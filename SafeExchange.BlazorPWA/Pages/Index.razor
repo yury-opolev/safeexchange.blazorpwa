@@ -1,0 +1,35 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+@inject StateContainer StateContainer
+
+<p>
+    <h4>Find secret:</h4>
+</p>
+
+<nav class="navbar navbar-light bg-light">
+    <form class="form-inline col-12">
+        <input class="form-control mr-sm-2 col-10" type="search" placeholder="Secret Name" aria-label="Search" @bind="ObjectName" >
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="ViewObject" >Search</button>
+    </form>
+</nav>
+
+@code {
+
+    private string ObjectName;
+
+    protected override void OnInitialized()
+    {
+        this.StateContainer.SetCurrentPageHeader($"Home");
+    }
+
+    public void ViewObject()
+    {
+        if (string.IsNullOrEmpty(this.ObjectName))
+        {
+            //...
+            return;
+        }
+
+        NavigationManager.NavigateTo($"viewdata/{this.ObjectName}");
+    }
+}

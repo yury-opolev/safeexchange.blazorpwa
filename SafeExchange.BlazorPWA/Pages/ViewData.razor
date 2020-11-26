@@ -1,0 +1,162 @@
+@page "/viewdata/{objectName}"
+
+@using SafeExchange.BlazorPWA.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+@inject NavigationManager NavManager
+@inject ApiClient apiClient
+@inject StateContainer StateContainer
+
+@if (this.IsInProgress)
+{
+    <p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+    </p>
+}
+
+@if ((!string.IsNullOrEmpty(this.Status) && !"ok".Equals(this.Status)) || !string.IsNullOrEmpty(this.Error))
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>@(this.Status ?? string.Empty)</strong> @(this.Error ?? string.Empty)
+    </div>
+}
+
+@if (this.inputModel != null)
+{
+    <p class="h4">
+        Value:
+    </p>
+
+    <EditForm Model="@inputModel">
+        <p>
+            <InputTextArea class="col" rows="10" @bind-Value="inputModel.Data.Value" placeholder="Content" readonly />
+        </p>
+
+        <p class="h4">
+            Access list:
+        </p>
+
+        @foreach (var accessItem in inputModel.AccessList)
+        {
+            <p>
+                <div class="row">
+                    <div class="col">
+                        <InputText class="form-control" @bind-Value="accessItem.Subject" readonly />
+                    </div>
+                    <div class="col">
+                        <InputText class="form-control" @bind-Value="accessItem.Permission" readonly />
+                    </div>
+                </div>
+            </p>
+        }
+
+        @if (inputModel.AccessList.Count == 0)
+        {
+            <p>
+                - No access was granted to users -
+            </p>
+        }
+
+        <p>
+            <div class="row justify-content-center">
+                <button class="btn btn-outline-primary mx-2" type="button" disabled="@IsInProgress" @onclick="FetchData"><span class="oi oi-reload"></span>&nbsp; Refresh</button>
+                <button class="btn btn-primary mx-2" type="button" disabled="@IsInProgress" @onclick="EditObject"><span class="oi oi-pencil"></span>&nbsp; Edit</button>
+            </div>
+        </p>
+    </EditForm>
+}
+
+@code {
+
+    [Parameter]
+    public string ObjectName { get; set; }
+
+    private bool IsInProgress;
+
+    private SecretInput inputModel;
+
+    private string Status;
+
+    private string Error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.ObjectName = this.ObjectName ?? string.Empty;
+        this.StateContainer.SetCurrentPageHeader($"View '{this.ObjectName}'");
+
+        await this.FetchData();
+    }
+
+    private async Task FetchData()
+    {
+        await this.FetchSecretAsync(this.ObjectName);
+    }
+
+    private void EditObject()
+    {
+        NavManager.NavigateTo($"editdata/{this.ObjectName}");
+    }
+
+    private async Task FetchSecretAsync(string objectName)
+    {
+        this.IsInProgress = true;
+        try
+        {
+            var secretData = await apiClient.GetSecretDataAsync(objectName);
+
+            if (!"ok".Equals(secretData.Status))
+            {
+                this.Status = secretData.Status;
+                this.Error = secretData.Error;
+                return;
+            }
+
+            this.Status = null;
+            this.Error = null;
+
+            var tempModel = new SecretInput()
+            {
+                Name = this.ObjectName,
+                Data = new SecretDataInput()
+                {
+                    Value = secretData.Result.Secret,
+                    ContentType = secretData.Result.ContentType,
+                    DestroySettings = null
+                },
+                AccessList = new List<AccessDataInput>()
+            };
+
+            var accessData = await apiClient.ReadAccessAsync(objectName);
+
+            if (!"ok".Equals(accessData.Status))
+            {
+                this.inputModel = tempModel;
+
+                this.Status = accessData.Status;
+                this.Error = accessData.Error;
+                return;
+            }
+
+            foreach (var accessItem in accessData.AccessList)
+            {
+                tempModel.AccessList.Add(new AccessDataInput() { Subject = accessItem.UserName, Permission = AccessDataInput.CreatePermissionsString(accessItem) });
+            }
+
+            this.inputModel = tempModel;
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+}
+

@@ -1,0 +1,118 @@
+﻿@page "/listdata/"
+
+@using SafeExchange.BlazorPWA.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+@inject NavigationManager NavigationManager
+@inject StateContainer StateContainer
+@inject ApiClient apiClient
+
+@if (this.IsInProgress)
+{
+    <p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+    </p>
+}
+
+@if ((!string.IsNullOrEmpty(this.Status) && !"ok".Equals(this.Status)) || !string.IsNullOrEmpty(this.Error))
+{
+    <div class="alert alert-warning" role="alert">
+        <strong>@(this.Status ?? string.Empty)</strong> @(this.Error ?? string.Empty)
+    </div>
+}
+
+@if (this.ObjectNames != null)
+{
+    <EditForm Model="@this.ObjectNames">
+
+        @for (int i = 0; i < this.ObjectNames.Count; i++)
+        {
+            var objectName = this.ObjectNames[i];
+            <p>
+                <div class="row">
+                    <div class="col-6">
+                        <InputText class="form-control" @bind-Value="objectName" readonly />
+                    </div>
+                    <div class="col-4">
+                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectName))"><span class="oi oi-eye"></span>&nbsp;View</button>
+                        <button class="btn btn-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.EditObject(objectName))"><span class="oi oi-pencil"></span>&nbsp; Edit</button>
+                    </div>
+                </div>
+            </p>
+        }
+
+    </EditForm>
+}
+
+@code {
+
+    private bool IsInProgress;
+
+    private string Status;
+
+    private string Error;
+
+    private IList<string> ObjectNames;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.SetCurrentPageHeader($"My secrets");
+        await this.FetchSecretNamesAsync();
+    }
+
+    private void ViewObject(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"viewdata/{objectName}");
+    }
+
+    private void EditObject(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"editdata/{objectName}");
+    }
+
+    private async Task FetchSecretNamesAsync()
+    {
+        this.IsInProgress = true;
+        try
+        {
+            var secretDescriptions = await apiClient.ListSecretsAsync();
+
+            if (!"ok".Equals(secretDescriptions.Status))
+            {
+                this.Status = secretDescriptions.Status;
+                this.Error = secretDescriptions.Error;
+                return;
+            }
+
+            this.ObjectNames = new List<string>(secretDescriptions.Secrets.Count);
+            foreach (var secretDescription in secretDescriptions.Secrets)
+            {
+                this.ObjectNames.Add(secretDescription.ObjectName);
+            }
+
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+}
