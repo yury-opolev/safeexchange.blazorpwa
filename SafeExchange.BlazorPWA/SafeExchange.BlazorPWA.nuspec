@@ -9,7 +9,6 @@
     <license type="expression">BSD-3-Clause</license>
     <projectUrl>https://github.com/yury-opolev/safeexchange</projectUrl>
     <description>Web client for SafeExchange API</description>
-    <releaseNotes>Summary of changes made in this release of the package.</releaseNotes>
     <copyright>Copyright 2020</copyright>
     <tags>Web Html Blazor</tags>
   </metadata>
