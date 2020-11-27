@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>SpaceOyster.SafeExchange.BlazorPWA</id>
-    <version>0.0.0.1</version>
+    <version>{VERSION}</version>
     <title>SafeExchange Web Client</title>
     <authors>Yury Opolev [space.oyster@outlook.com]</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
