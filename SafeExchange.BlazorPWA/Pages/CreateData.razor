@@ -19,10 +19,10 @@
     </p>
 }
 
-@if ((!string.IsNullOrEmpty(this.Status) && !"ok".Equals(this.Status)) || !string.IsNullOrEmpty(this.Error))
+@if (this.Notification != null)
 {
-    <div class="alert alert-warning" role="alert">
-        <strong>@(this.Status ?? string.Empty)</strong> @(this.Error ?? string.Empty)
+    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
     </div>
 }
 
@@ -103,6 +103,8 @@
 
 @code {
 
+    private NotificationData Notification;
+
     private bool IsInProgress = false;
 
     private SecretInput inputModel = new SecretInput()
@@ -119,13 +121,10 @@
         AccessList = new List<AccessDataInput>() { new AccessDataInput() { Permission = "Read" } }
     };
 
-    private string Status;
-
-    private string Error;
-
     protected override void OnInitialized()
     {
         this.StateContainer.SetCurrentPageHeader($"Add secret");
+        this.StateContainer.TakeNotification();
     }
 
     private void AddPermissionItem()
@@ -153,11 +152,14 @@
         {
             var secretData = await apiClient.CreateSecretDataAsync(this.inputModel.Name, inputData);
 
-            this.Status = secretData.Status;
-            this.Error = secretData.Error;
-
-            if (!"ok".Equals(this.Status))
+            if (!"ok".Equals(secretData.Status))
             {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = secretData.Status,
+                    Message = secretData.Error
+                };
                 return;
             }
 
@@ -170,10 +172,14 @@
                 }
             }
 
-            if ("ok".Equals(this.Status))
+            var notification = new NotificationData()
             {
-                NavManager.NavigateTo($"viewdata/{this.inputModel.Name}");
-            }
+                Type = NotificationType.Success,
+                Status = "Success",
+                Message = $"Secret '{this.inputModel.Name}' created successfully"
+            };
+            this.StateContainer.SetNextNotification(notification);
+            NavManager.NavigateTo($"/");
         }
         catch (AccessTokenNotAvailableException exception)
         {

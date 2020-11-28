@@ -1,6 +1,19 @@
 ﻿@page "/"
+
+@using SafeExchange.BlazorPWA.Model
+
 @inject NavigationManager NavigationManager
 @inject StateContainer StateContainer
+
+@if (this.Notification != null)
+{
+<div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary") alert-dismissible fade show" role="alert">
+    <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+}
 
 <p>
     <h4>Find secret:</h4>
@@ -8,18 +21,21 @@
 
 <nav class="navbar navbar-light bg-light">
     <form class="form-inline col-12">
-        <input class="form-control mr-sm-2 col-10" type="search" placeholder="Secret Name" aria-label="Search" @bind="ObjectName" >
-        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="ViewObject" >Search</button>
+        <input class="form-control mr-sm-2 col-10" type="search" placeholder="Secret Name" aria-label="Search" @bind="ObjectName">
+        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="ViewObject">Search</button>
     </form>
 </nav>
 
 @code {
+
+    private NotificationData Notification;
 
     private string ObjectName;
 
     protected override void OnInitialized()
     {
         this.StateContainer.SetCurrentPageHeader($"Home");
+        this.Notification = this.StateContainer.TakeNotification();
     }
 
     public void ViewObject()
