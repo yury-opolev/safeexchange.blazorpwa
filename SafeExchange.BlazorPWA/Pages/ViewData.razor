@@ -107,6 +107,15 @@
         this.IsInProgress = true;
         try
         {
+            var accessData = await apiClient.ReadAccessAsync(objectName);
+
+            if (!"ok".Equals(accessData.Status))
+            {
+                this.Status = accessData.Status;
+                this.Error = accessData.Error;
+                return;
+            }
+
             var secretData = await apiClient.GetSecretDataAsync(objectName);
 
             if (!"ok".Equals(secretData.Status))
@@ -119,7 +128,7 @@
             this.Status = null;
             this.Error = null;
 
-            var tempModel = new SecretInput()
+            this.inputModel = new SecretInput()
             {
                 Name = this.ObjectName,
                 Data = new SecretDataInput()
@@ -131,23 +140,10 @@
                 AccessList = new List<AccessDataInput>()
             };
 
-            var accessData = await apiClient.ReadAccessAsync(objectName);
-
-            if (!"ok".Equals(accessData.Status))
-            {
-                this.inputModel = tempModel;
-
-                this.Status = accessData.Status;
-                this.Error = accessData.Error;
-                return;
-            }
-
             foreach (var accessItem in accessData.AccessList)
             {
-                tempModel.AccessList.Add(new AccessDataInput() { Subject = accessItem.UserName, Permission = AccessDataInput.CreatePermissionsString(accessItem) });
+                this.inputModel.AccessList.Add(new AccessDataInput() { Subject = accessItem.UserName, Permission = AccessDataInput.CreatePermissionsString(accessItem) });
             }
-
-            this.inputModel = tempModel;
         }
         catch (AccessTokenNotAvailableException exception)
         {
