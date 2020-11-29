@@ -23,6 +23,9 @@
 {
     <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
         <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
 }
 
@@ -189,5 +192,10 @@
         {
             this.IsInProgress = false;
         }
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
     }
 }

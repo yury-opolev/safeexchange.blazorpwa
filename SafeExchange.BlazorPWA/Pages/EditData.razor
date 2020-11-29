@@ -9,339 +9,372 @@
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
-
-    <!-- Modal -->
-    <div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalLabel">Delete secret</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    Are you sure you want to delete the secret?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="DeleteSecretAsync">Yes</button>
-                </div>
+<!-- Modal -->
+<div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Delete secret</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the secret?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="DeleteSecretAsync">Yes</button>
             </div>
         </div>
     </div>
+</div>
 
-    @if (this.IsInProgress)
-    {
+@if (this.IsInProgress)
+{
+    <p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+    </p>
+}
+
+@if (this.Notification != null)
+{
+    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+@if (this.inputModel != null)
+{
+    <p class="h4">
+        Value:
+    </p>
+
+    <EditForm Model="@inputModel" OnValidSubmit="@UpdateSecretAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
         <p>
-            <div class="progress">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+            <InputTextArea class="form-control col" rows="10" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
+        </p>
+
+        <p>
+            <div class="form-check">
+                <label class="form-check-label">
+                    <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />Destroy After Read
+                </label>
             </div>
         </p>
-    }
-
-    @if ((!string.IsNullOrEmpty(this.Status) && !"ok".Equals(this.Status)) || !string.IsNullOrEmpty(this.Error))
-    {
-        <div class="alert alert-warning" role="alert">
-            <strong>@(this.Status ?? string.Empty)</strong> @(this.Error ?? string.Empty)
-        </div>
-    }
-
-    @if (this.inputModel != null)
-    {
-        <p class="h4">
-            Value:
+        <p>
+            <div class="form-check">
+                <label class="form-check-label">
+                    <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />Schedule Destroy
+                </label>
+            </div>
+        </p>
+        <p>
+            <div class="form-group form-row">
+                <label for="destroy-datetime-input" class="col-2 col-form-label">Destroy At:</label>
+                <div class="col-10">
+                    <InputDateTime id="destroy-datetime-input" class="form-control" type="datetime-local" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAt" DisplayName="DestroyAt" />
+                </div>
+            </div>
         </p>
 
-        <EditForm Model="@inputModel" OnValidSubmit="@UpdateSecretAsync">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+        <p class="h4">
+            Access list:
+        </p>
 
-            <p>
-                <InputTextArea class="form-control col" rows="10" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
-            </p>
-
-            <p>
-                <div class="form-check">
-                    <label class="form-check-label">
-                        <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />Destroy After Read
-                    </label>
-                </div>
-            </p>
-            <p>
-                <div class="form-check">
-                    <label class="form-check-label">
-                        <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />Schedule Destroy
-                    </label>
-                </div>
-            </p>
-            <p>
-                <div class="form-group form-row">
-                    <label for="destroy-datetime-input" class="col-2 col-form-label">Destroy At:</label>
-                    <div class="col-10">
-                        <InputDateTime id="destroy-datetime-input" class="form-control" type="datetime-local" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAt" DisplayName="DestroyAt" />
-                    </div>
-                </div>
-            </p>
-
-            <p class="h4">
-                Access list:
-            </p>
-
-            @for (int i = 0; i < inputModel.AccessList.Count; i++)
-            {
-                var tempIndex = i;
-                <p>
-                    <div class="row">
-                        <div class="col">
-                            <InputText class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" />
-                        </div>
-                        <div class="col">
-                            @if (tempIndex < this.FixedAccessItemCount)
-                            {
-                                <InputText class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" readonly />
-                            }
-                            else
-                            {
-                                <InputSelect class="form-control bg-light" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission">
-                                    <option>Read</option>
-                                    <option>Read,Write</option>
-                                    <option>Read,Write,GrantAccess</option>
-                                    <option>Read,Write,GrantAccess,RevokeAccess</option>
-                                </InputSelect>
-                            }
-                        </div>
-                        <div class="col-3">
-                            @if (this.IsDeleted(tempIndex))
-                            {
-                                <button class="btn btn-outline-secondary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))"><span class="oi oi-action-undo"></span></button>
-                            }
-                            else
-                            {
-                                <button class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))"><span class="oi oi-x"></span></button>
-                            }
-                        </div>
-                    </div>
-                </p>
-            }
+        @for (int i = 0; i < inputModel.AccessList.Count; i++)
+        {
+            var tempIndex = i;
             <p>
                 <div class="row">
                     <div class="col">
-                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                        <InputText class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" />
+                    </div>
+                    <div class="col">
+                        @if (tempIndex < this.FixedAccessItemCount)
+                        {
+                            <InputText class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" readonly />
+                        }
+                        else
+                        {
+                            <InputSelect class="form-control bg-light" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission">
+                                <option>Read</option>
+                                <option>Read,Write</option>
+                                <option>Read,Write,GrantAccess</option>
+                                <option>Read,Write,GrantAccess,RevokeAccess</option>
+                            </InputSelect>
+                        }
+                    </div>
+                    <div class="col-3">
+                        @if (this.IsDeleted(tempIndex))
+                        {
+                            <button class="btn btn-outline-secondary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))"><span class="oi oi-action-undo"></span></button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))"><span class="oi oi-x"></span></button>
+                        }
                     </div>
                 </div>
             </p>
-
-            <p>
-                <div class="row justify-content-center">
-                    <button type="submit" class="btn btn-primary mx-2" disabled="@IsInProgress">Update</button>
-                    <button type="button" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deletionDialog" disabled="@IsInProgress">
-                        Delete
-                    </button>
+        }
+        <p>
+            <div class="row">
+                <div class="col">
+                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
                 </div>
-            </p>
-        </EditForm>
+            </div>
+        </p>
+
+        <p>
+            <div class="row justify-content-center">
+                <button type="submit" class="btn btn-primary mx-2" disabled="@IsInProgress">Update</button>
+                <button type="button" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deletionDialog" disabled="@IsInProgress">
+                    Delete
+                </button>
+            </div>
+        </p>
+    </EditForm>
+}
+
+@code {
+
+    [Parameter]
+    public string ObjectName { get; set; }
+
+    private NotificationData Notification;
+
+    private bool IsInProgress;
+
+    private SecretInput inputModel;
+
+    private int FixedAccessItemCount = 0;
+
+    private List<int> DeletedAccessItems = new List<int>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.TakeNotification();
+
+        this.ObjectName = this.ObjectName ?? string.Empty;
+        this.StateContainer.SetCurrentPageHeader($"Edit '{this.ObjectName}'");
+
+        await this.FetchSecretAsync(this.ObjectName);
     }
 
-    @code {
+    private void AddPermissionItem()
+    {
+        this.inputModel.AccessList.Add(new AccessDataInput() { Permission = "Read" });
+    }
 
-        [Parameter]
-        public string ObjectName { get; set; }
-
-        private bool IsInProgress;
-
-        private SecretInput inputModel;
-
-        private int FixedAccessItemCount = 0;
-
-        private List<int> DeletedAccessItems = new List<int>();
-
-        private string Status;
-
-        private string Error;
-
-        protected override async Task OnInitializedAsync()
+    private void RemovePermissionItem(int index)
+    {
+        if (index >= this.FixedAccessItemCount)
         {
-            this.ObjectName = this.ObjectName ?? string.Empty;
-            this.StateContainer.SetCurrentPageHeader($"Edit '{this.ObjectName}'");
-
-            await this.FetchSecretAsync(this.ObjectName);
+            this.inputModel.AccessList.RemoveAt(index);
+            return;
         }
 
-        private void AddPermissionItem()
+        if (this.DeletedAccessItems.Contains(index))
         {
-            this.inputModel.AccessList.Add(new AccessDataInput() { Permission = "Read" });
+            this.DeletedAccessItems.Remove(index);
         }
-
-        private void RemovePermissionItem(int index)
+        else
         {
-            if (index >= this.FixedAccessItemCount)
+            this.DeletedAccessItems.Add(index);
+        }
+    }
+
+    private bool IsDeleted(int index)
+    {
+        return this.DeletedAccessItems.Contains(index);
+    }
+
+    private async Task FetchSecretAsync(string objectName)
+    {
+        this.IsInProgress = true;
+        try
+        {
+            var accessData = await apiClient.ReadAccessAsync(objectName);
+
+            if (!"ok".Equals(accessData.Status))
             {
-                this.inputModel.AccessList.RemoveAt(index);
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = accessData.Status,
+                    Message = accessData.Error
+                };
                 return;
             }
 
-            if (this.DeletedAccessItems.Contains(index))
+            var secretData = await apiClient.GetSecretDataAsync(objectName);
+
+            if (!"ok".Equals(secretData.Status))
             {
-                this.DeletedAccessItems.Remove(index);
-            }
-            else
-            {
-                this.DeletedAccessItems.Add(index);
-            }
-        }
-
-        private bool IsDeleted(int index)
-        {
-            return this.DeletedAccessItems.Contains(index);
-        }
-
-        private async Task FetchSecretAsync(string objectName)
-        {
-            this.IsInProgress = true;
-            try
-            {
-                var accessData = await apiClient.ReadAccessAsync(objectName);
-
-                if (!"ok".Equals(accessData.Status))
+                this.Notification = new NotificationData()
                 {
-                    this.Status = accessData.Status;
-                    this.Error = accessData.Error;
-                    return;
-                }
-
-                var secretData = await apiClient.GetSecretDataAsync(objectName);
-
-                if (!"ok".Equals(secretData.Status))
-                {
-                    this.Status = secretData.Status;
-                    this.Error = secretData.Error;
-                    return;
-                }
-
-                this.Status = null;
-                this.Error = null;
-
-                this.inputModel = new SecretInput()
-                {
-                    Name = this.ObjectName,
-                    Data = new SecretDataInput()
-                    {
-                        Value = secretData.Result.Secret,
-                        ContentType = secretData.Result.ContentType,
-                        DestroySettings = new DestroySettings()
-                        {
-                            DestroyAfterRead = false,
-                            ScheduleDestroy = true,
-                            DestroyAt = DateTime.Now.AddDays(7)
-                        }
-                    },
-                    AccessList = new List<AccessDataInput>()
+                    Type = NotificationType.Warning,
+                    Status = secretData.Status,
+                    Message = secretData.Error
                 };
+                return;
+            }
 
-                foreach (var accessItem in accessData.AccessList)
+            this.Notification = null;
+
+            this.inputModel = new SecretInput()
+            {
+                Name = this.ObjectName,
+                Data = new SecretDataInput()
                 {
-                    this.inputModel.AccessList.Add(new AccessDataInput() { Subject = accessItem.UserName, Permission = AccessDataInput.CreatePermissionsString(accessItem) });
-                }
-
-                this.FixedAccessItemCount = this.inputModel.AccessList.Count;
-            }
-            catch (AccessTokenNotAvailableException exception)
-            {
-                exception.Redirect();
-            }
-            finally
-            {
-                this.IsInProgress = false;
-            }
-        }
-
-        private async Task UpdateSecretAsync()
-        {
-            this.IsInProgress = true;
-
-            var inputData = new SecretDataInput()
-            {
-                Value = this.inputModel.Data.Value,
-                ContentType = this.inputModel.Data.ContentType,
-                DestroySettings = this.inputModel.Data.DestroySettings
+                    Value = secretData.Result.Secret,
+                    ContentType = secretData.Result.ContentType,
+                    DestroySettings = new DestroySettings()
+                    {
+                        DestroyAfterRead = false,
+                        ScheduleDestroy = true,
+                        DestroyAt = DateTime.Now.AddDays(7)
+                    }
+                },
+                AccessList = new List<AccessDataInput>()
             };
 
-            try
+            foreach (var accessItem in accessData.AccessList)
             {
-                var secretData = await apiClient.UpdateSecretDataAsync(this.inputModel.Name, inputData);
-
-                this.Status = secretData.Status;
-                this.Error = secretData.Error;
-
-                if (!"ok".Equals(this.Status))
-                {
-                    return;
-                }
-
-                foreach (var deletedIndex in this.DeletedAccessItems)
-                {
-                    var accessItem = this.inputModel.AccessList[deletedIndex];
-                    var accessReply = await apiClient.RevokeAccessAsync(this.inputModel.Name, accessItem);
-                    if (!"ok".Equals(accessReply.Status))
-                    {
-                        // TODO ...
-                    }
-                }
-
-                for (int index = 0; index < this.inputModel.AccessList.Count; index++)
-                {
-                    if (this.IsDeleted(index))
-                    {
-                        continue;
-                    }
-
-                    var accessItem = this.inputModel.AccessList[index];
-                    var accessReply = await apiClient.GrantAccessAsync(this.inputModel.Name, accessItem);
-                    if (!"ok".Equals(accessReply.Status))
-                    {
-                        // TODO ...
-                    }
-                }
-
-                if ("ok".Equals(this.Status))
-                {
-                    NavManager.NavigateTo($"viewdata/{this.inputModel.Name}");
-                }
+                this.inputModel.AccessList.Add(new AccessDataInput() { Subject = accessItem.UserName, Permission = AccessDataInput.CreatePermissionsString(accessItem) });
             }
-            catch (AccessTokenNotAvailableException exception)
-            {
-                exception.Redirect();
-            }
-            finally
-            {
-                this.IsInProgress = false;
-            }
+
+            this.FixedAccessItemCount = this.inputModel.AccessList.Count;
         }
-
-        private async Task DeleteSecretAsync()
+        catch (AccessTokenNotAvailableException exception)
         {
-            this.IsInProgress = true;
-
-            try
-            {
-                var secretData = await apiClient.DeleteSecretDataAsync(this.inputModel.Name);
-
-                this.Status = secretData.Status;
-                this.Error = secretData.Error;
-
-                if ("ok".Equals(this.Status))
-                {
-                    NavManager.NavigateTo($"/");
-                }
-            }
-            catch (AccessTokenNotAvailableException exception)
-            {
-                exception.Redirect();
-            }
-            finally
-            {
-                this.IsInProgress = false;
-            }
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
         }
     }
+
+    private async Task UpdateSecretAsync()
+    {
+        this.IsInProgress = true;
+
+        var inputData = new SecretDataInput()
+        {
+            Value = this.inputModel.Data.Value,
+            ContentType = this.inputModel.Data.ContentType,
+            DestroySettings = this.inputModel.Data.DestroySettings
+        };
+
+        try
+        {
+            var secretData = await apiClient.UpdateSecretDataAsync(this.inputModel.Name, inputData);
+
+            if (!"ok".Equals(secretData.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = secretData.Status,
+                    Message = secretData.Error
+                };
+                return;
+            }
+
+            foreach (var deletedIndex in this.DeletedAccessItems)
+            {
+                var accessItem = this.inputModel.AccessList[deletedIndex];
+                var accessReply = await apiClient.RevokeAccessAsync(this.inputModel.Name, accessItem);
+                if (!"ok".Equals(accessReply.Status))
+                {
+                    // TODO ...
+                }
+            }
+
+            for (int index = 0; index < this.inputModel.AccessList.Count; index++)
+            {
+                if (this.IsDeleted(index))
+                {
+                    continue;
+                }
+
+                var accessItem = this.inputModel.AccessList[index];
+                var accessReply = await apiClient.GrantAccessAsync(this.inputModel.Name, accessItem);
+                if (!"ok".Equals(accessReply.Status))
+                {
+                    // TODO ...
+                }
+            }
+
+            var notification = new NotificationData()
+            {
+                Type = NotificationType.Success,
+                Status = "Success",
+                Message = $"Secret '{this.inputModel.Name}' updated successfully"
+            };
+            this.StateContainer.SetNextNotification(notification);
+            NavManager.NavigateTo($"/");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+
+    private async Task DeleteSecretAsync()
+    {
+        this.IsInProgress = true;
+
+        try
+        {
+            var secretData = await apiClient.DeleteSecretDataAsync(this.inputModel.Name);
+
+            if (!"ok".Equals(secretData.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = secretData.Status,
+                    Message = secretData.Error
+                };
+                return;
+            }
+
+            var notification = new NotificationData()
+            {
+                Type = NotificationType.Success,
+                Status = "Success",
+                Message = $"Secret '{this.inputModel.Name}' deleted successfully"
+            };
+            this.StateContainer.SetNextNotification(notification);
+            NavManager.NavigateTo($"/");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
+    }
+}

@@ -19,10 +19,13 @@
     </p>
 }
 
-@if ((!string.IsNullOrEmpty(this.Status) && !"ok".Equals(this.Status)) || !string.IsNullOrEmpty(this.Error))
+@if (this.Notification != null)
 {
-    <div class="alert alert-warning" role="alert">
-        <strong>@(this.Status ?? string.Empty)</strong> @(this.Error ?? string.Empty)
+    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
 }
 
@@ -76,16 +79,16 @@
     [Parameter]
     public string ObjectName { get; set; }
 
+    private NotificationData Notification;
+
     private bool IsInProgress;
 
     private SecretInput inputModel;
 
-    private string Status;
-
-    private string Error;
-
     protected override async Task OnInitializedAsync()
     {
+        this.StateContainer.TakeNotification();
+
         this.ObjectName = this.ObjectName ?? string.Empty;
         this.StateContainer.SetCurrentPageHeader($"View '{this.ObjectName}'");
 
@@ -111,8 +114,12 @@
 
             if (!"ok".Equals(accessData.Status))
             {
-                this.Status = accessData.Status;
-                this.Error = accessData.Error;
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = accessData.Status,
+                    Message = accessData.Error
+                };
                 return;
             }
 
@@ -120,13 +127,16 @@
 
             if (!"ok".Equals(secretData.Status))
             {
-                this.Status = secretData.Status;
-                this.Error = secretData.Error;
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = secretData.Status,
+                    Message = secretData.Error
+                };
                 return;
             }
 
-            this.Status = null;
-            this.Error = null;
+            this.Notification = null;
 
             this.inputModel = new SecretInput()
             {
@@ -153,6 +163,11 @@
         {
             this.IsInProgress = false;
         }
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
     }
 }
 
