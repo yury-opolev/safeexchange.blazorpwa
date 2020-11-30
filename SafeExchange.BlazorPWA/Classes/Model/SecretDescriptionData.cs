@@ -4,7 +4,7 @@
 
 namespace SafeExchange.BlazorPWA.Model
 {
-    using System;
+    using SafeExchange.BlazorPWA.Helpers;
 
     public class SecretDescriptionData
     {
@@ -19,5 +19,10 @@ namespace SafeExchange.BlazorPWA.Model
         public bool CanGrantAccess { get; set; }
 
         public bool CanRevokeAccess { get; set; }
+
+        public string CreatePermissionsString()
+        {
+            return PermissionsStringBuilder.CreatePermissionsString(this.CanRead, this.CanWrite, this.CanGrantAccess, this.CanRevokeAccess);
+        }
     }
 }

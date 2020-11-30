@@ -19,48 +19,60 @@
     </p>
 }
 
-@if ((!string.IsNullOrEmpty(this.Status) && !"ok".Equals(this.Status)) || !string.IsNullOrEmpty(this.Error))
+@if (this.Notification != null)
 {
-    <div class="alert alert-warning" role="alert">
-        <strong>@(this.Status ?? string.Empty)</strong> @(this.Error ?? string.Empty)
+    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
     </div>
 }
 
-@if (this.ObjectNames != null)
+@if (this.ObjectDescriptions != null)
 {
-    <EditForm Model="@this.ObjectNames">
+    <EditForm Model="@this.ObjectDescriptions">
 
-        @for (int i = 0; i < this.ObjectNames.Count; i++)
+        @for (int i = 0; i < this.ObjectDescriptions.Count; i++)
         {
-            var objectName = this.ObjectNames[i];
+            var objectDescription = this.ObjectDescriptions[i];
             <p>
                 <div class="row">
-                    <div class="col-6">
-                        <InputText class="form-control" @bind-Value="objectName" readonly />
+                    <div class="col">
+                        <InputText class="form-control" @bind-Value="objectDescription.ObjectName" readonly />
                     </div>
-                    <div class="col-4">
-                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectName))"><span class="oi oi-eye"></span>&nbsp;View</button>
-                        <button class="btn btn-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.EditObject(objectName))"><span class="oi oi-pencil"></span>&nbsp; Edit</button>
+                    <div class="col">
+                        <input class="form-control" value="@(objectDescription.CreatePermissionsString())" readonly/>
+                    </div>
+                    <div class="btn-group px-4" role="group" aria-label="Item buttons">
+                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectDescription.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
+                        <button class="btn btn-outline-primary" type="button" disabled="@(!objectDescription.CanWrite || IsInProgress)" @onclick="@(e => this.EditObject(objectDescription.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
                     </div>
                 </div>
             </p>
         }
-
     </EditForm>
+
+    @if (this.ObjectDescriptions.Count == 0)
+    {
+        <p>
+            - No secrets found -
+        </p>
+    }
 }
 
 @code {
 
+    private NotificationData Notification;
+
     private bool IsInProgress;
 
-    private string Status;
-
-    private string Error;
-
-    private IList<string> ObjectNames;
+    private IList<SecretDescriptionData> ObjectDescriptions;
 
     protected override async Task OnInitializedAsync()
     {
+        this.StateContainer.TakeNotification();
+
         this.StateContainer.SetCurrentPageHeader($"My secrets");
         await this.FetchSecretNamesAsync();
     }
@@ -94,17 +106,20 @@
 
             if (!"ok".Equals(secretDescriptions.Status))
             {
-                this.Status = secretDescriptions.Status;
-                this.Error = secretDescriptions.Error;
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = secretDescriptions.Status,
+                    Message = secretDescriptions.Error
+                };
                 return;
             }
 
-            this.ObjectNames = new List<string>(secretDescriptions.Secrets.Count);
+            this.ObjectDescriptions = new List<SecretDescriptionData>(secretDescriptions.Secrets.Count);
             foreach (var secretDescription in secretDescriptions.Secrets)
             {
-                this.ObjectNames.Add(secretDescription.ObjectName);
+                this.ObjectDescriptions.Add(secretDescription);
             }
-
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -114,5 +129,10 @@
         {
             this.IsInProgress = false;
         }
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
     }
 }
