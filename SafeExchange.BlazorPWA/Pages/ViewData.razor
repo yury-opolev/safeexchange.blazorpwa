@@ -1,8 +1,10 @@
 @page "/viewdata/{objectName}"
 
 @using SafeExchange.BlazorPWA.Model
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Microsoft.AspNetCore.Authorization
+@using SafeExchange.BlazorPWA.Helpers
 
 @attribute [Authorize]
 
@@ -67,8 +69,10 @@
 
         <p>
             <div class="row justify-content-center">
-                <button class="btn btn-outline-primary mx-2" type="button" disabled="@IsInProgress" @onclick="FetchData"><span class="oi oi-reload"></span>&nbsp; Refresh</button>
-                <button class="btn btn-primary mx-2" type="button" disabled="@IsInProgress" @onclick="EditObject"><span class="oi oi-pencil"></span>&nbsp; Edit</button>
+                <div class="btn-group" role="group" aria-label="Item buttons">
+                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="FetchData"><i class="oi oi-reload"></i><span>&nbsp;Refresh</span></button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@(!this.CanEditObject() || IsInProgress)" @onclick="EditObject"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
+                </div>
             </div>
         </p>
     </EditForm>
@@ -76,8 +80,13 @@
 
 @code {
 
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
     [Parameter]
     public string ObjectName { get; set; }
+
+    private AuthenticationState authenticationState;
 
     private NotificationData Notification;
 
@@ -92,12 +101,38 @@
         this.ObjectName = this.ObjectName ?? string.Empty;
         this.StateContainer.SetCurrentPageHeader($"View '{this.ObjectName}'");
 
+        this.authenticationState = await this.AuthenticationStateTask;
         await this.FetchData();
     }
 
     private async Task FetchData()
     {
         await this.FetchSecretAsync(this.ObjectName);
+    }
+
+    private bool CanEditObject()
+    {
+        var currentUserUpn = TokenHandler.GetName(authenticationState.User);
+        if (string.IsNullOrEmpty(currentUserUpn) || !currentUserUpn.Contains("@"))
+        {
+            return true;
+        }
+
+        var accessList = this.inputModel?.AccessList;
+        if (accessList == null)
+        {
+            return false;
+        }
+
+        foreach (var accessItem in accessList)
+        {
+            if (accessItem.Subject.Equals(currentUserUpn) &&
+                (accessItem.Permission.Contains("Write") || accessItem.Permission.Contains("GrantAccess")))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void EditObject()
