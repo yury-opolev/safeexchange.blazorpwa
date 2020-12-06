@@ -30,6 +30,11 @@ a, .btn-link {
     color: red;
 }
 
+.text-removed {
+    background-color: pink !important;
+    text-decoration-line: line-through !important;
+}
+
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;
