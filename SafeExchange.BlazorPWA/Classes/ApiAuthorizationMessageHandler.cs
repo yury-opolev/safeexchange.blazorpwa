@@ -3,15 +3,18 @@ namespace SafeExchange.BlazorPWA
 {
     using Microsoft.AspNetCore.Components;
     using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+    using Microsoft.Extensions.Configuration;
 
     public class ApiAuthorizationMessageHandler : AuthorizationMessageHandler
     {
-        public ApiAuthorizationMessageHandler(IAccessTokenProvider provider, NavigationManager navigationManager)
+        public ApiAuthorizationMessageHandler(IAccessTokenProvider provider, NavigationManager navigationManager, IConfiguration configuration)
             : base(provider, navigationManager)
         {
+            var apiUrl = configuration.GetSection("BackendApi").GetValue<string>("BaseAddress");
+            var accessTokenScopes = configuration.GetValue<string[]>("AccessTokenScopes");
             ConfigureHandler(
-                authorizedUrls: new[] { "{BACKEND API URL}" },
-                scopes: new[] { "{API SCOPE}" });
+                authorizedUrls: new[] { apiUrl },
+                scopes: accessTokenScopes);
         }
     }
 }

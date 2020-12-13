@@ -11,5 +11,7 @@ namespace SafeExchange.BlazorPWA.Model
         public string Secret { get; set; }
 
         public string ContentType { get; set; }
+
+        public DestroySettings DestroySettings { get; set; }
     }
 }

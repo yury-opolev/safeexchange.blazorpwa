@@ -238,12 +238,7 @@
                 {
                     Value = secretData.Result.Secret,
                     ContentType = secretData.Result.ContentType,
-                    DestroySettings = new DestroySettings()
-                    {
-                        DestroyAfterRead = false,
-                        ScheduleDestroy = true,
-                        DestroyAt = DateTime.Now.AddDays(7)
-                    }
+                    DestroySettings = secretData.Result.DestroySettings
                 },
                 AccessList = new List<AccessDataInput>()
             };
