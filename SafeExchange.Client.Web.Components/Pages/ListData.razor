@@ -1,0 +1,135 @@
+﻿@page "/listdata/"
+
+@using SafeExchange.Client.Web.Components.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@inject NavigationManager NavigationManager
+@inject StateContainer StateContainer
+@inject ApiClient apiClient
+
+@if (this.IsInProgress)
+{
+    <p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+    </p>
+}
+
+@if (this.Notification != null)
+{
+    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+@if (this.ObjectDescriptions != null)
+{
+    <EditForm Model="@this.ObjectDescriptions">
+
+        @for (int i = 0; i < this.ObjectDescriptions.Count; i++)
+        {
+            var objectDescription = this.ObjectDescriptions[i];
+            <p>
+                <div class="row">
+                    <div class="col">
+                        <InputText class="form-control" @bind-Value="objectDescription.ObjectName" readonly />
+                    </div>
+                    <div class="col">
+                        <input class="form-control" value="@(objectDescription.CreatePermissionsString())" readonly />
+                    </div>
+                    <div class="btn-group px-4" role="group" aria-label="Item buttons">
+                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectDescription.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
+                        <button class="btn btn-outline-primary" type="button" disabled="@(!objectDescription.CanWrite || IsInProgress)" @onclick="@(e => this.EditObject(objectDescription.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
+                    </div>
+                </div>
+            </p>
+        }
+    </EditForm>
+
+    @if (this.ObjectDescriptions.Count == 0)
+    {
+        <p>
+            - No secrets found -
+        </p>
+    }
+}
+
+@code {
+
+    private NotificationData Notification;
+
+    private bool IsInProgress;
+
+    private IList<SecretDescriptionData> ObjectDescriptions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.TakeNotification();
+
+        this.StateContainer.SetCurrentPageHeader($"My secrets");
+        await this.FetchSecretNamesAsync();
+    }
+
+    private void ViewObject(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"viewdata/{objectName}");
+    }
+
+    private void EditObject(string objectName)
+    {
+        if (string.IsNullOrEmpty(objectName))
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"editdata/{objectName}");
+    }
+
+    private async Task FetchSecretNamesAsync()
+    {
+        this.IsInProgress = true;
+        try
+        {
+            var secretDescriptions = await apiClient.ListSecretsAsync();
+
+            if (!"ok".Equals(secretDescriptions.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = secretDescriptions.Status,
+                    Message = secretDescriptions.Error
+                };
+                return;
+            }
+
+            this.ObjectDescriptions = new List<SecretDescriptionData>(secretDescriptions.Secrets.Count);
+            foreach (var secretDescription in secretDescriptions.Secrets)
+            {
+                this.ObjectDescriptions.Add(secretDescription);
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
+    }
+}
