@@ -1,16 +1,16 @@
-﻿@inject StateContainer StateContainer
+﻿@inject StateContainer StateContainerInstance
 @implements IDisposable
 
-    @StateContainer.CurrentPageHeader
+    @StateContainerInstance.CurrentPageHeader
 
 @code{
     protected override void OnInitialized()
     {
-        StateContainer.OnChange += StateHasChanged;
+        StateContainerInstance.OnChange += StateHasChanged;
     }
 
     public void Dispose()
     {
-        StateContainer.OnChange -= StateHasChanged;
+        StateContainerInstance.OnChange -= StateHasChanged;
     }
 }
