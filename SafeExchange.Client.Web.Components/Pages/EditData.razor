@@ -1,5 +1,8 @@
 ﻿@using SafeExchange.Client.Web.Components.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Text.RegularExpressions;
+
+@implements IDisposable
 
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
@@ -50,12 +53,12 @@
         Value:
     </p>
 
-    <EditForm Model="@inputModel" OnValidSubmit="@UpdateSecretAsync">
+    <EditForm EditContext="@editContext" OnValidSubmit="@TryUpdateSecretAsync">
         <DataAnnotationsValidator />
-        <ValidationSummary />
 
         <p>
             <InputTextArea class="form-control col" rows="10" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
+            <ValidationMessage For="@(() => inputModel.Data.Value)" />
         </p>
 
         <p>
@@ -92,6 +95,7 @@
                 <div class="row">
                     <div class="col">
                         <InputText class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" />
+                        <ValidationMessage For="@(() => inputModel.AccessList[tempIndex].Subject)" />
                     </div>
                     <div class="col">
                         @if (tempIndex < this.FixedAccessItemCount)
@@ -131,7 +135,7 @@
 
         <p>
             <div class="row justify-content-center">
-                <button type="submit" class="btn btn-primary mx-2" disabled="@IsInProgress">Update</button>
+                <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
                 <button type="button" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deletionDialog" disabled="@IsInProgress">
                     Delete
                 </button>
@@ -149,11 +153,20 @@
 
     private bool IsInProgress;
 
+    private EditContext editContext;
+
+    private bool isValidData = true;
+
     private SecretInput inputModel;
 
     private int FixedAccessItemCount = 0;
 
     private List<int> DeletedAccessItems = new List<int>();
+
+    public void Dispose()
+    {
+        editContext.OnFieldChanged -= this.HandleFieldChanged;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +176,51 @@
         this.StateContainer.SetCurrentPageHeader($"Edit '{this.ObjectName}'");
 
         await this.FetchSecretAsync(this.ObjectName);
+
+        this.editContext = new EditContext(this.inputModel);
+        this.editContext.OnFieldChanged += this.HandleFieldChanged;
+    }
+
+    private void HandleFieldChanged(object sender, FieldChangedEventArgs e)
+    {
+        isValidData = this.IsCurrentDataValid();
+        // StateHasChanged();
+    }
+
+    private bool IsCurrentDataValid()
+    {
+        if (!this.editContext.Validate())
+        {
+            return false;
+        }
+
+        // TODO: remove after nested objects validation is available
+        if (string.IsNullOrEmpty(this.inputModel?.Data?.Value))
+        {
+            return false;
+        }
+
+        if ((this.inputModel?.Data?.Value?.Length ?? 0) > 25000)
+        {
+            return false;
+        }
+
+        var regex = new Regex(@"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
+        var accessList = this.inputModel?.AccessList ?? new List<AccessDataInput>();
+        foreach (var accessItem in accessList)
+        {
+            if (string.IsNullOrEmpty(accessItem.Subject))
+            {
+                continue;
+            }
+
+            if (accessItem.Subject.Length > 63 || !regex.IsMatch(accessItem.Subject))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void AddPermissionItem()
@@ -255,8 +313,13 @@
         }
     }
 
-    private async Task UpdateSecretAsync()
+    private async Task TryUpdateSecretAsync()
     {
+        if (this.inputModel == null || !this.IsCurrentDataValid())
+        {
+            return;
+        }
+
         this.IsInProgress = true;
 
         var inputData = new SecretDataInput()
