@@ -188,24 +188,35 @@
 
     private bool IsCurrentDataValid()
     {
-        if (!this.editContext.Validate())
-        {
-            return false;
-        }
-
         // TODO: remove after nested objects validation is available
-        if (string.IsNullOrEmpty(this.inputModel?.Data?.Value))
+        if (string.IsNullOrEmpty(this.inputModel?.Name))
         {
             return false;
         }
 
-        if ((this.inputModel?.Data?.Value?.Length ?? 0) > 25000)
+        if (this.inputModel.Name.Length > 63)
+        {
+            return false;
+        }
+
+        var nameRegex = new Regex(@"^[0-9a-zA-Z-]+$");
+        if (!nameRegex.IsMatch(this.inputModel.Name))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(this.inputModel.Data?.Value))
+        {
+            return false;
+        }
+
+        if ((this.inputModel.Data?.Value?.Length ?? 0) > 25000)
         {
             return false;
         }
 
         var regex = new Regex(@"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-        var accessList = this.inputModel?.AccessList ?? new List<AccessDataInput>();
+        var accessList = this.inputModel.AccessList ?? new List<AccessDataInput>();
         foreach (var accessItem in accessList)
         {
             if (string.IsNullOrEmpty(accessItem.Subject))
