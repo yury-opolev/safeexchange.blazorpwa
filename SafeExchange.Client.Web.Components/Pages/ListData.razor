@@ -26,27 +26,22 @@
 
 @if (this.ObjectDescriptions != null)
 {
-    <EditForm Model="@this.ObjectDescriptions">
-
-        @for (int i = 0; i < this.ObjectDescriptions.Count; i++)
-        {
-            var objectDescription = this.ObjectDescriptions[i];
-            <p>
-                <div class="row">
-                    <div class="col">
-                        <InputText class="form-control" @bind-Value="objectDescription.ObjectName" readonly />
-                    </div>
-                    <div class="col">
-                        <input class="form-control" value="@(objectDescription.CreatePermissionsString())" readonly />
-                    </div>
-                    <div class="btn-group px-4" role="group" aria-label="Item buttons">
-                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectDescription.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
-                        <button class="btn btn-outline-primary" type="button" disabled="@(!objectDescription.CanWrite || IsInProgress)" @onclick="@(e => this.EditObject(objectDescription.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
-                    </div>
-                </div>
-            </p>
-        }
-    </EditForm>
+<ul class="list-group list-group-flush">
+    @for (int i = 0; i < this.ObjectDescriptions.Count; i++)
+    {
+        var objectDescription = this.ObjectDescriptions[i];
+        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+            <div>
+                <p class="my-0" clas>@objectDescription.ObjectName</p>
+                <small class="text-secondary my-0">@(objectDescription.CreatePermissionsString())</small>
+            </div>
+            <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
+                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectDescription.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
+                <button class="btn btn-outline-primary" type="button" disabled="@(!objectDescription.CanWrite || IsInProgress)" @onclick="@(e => this.EditObject(objectDescription.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
+            </div>
+        </li>
+    }
+</ul>
 
     @if (this.ObjectDescriptions.Count == 0)
     {
