@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30709.132
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SafeExchange.BlazorPWA", "SafeExchange.BlazorPWA\SafeExchange.BlazorPWA.csproj", "{FAD1104B-4C69-42DB-95FD-37098A20E781}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SafeExchange.Client.Web.Components", "SafeExchange.Client.Web.Components\SafeExchange.Client.Web.Components.csproj", "{EC77FF31-4A57-4394-AE68-AEF76D6AFA94}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SafeExchange.Client.Web.Components", "SafeExchange.Client.Web.Components\SafeExchange.Client.Web.Components.csproj", "{EC77FF31-4A57-4394-AE68-AEF76D6AFA94}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

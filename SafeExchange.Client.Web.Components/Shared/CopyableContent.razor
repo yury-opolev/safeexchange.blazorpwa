@@ -1,0 +1,20 @@
+﻿@inject ClipboardService ClipboardServiceInstance
+
+<div class="to-hover">
+    @ChildContent
+    <img class="to-show-on-hover" src="copy.svg" alt="Copy to Clipboard" width="20" @onclick="@(async () => await CopyDataToClipboard())">
+</div>
+
+@code {
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    [Parameter]
+    public string Data { get; set; }
+
+    private async Task CopyDataToClipboard()
+    {
+        await ClipboardServiceInstance.WriteTextAsync(Data);
+    }
+}

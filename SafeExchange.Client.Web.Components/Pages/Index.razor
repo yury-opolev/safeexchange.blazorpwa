@@ -5,8 +5,19 @@
 
 @if (this.Notification != null)
 {
-    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
-        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        @if (string.IsNullOrEmpty(this.Notification.CopyableUri))
+        {
+            <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        }
+        else
+        {
+            <CopyableContent Data="@this.Notification.CopyableUri">
+                <strong>@(this.Notification.Status ?? string.Empty)</strong>
+                @(this.Notification.Message ?? string.Empty):
+                <a href="@this.Notification.CopyableUri" class="alert-link"><span>Link</span></a>
+            </CopyableContent>
+        }
         <button type="button" class="close" @onclick="DismissNotification">
             <span aria-hidden="true">&times;</span>
         </button>

@@ -248,7 +248,8 @@
             {
                 Type = NotificationType.Success,
                 Status = "Success",
-                Message = $"Secret '{this.inputModel.Name}' created successfully"
+                Message = $"Secret '{this.inputModel.Name}' created successfully",
+                CopyableUri = this.GetViewUri(this.inputModel.Name)
             };
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
@@ -266,5 +267,10 @@
     public void DismissNotification()
     {
         this.Notification = null;
+    }
+
+    private string GetViewUri(string objectName)
+    {
+        return $"{NavManager.BaseUri.TrimEnd('/')}/viewdata/{objectName}";
     }
 }
