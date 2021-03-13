@@ -11,17 +11,16 @@
             <img src="signed-in.svg" alt="User Info" width="32">
         </button>
         <div class="dropdown-menu" aria-labelledby="userInfoDropdown">
-            <form class="px-4 py-2">
+            <form class="px-4 py-3">
                 <div class="form-group">
                     <p>@context.User.Identity.Name</p>
                     <small>@TokenHandler.GetName(context.User)</small>
                 </div>
-                <button type="button" class="btn btn-outline-secondary" data-toggle="modal" data-target="#settingsDialog">Settings</button>
             </form>
             <div class="dropdown-divider"></div>
             <button class="nav-link btn btn-link" @onclick="BeginSignOut">Sign out</button>
         </div>
-</Authorized>
+    </Authorized>
     <NotAuthorized>
         <a class="nav-link" href="authentication/login">
             <img src="sign-in.svg" alt="Sign In" width="32">
