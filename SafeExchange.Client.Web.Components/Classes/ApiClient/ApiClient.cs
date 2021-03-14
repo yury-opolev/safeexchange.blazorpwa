@@ -33,12 +33,18 @@ namespace SafeExchange.Client.Web.Components
 
         public async Task<NotificationSubscriptionReply> Subscribe(NotificationSubscription subscription)
         {
-            throw new NotImplementedException();
+            var responseMessage = await client.PostAsJsonAsync($"notifications", subscription);
+            return await this.HandleSubscriptionResponseAsync(responseMessage);
         }
 
         public async Task<NotificationSubscriptionReply> Unsubscribe(NotificationSubscription subscription)
         {
-            throw new NotImplementedException();
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Delete, $"notifications")
+            {
+                Content = JsonContent.Create(subscription, mediaType: null, jsonOptions)
+            };
+            var responseMessage = await client.SendAsync(httpRequestMessage);
+            return await this.HandleSubscriptionResponseAsync(responseMessage);
         }
 
         public async Task<ApiSecretReply> CreateSecretDataAsync(string objectName, SecretDataInput data)
@@ -154,6 +160,28 @@ namespace SafeExchange.Client.Web.Components
             }
 
             return new ApiAccessReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<NotificationSubscriptionReply> HandleSubscriptionResponseAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<NotificationSubscriptionReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<NotificationSubscriptionReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new NotificationSubscriptionReply()
             {
                 Status = message.StatusCode.ToString(),
                 Error = responseContent
