@@ -1,4 +1,8 @@
-﻿<!-- Modal -->
+﻿@using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+
+@inject NotificationsSubscriber subscriber
+
+<!-- Modal -->
 <div class="modal fade" id="settingsDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -32,4 +36,32 @@
 
 @code {
 
+    private async Task<bool> IsSubscribedAsync()
+    {
+        return await subscriber.IsSubscribed();
+    }
+
+    private async Task RequestNotificationSubscriptionAsync()
+    {
+        try
+        {
+            var subscription = await subscriber.Subscribe();
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+    }
+
+    private async Task DeleteNotificationSubscriptionAsync()
+    {
+        try
+        {
+            await subscriber.Unsubscribe();
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+    }
 }

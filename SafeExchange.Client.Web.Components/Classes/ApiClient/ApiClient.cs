@@ -31,6 +31,16 @@ namespace SafeExchange.Client.Web.Components
             };
         }
 
+        public async Task<NotificationSubscriptionReply> Subscribe(NotificationSubscription subscription)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<NotificationSubscriptionReply> Unsubscribe(NotificationSubscription subscription)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ApiSecretReply> CreateSecretDataAsync(string objectName, SecretDataInput data)
         {
             var responseMessage = await client.PostAsJsonAsync($"secrets/{objectName}", data);
