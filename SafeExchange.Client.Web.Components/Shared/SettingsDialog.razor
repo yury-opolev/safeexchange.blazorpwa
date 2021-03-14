@@ -16,12 +16,12 @@
                 <div class="mx-2 settings-row">
                     <div>Notifications:</div>
                     <div>
-                        <div class="btn-group btn-group-toggle" data-toggle="buttons">
-                            <label class="btn btn-outline-primary">
-                                <input type="radio" name="options" id="enableNotifications"> Enable
+                        <div class="btn-group" data-toggle="buttons">
+                            <label class="btn btn-outline-primary @(this.IsSubscribed ? "active" : "")">
+                                <input type="button" name="options" disabled="@this.IsInProgress" @onclick="@(e => this.SubscribeAsync())"> Enabled
                             </label>
-                            <label class="btn btn-outline-primary active">
-                                <input type="radio" name="options" id="disableNotifications" checked> Disable
+                            <label class="btn btn-outline-primary @(this.IsSubscribed ? "" : "active")">
+                                <input type="button" name="options" disabled="@this.IsInProgress" @onclick="@(e => this.UnsubscribeAsync())"> Disabled
                             </label>
                         </div>
                     </div>
@@ -36,32 +36,59 @@
 
 @code {
 
-    private async Task<bool> IsSubscribedAsync()
+    private bool IsSubscribed { get; set; }
+
+    private bool IsInProgress { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        return await subscriber.IsSubscribed();
+        this.IsSubscribed = await subscriber.IsSubscribed();
+        this.IsInProgress = false;
     }
 
-    private async Task RequestNotificationSubscriptionAsync()
+    private async Task SubscribeAsync()
     {
+        if (this.IsSubscribed)
+        {
+            return;
+        }
+
+        this.IsInProgress = true;
         try
         {
             var subscription = await subscriber.Subscribe();
+            this.IsSubscribed = true;
         }
         catch (AccessTokenNotAvailableException ex)
         {
             ex.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
         }
     }
 
-    private async Task DeleteNotificationSubscriptionAsync()
+    private async Task UnsubscribeAsync()
     {
+        if (!this.IsSubscribed)
+        {
+            return;
+        }
+
+        this.IsInProgress = true;
         try
         {
             await subscriber.Unsubscribe();
+            this.IsSubscribed = false;
         }
         catch (AccessTokenNotAvailableException ex)
         {
             ex.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
         }
     }
 }
