@@ -20,7 +20,8 @@ namespace SafeExchange.Client.Web.Components
         {
             this.apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
             this.pushNotifications = pushNotifications ?? throw new ArgumentNullException(nameof(pushNotifications));
-            this.applicationServerPublicKey = configuration?.GetSection("")?.GetValue<string>("") ?? throw new ArgumentException($"Application server public key is not configured.");
+            var appServerPublicKey = configuration?.GetSection("WebPushApi")?.GetValue<string>("AppServerPublicKey");
+            this.applicationServerPublicKey = appServerPublicKey ?? throw new ArgumentException($"Application server public key is not configured.");
         }
 
         public async Task<bool> IsSubscribed()

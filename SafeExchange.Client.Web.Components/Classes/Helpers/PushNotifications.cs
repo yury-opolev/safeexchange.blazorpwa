@@ -15,7 +15,7 @@ namespace SafeExchange.Client.Web.Components
         public PushNotifications(IJSRuntime jsRuntime)
         {
             moduleTask = new(() => jsRuntime.InvokeAsync<IJSObjectReference>(
-               "import", "./_content/EasyChat.Components/pushNotifications.js").AsTask());
+               "import", "./_content/SafeExchange.Client.Web.Components/pushNotifications.js").AsTask());
         }
 
         public async ValueTask<NotificationSubscription> RequestSubscription(string applicationServerPublicKey)
