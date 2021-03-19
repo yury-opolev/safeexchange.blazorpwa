@@ -8,10 +8,6 @@ namespace SafeExchange.Client.Web.Components
 
     public class NotificationSubscription
     {
-        public long NotificationSubscriptionId { get; set; }
-
-        public string UserId { get; set; }
-
         public string Url { get; set; }
 
         public string P256dh { get; set; }
@@ -20,7 +16,7 @@ namespace SafeExchange.Client.Web.Components
 
         public override string ToString()
         {
-            return $"Id:{this.NotificationSubscriptionId}, UserId:{this.UserId}, Endpoint:{this.Url.Substring(0, 30)}...";
+            return $"Endpoint:{this.Url.Substring(0, 30)}..., , P256dh Length:{this.P256dh?.Length ?? 0}, Auth Length:{this.Auth?.Length ?? 0}";
         }
     }
 }
