@@ -31,13 +31,13 @@ namespace SafeExchange.Client.Web.Components
             };
         }
 
-        public async Task<NotificationSubscriptionReply> Subscribe(NotificationSubscription subscription)
+        public async Task<ApiNotificationSubscriptionReply> Subscribe(NotificationSubscription subscription)
         {
             var responseMessage = await client.PostAsJsonAsync($"notifications", subscription);
             return await this.HandleSubscriptionResponseAsync(responseMessage);
         }
 
-        public async Task<NotificationSubscriptionReply> Unsubscribe(NotificationSubscription subscription)
+        public async Task<ApiNotificationSubscriptionReply> Unsubscribe(NotificationSubscription subscription)
         {
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Delete, $"notifications")
             {
@@ -45,6 +45,12 @@ namespace SafeExchange.Client.Web.Components
             };
             var responseMessage = await client.SendAsync(httpRequestMessage);
             return await this.HandleSubscriptionResponseAsync(responseMessage);
+        }
+
+        public async Task<ApiAccessRequestsListReply> GetAccessRequestsAsync()
+        {
+            var responseMessage = await client.GetAsync($"accessrequests");
+            return await this.HandleAccessRequestsListAsync(responseMessage);
         }
 
         public async Task<ApiSecretReply> CreateSecretDataAsync(string objectName, SecretDataInput data)
@@ -166,22 +172,44 @@ namespace SafeExchange.Client.Web.Components
             };
         }
 
-        private async Task<NotificationSubscriptionReply> HandleSubscriptionResponseAsync(HttpResponseMessage message)
+        private async Task<ApiNotificationSubscriptionReply> HandleSubscriptionResponseAsync(HttpResponseMessage message)
         {
             if (message.IsSuccessStatusCode)
             {
-                return await message.Content.ReadFromJsonAsync<NotificationSubscriptionReply>();
+                return await message.Content.ReadFromJsonAsync<ApiNotificationSubscriptionReply>();
             }
 
             var responseContent = await message.Content.ReadAsStringAsync();
-            var response = JsonSerializer.Deserialize<NotificationSubscriptionReply>(responseContent, this.jsonOptions);
+            var response = JsonSerializer.Deserialize<ApiNotificationSubscriptionReply>(responseContent, this.jsonOptions);
 
             if (!string.IsNullOrEmpty(response.Status))
             {
                 return response;
             }
 
-            return new NotificationSubscriptionReply()
+            return new ApiNotificationSubscriptionReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiAccessRequestsListReply> HandleAccessRequestsListAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiAccessRequestsListReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiAccessRequestsListReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiAccessRequestsListReply()
             {
                 Status = message.StatusCode.ToString(),
                 Error = responseContent

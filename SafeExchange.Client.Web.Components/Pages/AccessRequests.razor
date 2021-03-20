@@ -1,5 +1,119 @@
-﻿<h3>AccessRequests</h3>
+﻿@using SafeExchange.Client.Web.Components.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@inject StateContainer StateContainer
+@inject ApiClient apiClient
+
+@if (this.IsInProgress)
+{
+    <p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+    </p>
+}
+
+@if (this.Notification != null)
+{
+    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+@if (this.AccessRequestsList != null)
+{
+    <ul class="list-group list-group-flush">
+        @for (int i = 0; i < this.AccessRequestsList.Count; i++)
+        {
+            var accessRequest = this.AccessRequestsList[i];
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <div>@(accessRequest.UserName)</div>
+                    <div><strong>@(accessRequest.SecretName)</strong></div>
+                    <small class="text-secondary my-0">@(accessRequest.Permissions)</small>
+                    <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
+                </div>
+                <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
+                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.GrantAccess(accessRequest))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RejectRequest(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
+                </div>
+            </li>
+        }
+    </ul>
+
+    @if (this.AccessRequestsList.Count == 0)
+    {
+        <p>
+            - No access requests -
+        </p>
+    }
+}
 
 @code {
 
+    private NotificationData Notification;
+
+    private bool IsInProgress;
+
+    private IList<AccessRequestData> AccessRequestsList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.TakeNotification();
+
+        this.StateContainer.SetCurrentPageHeader($"Access Requests");
+        await this.FetchAccessRequestsAsync();
+    }
+
+    private async Task FetchAccessRequestsAsync()
+    {
+        this.IsInProgress = true;
+        try
+        {
+            var accessRequests = await apiClient.GetAccessRequestsAsync();
+
+            if (!"ok".Equals(accessRequests.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = accessRequests.Status,
+                    Message = accessRequests.Error
+                };
+                return;
+            }
+
+            this.AccessRequestsList = new List<AccessRequestData>(accessRequests.AccessRequests.Count);
+            foreach (var accessRequest in accessRequests.AccessRequests)
+            {
+                this.AccessRequestsList.Add(accessRequest);
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+
+    private void GrantAccess(AccessRequestData accessRequest)
+    {
+        //...
+    }
+
+    private void RejectRequest(AccessRequestData accessRequest)
+    {
+        //...
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
+    }
 }

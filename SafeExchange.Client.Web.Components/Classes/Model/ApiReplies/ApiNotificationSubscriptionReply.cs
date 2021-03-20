@@ -6,7 +6,7 @@ namespace SafeExchange.Client.Web.Components
 {
     using System;
 
-    public class NotificationSubscriptionReply
+    public class ApiNotificationSubscriptionReply
     {
         public string Status { get; set; }
 
