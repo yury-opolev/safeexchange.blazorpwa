@@ -23,33 +23,68 @@
     </div>
 }
 
-@if (this.AccessRequestsList != null)
+@if (this.IncomingAccessRequests != null)
 {
-    <ul class="list-group list-group-flush">
-        @for (int i = 0; i < this.AccessRequestsList.Count; i++)
-        {
-            var accessRequest = this.AccessRequestsList[i];
-            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                <div>
-                    <div>@(accessRequest.UserName)</div>
-                    <div><strong>@(accessRequest.SecretName)</strong></div>
-                    <small class="text-secondary my-0">@(accessRequest.Permissions)</small>
-                    <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
-                </div>
-                <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
-                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.GrantAccess(accessRequest))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
-                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RejectRequest(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
-                </div>
+    <div class="container-fluid">
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="incoming-tab" data-toggle="tab" href="#incoming" role="tab" aria-controls="incoming" aria-selected="true">Incoming</a>
             </li>
-        }
-    </ul>
+            <li class="nav-item">
+                <a class="nav-link" id="outgoing-tab" data-toggle="tab" href="#outgoing" role="tab" aria-controls="outgoing" aria-selected="false">Outgoing</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="incoming" role="tabpanel" aria-labelledby="incoming-tab">
+                <ul class="list-group list-group-flush">
+                    @foreach (var accessRequest in this.IncomingAccessRequests)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                            <div>
+                                <div>@(accessRequest.UserName)</div>
+                                <div><strong>@(accessRequest.SecretName)</strong></div>
+                                <small class="text-secondary my-0">@(accessRequest.Permissions)</small>
+                                <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
+                            </div>
+                            <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
+                                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.GrantAccess(accessRequest))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
+                                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RejectRequest(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
+                            </div>
+                        </li>
+                    }
+                </ul>
 
-    @if (this.AccessRequestsList.Count == 0)
-    {
-        <p>
-            - No access requests -
-        </p>
-    }
+                @if (this.IncomingAccessRequests.Count == 0)
+                {
+                    <p>
+                        - No incoming access requests -
+                    </p>
+                }
+            </div>
+            <div class="tab-pane fade" id="outgoing" role="tabpanel" aria-labelledby="outgoing-tab">
+                <ul class="list-group list-group-flush">
+                    @foreach (var accessRequest in this.OutgoingAccessRequests)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                            <div>
+                                <div>@(accessRequest.UserName)</div>
+                                <div><strong>@(accessRequest.SecretName)</strong></div>
+                                <small class="text-secondary my-0">@(accessRequest.Permissions)</small>
+                                <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+
+                @if (this.OutgoingAccessRequests.Count == 0)
+                {
+                    <p>
+                        - No outgoing access requests -
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
 }
 
 @code {
@@ -58,7 +93,9 @@
 
     private bool IsInProgress;
 
-    private IList<AccessRequestData> AccessRequestsList;
+    private IList<AccessRequestData> IncomingAccessRequests;
+
+    private IList<AccessRequestData> OutgoingAccessRequests;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,10 +123,18 @@
                 return;
             }
 
-            this.AccessRequestsList = new List<AccessRequestData>(accessRequests.AccessRequests.Count);
+            this.IncomingAccessRequests = new List<AccessRequestData>(accessRequests.AccessRequests.Count);
+            this.OutgoingAccessRequests = new List<AccessRequestData>(accessRequests.AccessRequests.Count);
             foreach (var accessRequest in accessRequests.AccessRequests)
             {
-                this.AccessRequestsList.Add(accessRequest);
+                if (accessRequest.RequestType == AccessRequestType.Incoming)
+                {
+                    this.IncomingAccessRequests.Add(accessRequest);
+                }
+                else
+                {
+                    this.OutgoingAccessRequests.Add(accessRequest);
+                }
             }
         }
         catch (AccessTokenNotAvailableException exception)
