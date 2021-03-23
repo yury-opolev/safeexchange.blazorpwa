@@ -56,7 +56,7 @@
 
                 @if (this.IncomingAccessRequests.Count == 0)
                 {
-                    <p>
+                    <p class="my-4">
                         - No incoming access requests -
                     </p>
                 }
@@ -70,6 +70,7 @@
                                 <div>@(accessRequest.UserName)</div>
                                 <div><strong>@(accessRequest.SecretName)</strong></div>
                                 <small class="text-secondary my-0">@(accessRequest.Permissions)</small>
+                                <small>&nbsp;-&nbsp;</small>
                                 <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
                         </li>
@@ -78,16 +79,40 @@
 
                 @if (this.OutgoingAccessRequests.Count == 0)
                 {
-                    <p>
+                    <p class="my-4">
                         - No outgoing access requests -
                     </p>
                 }
 
-                <p>
-                    <div class="py-2">
-                        <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="RequestAccess"><span class="oi oi-cloud-upload"></span>&nbsp; Request Access</button>
+                <p class="my-4"></p>
+
+                <div class="card bg-light mb-3">
+                    <div class="card-header"><strong>Create new access request</strong></div>
+                    <div class="card-body">
+
+                        <EditForm Model="@this.AccessRequestInput" OnValidSubmit="@RequestAccessAsync">
+                            <DataAnnotationsValidator />
+                            <p>
+                                <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="this.AccessRequestInput.SecretId" placeholder="Secret Id" />
+                                <ValidationMessage For="@(() => this.AccessRequestInput.SecretId)" />
+                            </p>
+                            <p>
+                                <label>
+                                    Permissions:
+                                    <InputSelect class="form-control" disabled="@IsInProgress" @bind-Value="this.AccessRequestInput.Permission">
+                                        <option>Read</option>
+                                        <option>Read,Write</option>
+                                        <option>Read,Write,GrantAccess</option>
+                                        <option>Read,Write,GrantAccess,RevokeAccess</option>
+                                    </InputSelect>
+                                </label>
+                            </p>
+                            <p>
+                                <button class="btn btn-outline-primary" type="submit" disabled="@IsInProgress"><span class="oi oi-cloud-upload"></span>&nbsp; Request Access</button>
+                            </p>
+                        </EditForm>
                     </div>
-                </p>
+                </div>
             </div>
         </div>
     </div>
@@ -102,6 +127,8 @@
     private IList<AccessRequestData> IncomingAccessRequests;
 
     private IList<AccessRequestData> OutgoingAccessRequests;
+
+    private AccessRequestDataInput AccessRequestInput { get; set; } = new AccessRequestDataInput();
 
     protected override async Task OnInitializedAsync()
     {
@@ -153,9 +180,44 @@
         }
     }
 
-    private void RequestAccess()
+    private async Task RequestAccessAsync()
     {
-        //...
+        this.IsInProgress = true;
+        try
+        {
+            var reply = await apiClient.CreateAccessRequestAsync(this.AccessRequestInput);
+
+            if (!"ok".Equals(reply.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = reply.Status,
+                    Message = reply.Error
+                };
+                return;
+            }
+
+            this.AccessRequestInput.SecretId = string.Empty;
+            this.AccessRequestInput.Permission = string.Empty;
+
+            this.Notification = new NotificationData()
+            {
+                Type = NotificationType.Success,
+                Status = "ok",
+                Message = "Access request created."
+            };
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+
+        await FetchAccessRequestsAsync();
     }
 
     private void GrantAccess(AccessRequestData accessRequest)
