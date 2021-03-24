@@ -3,6 +3,7 @@
 
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
+@inject NavigationManager NavManager
 
 @if (this.IsInProgress)
 {
@@ -84,35 +85,6 @@
                     </p>
                 }
 
-                <p class="my-4"></p>
-
-                <div class="card bg-light mb-3">
-                    <div class="card-header"><strong>Create new access request</strong></div>
-                    <div class="card-body">
-
-                        <EditForm Model="@this.AccessRequestInput" OnValidSubmit="@RequestAccessAsync">
-                            <DataAnnotationsValidator />
-                            <p>
-                                <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="this.AccessRequestInput.SecretId" placeholder="Secret Id" />
-                                <ValidationMessage For="@(() => this.AccessRequestInput.SecretId)" />
-                            </p>
-                            <p>
-                                <label>
-                                    Permissions:
-                                    <InputSelect class="form-control" disabled="@IsInProgress" @bind-Value="this.AccessRequestInput.Permission">
-                                        <option>Read</option>
-                                        <option>Read,Write</option>
-                                        <option>Read,Write,GrantAccess</option>
-                                        <option>Read,Write,GrantAccess,RevokeAccess</option>
-                                    </InputSelect>
-                                </label>
-                            </p>
-                            <p>
-                                <button class="btn btn-outline-primary" type="submit" disabled="@IsInProgress"><span class="oi oi-cloud-upload"></span>&nbsp; Request Access</button>
-                            </p>
-                        </EditForm>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -128,13 +100,11 @@
 
     private IList<AccessRequestData> OutgoingAccessRequests;
 
-    private AccessRequestDataInput AccessRequestInput { get; set; } = new AccessRequestDataInput();
-
     protected override async Task OnInitializedAsync()
     {
         this.StateContainer.TakeNotification();
-
         this.StateContainer.SetCurrentPageHeader($"Access Requests");
+
         await this.FetchAccessRequestsAsync();
     }
 
@@ -178,46 +148,6 @@
         {
             this.IsInProgress = false;
         }
-    }
-
-    private async Task RequestAccessAsync()
-    {
-        this.IsInProgress = true;
-        try
-        {
-            var reply = await apiClient.CreateAccessRequestAsync(this.AccessRequestInput);
-
-            if (!"ok".Equals(reply.Status))
-            {
-                this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = reply.Status,
-                    Message = reply.Error
-                };
-                return;
-            }
-
-            this.AccessRequestInput.SecretId = string.Empty;
-            this.AccessRequestInput.Permission = string.Empty;
-
-            this.Notification = new NotificationData()
-            {
-                Type = NotificationType.Success,
-                Status = "success",
-                Message = "Access request created."
-            };
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
-        }
-        finally
-        {
-            this.IsInProgress = false;
-        }
-
-        await FetchAccessRequestsAsync();
     }
 
     private async Task ProcessAccessRequestAsync(AccessRequestData accessRequest, bool grant)
