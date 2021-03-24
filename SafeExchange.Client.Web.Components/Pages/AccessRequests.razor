@@ -47,8 +47,8 @@
                                 <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
                             <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
-                                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.GrantAccess(accessRequest))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
-                                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RejectRequest(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
+                                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, true))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
+                                <button class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, false))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
                             </div>
                         </li>
                     }
@@ -204,7 +204,7 @@
             this.Notification = new NotificationData()
             {
                 Type = NotificationType.Success,
-                Status = "ok",
+                Status = "success",
                 Message = "Access request created."
             };
         }
@@ -220,14 +220,47 @@
         await FetchAccessRequestsAsync();
     }
 
-    private void GrantAccess(AccessRequestData accessRequest)
+    private async Task ProcessAccessRequestAsync(AccessRequestData accessRequest, bool grant)
     {
-        //...
-    }
+        this.IsInProgress = true;
+        try
+        {
+            var processingInput = new AccessRequestProcessingDataInput
+            {
+                RequestId = accessRequest.RequestId,
+                SecretId = accessRequest.SecretName,
+                Grant = grant
+            };
+            var reply = await apiClient.ProcessAccessRequestAsync(processingInput);
 
-    private void RejectRequest(AccessRequestData accessRequest)
-    {
-        //...
+            if (!"ok".Equals(reply.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = reply.Status,
+                    Message = reply.Error
+                };
+                return;
+            }
+
+            this.Notification = new NotificationData()
+            {
+                Type = NotificationType.Success,
+                Status = "success",
+                Message = (grant ? "Access granted." : "Request rejected.")
+            };
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+
+        await FetchAccessRequestsAsync();
     }
 
     public void DismissNotification()
