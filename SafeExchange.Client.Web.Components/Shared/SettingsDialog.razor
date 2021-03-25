@@ -1,7 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+@using SafeExchange.Client.Web.Components.Model;
 
 @inject NotificationsSubscriber subscriber
-
 <!-- Modal -->
 <div class="modal fade" id="settingsDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -13,18 +13,17 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="mx-2 settings-row">
-                    <div>Notifications:</div>
-                    <div>
-                        <div class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-outline-primary @(this.IsSubscribed ? "active" : "")">
-                                <input type="button" name="options" disabled="@this.IsInProgress" @onclick="@(e => this.SubscribeAsync())"> Enabled
-                            </label>
-                            <label class="btn btn-outline-primary @(this.IsSubscribed ? "" : "active")">
-                                <input type="button" name="options" disabled="@this.IsInProgress" @onclick="@(e => this.UnsubscribeAsync())"> Disabled
-                            </label>
+                <div class="mx-2">
+                    <EditForm Model="@this.SubState">
+                        <div>Notifications:</div>
+                        <div class="my-2 mx-4">
+                            <InputRadioGroup @bind-Value="this.SubState" disabled="@this.IsInProgress">
+                                <InputRadio Value="SubscriptionState.Subscribed" /> Enabled
+                                <br>
+                                <InputRadio Value="SubscriptionState.NotSubscribed" /> Disabled
+                            </InputRadioGroup>
                         </div>
-                    </div>
+                    </EditForm>
                 </div>
             </div>
             <div class="modal-footer">
@@ -36,32 +35,62 @@
 
 @code {
 
-    private bool IsSubscribed { get; set; }
+    private SubscriptionState subState;
+
+    private SubscriptionState SubState
+    {
+        get => this.subState;
+
+        set
+        {
+            if (value == this.subState)
+            {
+                return;
+            }
+
+            _ = this.OnSubscriptionChangeAsync(value);
+        }
+    }
 
     private bool IsInProgress { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        this.IsSubscribed = await subscriber.IsSubscribed();
+        var isSubscribed = await subscriber.IsSubscribed();
+        this.subState = isSubscribed ? SubscriptionState.Subscribed : SubscriptionState.NotSubscribed;
         this.IsInProgress = false;
     }
 
-    private async Task SubscribeAsync()
+    private async Task OnSubscriptionChangeAsync(SubscriptionState updatedState)
     {
-        if (this.IsSubscribed)
+        if (updatedState == SubscriptionState.Subscribed)
         {
-            return;
+            updatedState = await this.SubscribeAsync();
+        }
+        else
+        {
+            updatedState = await this.UnsubscribeAsync();
         }
 
+        this.subState = updatedState;
+    }
+
+    private async Task<SubscriptionState> SubscribeAsync()
+    {
         this.IsInProgress = true;
         try
         {
             var subscription = await subscriber.Subscribe();
-            this.IsSubscribed = true;
+            return SubscriptionState.Subscribed;
         }
         catch (AccessTokenNotAvailableException ex)
         {
             ex.Redirect();
+            return SubscriptionState.NotSubscribed;
+        }
+        catch (Exception)
+        {
+            return SubscriptionState.NotSubscribed;
         }
         finally
         {
@@ -69,22 +98,22 @@
         }
     }
 
-    private async Task UnsubscribeAsync()
+    private async Task<SubscriptionState> UnsubscribeAsync()
     {
-        if (!this.IsSubscribed)
-        {
-            return;
-        }
-
         this.IsInProgress = true;
         try
         {
             await subscriber.Unsubscribe();
-            this.IsSubscribed = false;
+            return SubscriptionState.NotSubscribed;
         }
         catch (AccessTokenNotAvailableException ex)
         {
             ex.Redirect();
+            return SubscriptionState.Subscribed;
+        }
+        catch (Exception)
+        {
+            return SubscriptionState.Subscribed;
         }
         finally
         {
