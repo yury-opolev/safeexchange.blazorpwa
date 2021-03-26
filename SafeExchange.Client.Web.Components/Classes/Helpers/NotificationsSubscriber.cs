@@ -5,6 +5,7 @@
 namespace SafeExchange.Client.Web.Components
 {
     using Microsoft.Extensions.Configuration;
+    using SafeExchange.Client.Web.Components.Model;
     using System;
     using System.Threading.Tasks;
 
@@ -30,34 +31,50 @@ namespace SafeExchange.Client.Web.Components
             return subscription != default(NotificationSubscription);
         }
 
-        public async Task<NotificationSubscription> Subscribe()
+        public async Task<NotificationSubscriptionOperationResult> Subscribe()
         { 
             var subscription = await pushNotifications.RequestSubscription(applicationServerPublicKey);
-            if (subscription == null)
+            if (subscription == default(NotificationSubscription))
             {
-                return null;
+                return new NotificationSubscriptionOperationResult()
+                {
+                    Status = "no_content",
+                    Error = "Could not request browser push notifications."
+                };
             }
 
             var response = await apiClient.Subscribe(subscription);
             if (!response.Status.Equals("ok"))
             {
                 await pushNotifications.DeleteSubscription();
-                return null;
             }
 
-            return subscription;
+            return new NotificationSubscriptionOperationResult()
+            {
+                Status = response.Status,
+                Error = response.Error
+            };
         }
 
-        public async Task Unsubscribe()
+        public async Task<NotificationSubscriptionOperationResult> Unsubscribe()
         {
             var subscription = await pushNotifications.GetSubscription();
-            if (subscription == null)
+            if (subscription == default(NotificationSubscription))
             {
-                return;
+                return new NotificationSubscriptionOperationResult()
+                {
+                    Status = "no_content",
+                    Error = "Not found browser push notifications subscription."
+                };
             }
-
+            
             await pushNotifications.DeleteSubscription();
-            await apiClient.Unsubscribe(subscription);
+            var response = await apiClient.Unsubscribe(subscription);
+            return new NotificationSubscriptionOperationResult()
+            {
+                Status = response.Status,
+                Error = response.Error
+            };
         }
     }
 }

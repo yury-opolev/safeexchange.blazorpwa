@@ -17,17 +17,31 @@
                     <EditForm Model="@this.SubState">
                         <div>Notifications:</div>
                         <div class="my-2 mx-4">
-                            <InputRadioGroup @bind-Value="this.SubState" disabled="@this.IsInProgress">
-                                <InputRadio Value="SubscriptionState.Subscribed" /> Enabled
+                            <InputRadioGroup @bind-Value="this.SubState">
+                                <InputRadio Value="SubscriptionState.Subscribed" disabled="@this.IsInProgress" /> Enabled
                                 <br>
-                                <InputRadio Value="SubscriptionState.NotSubscribed" /> Disabled
+                                <InputRadio Value="SubscriptionState.NotSubscribed" disabled="@this.IsInProgress" /> Disabled
                             </InputRadioGroup>
                         </div>
                     </EditForm>
                 </div>
+                @if (this.IsInProgress)
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="sr-only">Applying...</span>
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(this.AlertMessage))
+                {
+                    <div class="alert alert-warning" role="alert">
+                        <strong>@this.AlertHeader</strong>&nbsp; @this.AlertMessage
+                    </div>
+                }
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" disabled="@this.IsInProgress" >Close</button>
             </div>
         </div>
     </div>
@@ -54,6 +68,10 @@
 
     private bool IsInProgress { get; set; }
 
+    private string AlertHeader { get; set; }
+
+    private string AlertMessage { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         var isSubscribed = await subscriber.IsSubscribed();
@@ -65,59 +83,81 @@
     {
         if (updatedState == SubscriptionState.Subscribed)
         {
-            updatedState = await this.SubscribeAsync();
+            await this.SubscribeAsync();
         }
         else
         {
-            updatedState = await this.UnsubscribeAsync();
+            await this.UnsubscribeAsync();
         }
-
-        this.subState = updatedState;
     }
 
-    private async Task<SubscriptionState> SubscribeAsync()
+    private async Task SubscribeAsync()
     {
+        var resultingState = SubscriptionState.NotSubscribed;
         this.IsInProgress = true;
+        this.AlertMessage = string.Empty;
         try
         {
-            var subscription = await subscriber.Subscribe();
-            return SubscriptionState.Subscribed;
+            var result = await subscriber.Subscribe();
+            if (result.Status == "ok")
+            {
+                resultingState = SubscriptionState.Subscribed;
+            }
+            else
+            {
+                this.AlertHeader = result.Status;
+                this.AlertMessage = result.Error;
+            }
         }
         catch (AccessTokenNotAvailableException ex)
         {
             ex.Redirect();
-            return SubscriptionState.NotSubscribed;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return SubscriptionState.NotSubscribed;
+            this.AlertHeader = "exception";
+            this.AlertMessage = ex.Message;
         }
         finally
         {
+            this.subState = resultingState;
             this.IsInProgress = false;
+            this.StateHasChanged();
         }
     }
 
-    private async Task<SubscriptionState> UnsubscribeAsync()
+    private async Task UnsubscribeAsync()
     {
+        var resultingState = SubscriptionState.Subscribed;
         this.IsInProgress = true;
+        this.AlertMessage = string.Empty;
         try
         {
-            await subscriber.Unsubscribe();
-            return SubscriptionState.NotSubscribed;
+            var result = await subscriber.Unsubscribe();
+            if (result.Status == "ok")
+            {
+                resultingState = SubscriptionState.NotSubscribed;
+            }
+            else
+            {
+                this.AlertHeader = result.Status;
+                this.AlertMessage = result.Error;
+            }
         }
         catch (AccessTokenNotAvailableException ex)
         {
             ex.Redirect();
-            return SubscriptionState.Subscribed;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return SubscriptionState.Subscribed;
+            this.AlertHeader = "exception";
+            this.AlertMessage = ex.Message;
         }
         finally
         {
+            this.subState = resultingState;
             this.IsInProgress = false;
+            this.StateHasChanged();
         }
     }
 }
