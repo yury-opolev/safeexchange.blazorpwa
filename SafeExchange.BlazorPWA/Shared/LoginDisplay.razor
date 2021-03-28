@@ -16,7 +16,7 @@
                     <p>@context.User.Identity.Name</p>
                     <small>@TokenHandler.GetName(context.User)</small>
                 </div>
-                <button type="button" class="btn btn-outline-secondary" data-toggle="modal" data-target="#settingsDialog">Settings</button>
+                <button type="button" class="btn btn-outline-secondary" data-toggle="modal" data-target="#settingsDialog"><i class="oi oi-cog"></i><span>&nbsp; Settings</span></button>
             </form>
             <div class="dropdown-divider"></div>
             <button class="nav-link btn btn-link" @onclick="BeginSignOut">Sign out</button>
