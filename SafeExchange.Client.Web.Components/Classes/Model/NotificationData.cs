@@ -16,6 +16,10 @@ namespace SafeExchange.Client.Web.Components.Model
 
         public string CopyableUri { get; set; }
 
+        public string ButtonText { get; set; }
+
+        public string ButtonUri { get; set; }
+
         public string GetAlertClass()
         {
             switch (this.Type)

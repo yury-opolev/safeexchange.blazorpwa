@@ -39,12 +39,24 @@
 
 @if (this.Notification != null)
 {
-    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
-        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <p>
+            <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+        </p>
+        @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+        {
+            <hr>
+            <p>
+                <button class="btn btn-warning" type="button" disabled="@IsInProgress" @onclick="() => this.NavManager.NavigateTo(this.Notification.ButtonUri)">
+                    <span>@this.Notification.ButtonText</span>
+                </button>
+            </p>
+        }
         <button type="button" class="close" @onclick="DismissNotification">
             <span aria-hidden="true">&times;</span>
         </button>
     </div>
+
 }
 
 @if (this.inputModel != null)
@@ -267,27 +279,29 @@
         try
         {
             var accessData = await apiClient.ReadAccessAsync(objectName);
-
             if (!"ok".Equals(accessData.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = accessData.Status,
-                    Message = accessData.Error
+                    Message = accessData.Error,
+                    ButtonText = "unauthorized".Equals(accessData.Status) ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri("Read,Write")
                 };
                 return;
             }
 
             var secretData = await apiClient.GetSecretDataAsync(objectName);
-
             if (!"ok".Equals(secretData.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = secretData.Status,
-                    Message = secretData.Error
+                    Message = secretData.Error,
+                    ButtonText = "unauthorized".Equals(secretData.Status) ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri("Read,Write")
                 };
                 return;
             }
@@ -342,31 +356,33 @@
         try
         {
             var secretData = await apiClient.UpdateSecretDataAsync(this.inputModel.Name, inputData);
-
             if (!"ok".Equals(secretData.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = secretData.Status,
-                    Message = secretData.Error
+                    Message = secretData.Error,
+                    ButtonText = "unauthorized".Equals(secretData.Status) ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri("Read,Write")
                 };
                 return;
             }
 
+            var missingAccess = string.Empty;
             foreach (var deletedIndex in this.DeletedAccessItems)
             {
                 var accessItem = this.inputModel.AccessList[deletedIndex];
                 var accessReply = await apiClient.RevokeAccessAsync(this.inputModel.Name, accessItem);
                 if (!"ok".Equals(accessReply.Status))
                 {
-                    // TODO ...
+                    missingAccess = "Read,Write,GrantAccess,RevokeAccess";
                 }
             }
 
             for (int index = 0; index < this.inputModel.AccessList.Count; index++)
             {
-                if (this.IsDeleted(index))
+                if (index < this.FixedAccessItemCount)
                 {
                     continue;
                 }
@@ -375,15 +391,18 @@
                 var accessReply = await apiClient.GrantAccessAsync(this.inputModel.Name, accessItem);
                 if (!"ok".Equals(accessReply.Status))
                 {
-                    // TODO ...
+                    missingAccess = string.IsNullOrEmpty(missingAccess) ? "Read,Write,GrantAccess" : missingAccess;
                 }
             }
 
+            var needToRequestAccess = !string.IsNullOrEmpty(missingAccess);
             var notification = new NotificationData()
             {
-                Type = NotificationType.Success,
-                Status = "Success",
-                Message = $"Secret '{this.inputModel.Name}' updated successfully"
+                Type = needToRequestAccess ? NotificationType.Warning : NotificationType.Success,
+                Status = needToRequestAccess ? "Success/Warning" : "Success",
+                Message = needToRequestAccess ? $"Secret '{this.inputModel.Name}' updated successfully, but access was not updated." : $"Secret '{this.inputModel.Name}' updated successfully",
+                ButtonText = needToRequestAccess ? "Request Access" : string.Empty,
+                ButtonUri = this.CreateAccessRequestUri(missingAccess)
             };
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
@@ -439,5 +458,10 @@
     public void DismissNotification()
     {
         this.Notification = null;
+    }
+
+    private string CreateAccessRequestUri(string permissions)
+    {
+        return $"addrequest?subject={this.ObjectName}&permission={permissions}";
     }
 }

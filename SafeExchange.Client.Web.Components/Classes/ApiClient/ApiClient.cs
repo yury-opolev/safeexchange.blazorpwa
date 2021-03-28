@@ -31,6 +31,41 @@ namespace SafeExchange.Client.Web.Components
             };
         }
 
+        public async Task<ApiNotificationSubscriptionReply> Subscribe(NotificationSubscription subscription)
+        {
+            var responseMessage = await client.PostAsJsonAsync($"notifications", subscription);
+            return await this.HandleSubscriptionResponseAsync(responseMessage);
+        }
+
+        public async Task<ApiNotificationSubscriptionReply> Unsubscribe(NotificationSubscription subscription)
+        {
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Delete, $"notifications")
+            {
+                Content = JsonContent.Create(subscription, mediaType: null, jsonOptions)
+            };
+            var responseMessage = await client.SendAsync(httpRequestMessage);
+            return await this.HandleSubscriptionResponseAsync(responseMessage);
+        }
+
+        public async Task<ApiAccessRequestsListReply> GetAccessRequestsAsync()
+        {
+            var responseMessage = await client.GetAsync($"accessrequests");
+            return await this.HandleAccessRequestsListAsync(responseMessage);
+        }
+
+        public async Task<ApiAccessRequestReply> CreateAccessRequestAsync(AccessRequestDataInput data)
+        {
+            var responseMessage = await client.PostAsJsonAsync($"accessrequest", data);
+            return await this.HandleAccessRequestResponseAsync(responseMessage);
+        }
+
+        public async Task<ApiAccessRequestReply> ProcessAccessRequestAsync(AccessRequestProcessingDataInput data)
+        {
+            var content = JsonContent.Create(data, mediaType: null, jsonOptions);
+            var responseMessage = await client.PatchAsync($"accessrequest", content);
+            return await this.HandleAccessRequestResponseAsync(responseMessage);
+        }
+
         public async Task<ApiSecretReply> CreateSecretDataAsync(string objectName, SecretDataInput data)
         {
             var responseMessage = await client.PostAsJsonAsync($"secrets/{objectName}", data);
@@ -144,6 +179,72 @@ namespace SafeExchange.Client.Web.Components
             }
 
             return new ApiAccessReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiNotificationSubscriptionReply> HandleSubscriptionResponseAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiNotificationSubscriptionReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiNotificationSubscriptionReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiNotificationSubscriptionReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiAccessRequestsListReply> HandleAccessRequestsListAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiAccessRequestsListReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiAccessRequestsListReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiAccessRequestsListReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiAccessRequestReply> HandleAccessRequestResponseAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiAccessRequestReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiAccessRequestReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiAccessRequestReply()
             {
                 Status = message.StatusCode.ToString(),
                 Error = responseContent

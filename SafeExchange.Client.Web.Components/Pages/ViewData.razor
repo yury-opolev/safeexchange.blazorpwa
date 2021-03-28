@@ -18,12 +18,23 @@
 
 @if (this.Notification != null)
 {
-    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
-        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
-        <button type="button" class="close" @onclick="DismissNotification">
-            <span aria-hidden="true">&times;</span>
-        </button>
-    </div>
+<div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+    <p>
+        <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+    </p>
+    @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+    {
+        <hr>
+        <p>
+            <button class="btn btn-warning" type="button" disabled="@IsInProgress" @onclick="() => this.NavManager.NavigateTo(this.Notification.ButtonUri)">
+                <span>@this.Notification.ButtonText</span>
+            </button>
+        </p>
+    }
+    <button type="button" class="close" @onclick="DismissNotification">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
 }
 
 @if (this.inputModel != null)
@@ -141,27 +152,29 @@
         try
         {
             var accessData = await apiClient.ReadAccessAsync(objectName);
-
             if (!"ok".Equals(accessData.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = accessData.Status,
-                    Message = accessData.Error
+                    Message = accessData.Error,
+                    ButtonText = "unauthorized".Equals(accessData.Status) ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri("Read")
                 };
                 return;
             }
 
             var secretData = await apiClient.GetSecretDataAsync(objectName);
-
             if (!"ok".Equals(secretData.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = secretData.Status,
-                    Message = secretData.Error
+                    Message = secretData.Error,
+                    ButtonText = "unauthorized".Equals(secretData.Status) ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri("Read")
                 };
                 return;
             }
@@ -198,6 +211,11 @@
     public void DismissNotification()
     {
         this.Notification = null;
+    }
+
+    private string CreateAccessRequestUri(string permissions)
+    {
+        return $"addrequest?subject={this.ObjectName}&permission={permissions}";
     }
 }
 

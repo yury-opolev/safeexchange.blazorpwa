@@ -5,23 +5,34 @@
 
 @if (this.Notification != null)
 {
-    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
-        @if (string.IsNullOrEmpty(this.Notification.CopyableUri))
-        {
-            <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
-        }
-        else
-        {
-            <CopyableContent Data="@this.Notification.CopyableUri">
-                <strong>@(this.Notification.Status ?? string.Empty)</strong>
-                @(this.Notification.Message ?? string.Empty):
-                <a href="@this.Notification.CopyableUri" class="alert-link"><span>Link</span></a>
-            </CopyableContent>
-        }
-        <button type="button" class="close" @onclick="DismissNotification">
-            <span aria-hidden="true">&times;</span>
-        </button>
-    </div>
+<div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+    @if (string.IsNullOrEmpty(this.Notification.CopyableUri))
+    {
+        <p>
+            <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+        </p>
+    }
+    else
+    {
+        <CopyableContent Data="@this.Notification.CopyableUri">
+            <strong>@(this.Notification.Status ?? string.Empty)</strong>
+            @(this.Notification.Message ?? string.Empty):
+            <a href="@this.Notification.CopyableUri" class="alert-link"><span>Link</span></a>
+        </CopyableContent>
+    }
+    @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+    {
+        <hr>
+        <p>
+            <button class="btn btn-warning" type="button" @onclick="() => this.NavigationManager.NavigateTo(this.Notification.ButtonUri)">
+                <span>@this.Notification.ButtonText</span>
+            </button>
+        </p>
+    }
+    <button type="button" class="close" @onclick="DismissNotification">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
 }
 
 <p>
