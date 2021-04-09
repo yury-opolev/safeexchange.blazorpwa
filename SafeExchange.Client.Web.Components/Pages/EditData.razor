@@ -401,6 +401,7 @@
                 Type = needToRequestAccess ? NotificationType.Warning : NotificationType.Success,
                 Status = needToRequestAccess ? "Success/Warning" : "Success",
                 Message = needToRequestAccess ? $"Secret '{this.inputModel.Name}' updated successfully, but access was not updated." : $"Secret '{this.inputModel.Name}' updated successfully",
+                CopyableUri = this.GetViewUri(this.inputModel.Name),
                 ButtonText = needToRequestAccess ? "Request Access" : string.Empty,
                 ButtonUri = this.CreateAccessRequestUri(missingAccess)
             };
@@ -463,5 +464,10 @@
     private string CreateAccessRequestUri(string permissions)
     {
         return $"addrequest?subject={this.ObjectName}&permission={permissions}";
+    }
+
+    private string GetViewUri(string objectName)
+    {
+        return $"{NavManager.BaseUri.TrimEnd('/')}/viewdata/{objectName}";
     }
 }
