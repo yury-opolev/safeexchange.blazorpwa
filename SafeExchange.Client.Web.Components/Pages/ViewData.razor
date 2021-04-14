@@ -39,13 +39,9 @@
 
 @if (this.inputModel != null)
 {
-    <p class="h4">
-        Value:
-    </p>
-
     <EditForm Model="@inputModel">
         <p>
-            <InputTextArea class="col" rows="10" @bind-Value="inputModel.Data.Value" placeholder="Content" readonly />
+            <InputTextArea class="col" rows="12" @bind-Value="inputModel.Data.Value" placeholder="Content" readonly />
         </p>
 
         <p class="h4">

@@ -61,15 +61,11 @@
 
 @if (this.inputModel != null)
 {
-    <p class="h4">
-        Value:
-    </p>
-
     <EditForm EditContext="@editContext" OnValidSubmit="@TryUpdateSecretAsync">
         <DataAnnotationsValidator />
 
         <p>
-            <InputTextArea class="form-control col" rows="10" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
+            <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
             <ValidationMessage For="@(() => inputModel.Data.Value)" />
         </p>
 

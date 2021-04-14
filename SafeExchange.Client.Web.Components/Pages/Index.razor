@@ -40,33 +40,36 @@
 </p>
 
 <nav class="navbar navbar-light bg-light">
-    <form class="form-inline col-12">
-        <input class="form-control mr-sm-2 col-10" type="search" placeholder="Secret Name" aria-label="Search" @bind="ObjectName">
-        <button class="btn btn-outline-success my-2 my-sm-0" type="button" @onclick="ViewObject">Search</button>
-    </form>
+    <EditForm class="form-inline col-12" Model="@this.searchInput" OnValidSubmit="@ViewObject">
+        <InputText class="form-control mr-sm-2 col-10" @bind-Value="this.searchInput.SearchText" placeholder="Secret Name" aria-label="Search" />
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit" disabled="@this.IsInProgress" >Search</button>
+    </EditForm>
 </nav>
 
 @code {
 
     private NotificationData Notification;
 
-    private string ObjectName;
+    private SearchInput searchInput;
+
+    private bool IsInProgress;
 
     protected override void OnInitialized()
     {
         this.StateContainer.SetCurrentPageHeader($"Home");
         this.Notification = this.StateContainer.TakeNotification();
+        this.searchInput = new SearchInput();
     }
 
     public void ViewObject()
     {
-        if (string.IsNullOrEmpty(this.ObjectName))
+        if (string.IsNullOrEmpty(this.searchInput.SearchText))
         {
             //...
             return;
         }
 
-        NavigationManager.NavigateTo($"viewdata/{this.ObjectName}");
+        NavigationManager.NavigateTo($"viewdata/{this.searchInput.SearchText}");
     }
 
     public void DismissNotification()
