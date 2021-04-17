@@ -1,7 +1,35 @@
 @page "/authentication/{action}"
+
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-<RemoteAuthenticatorView Action="@Action" />
+@using SafeExchange.Client.Web.Components
+@using SafeExchange.Client.Web.Components.Model
+
+@inject StateContainer StateContainerInstance
+@inject ApiClient apiClient
+
+<RemoteAuthenticatorView Action="@Action" OnLogOutSucceeded=@this.OnLogOutSucceeded />
+
+<AuthorizeView>
+    <Authorized>
+        @(this.OnAuthorized())
+    </Authorized>
+</AuthorizeView>
 
 @code{
     [Parameter] public string Action { get; set; }
+
+    public async ValueTask<string> OnAuthorized()
+    {
+        if (this.StateContainerInstance.CachedAccessRequests == default(ApiAccessRequestsListReply))
+        {
+            await this.StateContainerInstance.TryFetchAccessRequestsAsync(this.apiClient);
+        }
+
+        return string.Empty;
+    }
+
+    public void OnLogOutSucceeded()
+    {
+        this.StateContainerInstance.CachedAccessRequests = default(ApiAccessRequestsListReply);
+    }
 }

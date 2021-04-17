@@ -1,4 +1,8 @@
-﻿<div class="top-row pl-4 navbar navbar-dark">
+﻿@using SafeExchange.Client.Web.Components
+
+@inject StateContainer StateContainerInstance
+
+<div class="top-row pl-4 navbar navbar-dark">
     <a class="navbar-brand" href="">SafeExchange</a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu">
         <span class="navbar-toggler-icon"></span>
@@ -27,7 +31,22 @@
                 <li class="dropdown-divider"></li>
                 <li class="nav-item px-3">
                     <NavLink class="nav-link" href="accessrequests">
-                        <span class="oi oi-people" aria-hidden="true"></span> My Requests
+                        <span class="oi oi-people" aria-hidden="true"></span> My Requests &nbsp;
+                        @if (this.StateContainerInstance.IsFetchingAccessRequests)
+                        {
+                            <span class="spinner-border spinner-border-sm text-light" role="status"></span>
+                        }
+                        else
+                        {
+                            if (this.StateContainerInstance.IncomingAccessRequestsCount > 0)
+                            {
+                                <span class="badge badge-pill badge-danger">@(this.StateContainerInstance.IncomingAccessRequestsCount)</span><span>&nbsp;</span>
+                            }
+                            if (this.StateContainerInstance.OutgoingAccessRequestsCount > 0)
+                            {
+                                <span class="badge badge-pill badge-light">@(this.StateContainerInstance.OutgoingAccessRequestsCount)</span>
+                            }
+                        }
                     </NavLink>
                 </li>
                 <li class="nav-item px-3">
@@ -44,6 +63,16 @@
     private bool collapseNavMenu = true;
 
     private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override void OnInitialized()
+    {
+        StateContainerInstance.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateContainerInstance.OnChange -= StateHasChanged;
+    }
 
     private void ToggleNavMenu()
     {

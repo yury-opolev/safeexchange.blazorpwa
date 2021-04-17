@@ -110,10 +110,10 @@
     private async Task FetchAccessRequestsAsync()
     {
         this.IsInProgress = true;
+
         try
         {
-            var accessRequests = await apiClient.GetAccessRequestsAsync();
-
+            var accessRequests = await this.StateContainer.TryFetchAccessRequestsAsync(this.apiClient);
             if (!"ok".Equals(accessRequests.Status))
             {
                 this.Notification = new NotificationData()
