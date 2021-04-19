@@ -58,7 +58,7 @@
 
     private bool IsInProgress;
 
-    private AccessRequestDataInput AccessRequestInput { get; set; } = new AccessRequestDataInput();
+    private AccessRequestDataInput AccessRequestInput { get; set; } = new AccessRequestDataInput() { Permission = "Read" };
 
     protected override void OnInitialized()
     {
