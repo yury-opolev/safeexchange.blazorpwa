@@ -58,6 +58,6 @@ a, .btn-link {
     display: none;
 }
 
-.to-hover:hover > .to-show-on-hover {
+.to-hover:hover .to-show-on-hover {
     display: inline;
 }

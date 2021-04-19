@@ -1,8 +1,9 @@
 ﻿@inject ClipboardService ClipboardServiceInstance
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 <div class="to-hover">
     @ChildContent
-    <img class="to-show-on-hover" src="copy.svg" alt="Copy to Clipboard" width="20" @onclick="@(async () => await CopyDataToClipboard())">
+    <img class="to-show-on-hover" src="copy.svg" alt="Copy to Clipboard" width="20" data-toggle="tooltip" data-placement="top" title="Copy to clipboard" @onclick="@(async () => await CopyDataToClipboard())">
 </div>
 
 @code {
@@ -12,6 +13,14 @@
 
     [Parameter]
     public string Data { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TooltipsInitializerInstance.InitializeTooltipsAsync("Copy to clipboard", "Copied");
+        }
+    }
 
     private async Task CopyDataToClipboard()
     {
