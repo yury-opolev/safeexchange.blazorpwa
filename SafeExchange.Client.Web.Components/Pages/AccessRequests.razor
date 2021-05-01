@@ -3,6 +3,26 @@
 
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
+<!-- Modal -->
+<div class="modal fade" id="cancellationDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Caancel request</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to cancel the request?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="@(e => this.CancelAccessRequestAsync())">Proceed</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (this.IsInProgress)
 {
@@ -73,6 +93,7 @@
                                 <small>&nbsp;-&nbsp;</small>
                                 <small class="text-secondary my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
+                            <button type="button" class="btn btn-outline-danger" data-toggle="modal" data-target="#cancellationDialog" disabled="@IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Cancel</span></button>
                         </li>
                     }
                 </ul>
@@ -98,6 +119,8 @@
     private IList<AccessRequestData> IncomingAccessRequests;
 
     private IList<AccessRequestData> OutgoingAccessRequests;
+
+    private AccessRequestData RequestToCancel;
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,6 +201,54 @@
                 Type = NotificationType.Success,
                 Status = "success",
                 Message = (grant ? "Access granted." : "Request rejected.")
+            };
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+
+        await FetchAccessRequestsAsync();
+    }
+
+    private void SetRequestToCancellation(AccessRequestData accessRequest)
+    {
+        this.RequestToCancel = accessRequest;
+    }
+
+    private async Task CancelAccessRequestAsync()
+    {
+        this.IsInProgress = true;
+        try
+        {
+            var processingInput = new AccessRequestCancellationDataInput
+            {
+                RequestId = this.RequestToCancel.RequestId,
+                SecretId = this.RequestToCancel.SecretName,
+            };
+            var reply = await apiClient.CancelAccessRequestAsync(processingInput);
+
+            if (!"ok".Equals(reply.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = reply.Status,
+                    Message = reply.Error
+                };
+                return;
+            }
+
+            this.RequestToCancel = null;
+            this.Notification = new NotificationData()
+            {
+                Type = NotificationType.Success,
+                Status = "success",
+                Message = "Request cancelled."
             };
         }
         catch (AccessTokenNotAvailableException exception)

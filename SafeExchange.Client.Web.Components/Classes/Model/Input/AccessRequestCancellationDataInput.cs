@@ -1,0 +1,15 @@
+﻿/// <summary>
+/// SafeExchange
+/// </summary>
+
+namespace SafeExchange.Client.Web.Components.Model
+{
+    using System;
+
+    public class AccessRequestCancellationDataInput
+    {
+        public string SecretId { get; set; }
+
+        public string RequestId { get; set; }
+    }
+}

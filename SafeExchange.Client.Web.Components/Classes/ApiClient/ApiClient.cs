@@ -55,14 +55,24 @@ namespace SafeExchange.Client.Web.Components
 
         public async Task<ApiAccessRequestReply> CreateAccessRequestAsync(AccessRequestDataInput data)
         {
-            var responseMessage = await client.PostAsJsonAsync($"accessrequest", data);
+            var responseMessage = await client.PostAsJsonAsync("accessrequest", data);
             return await this.HandleAccessRequestResponseAsync(responseMessage);
         }
 
         public async Task<ApiAccessRequestReply> ProcessAccessRequestAsync(AccessRequestProcessingDataInput data)
         {
             var content = JsonContent.Create(data, mediaType: null, jsonOptions);
-            var responseMessage = await client.PatchAsync($"accessrequest", content);
+            var responseMessage = await client.PatchAsync("accessrequest", content);
+            return await this.HandleAccessRequestResponseAsync(responseMessage);
+        }
+
+        public async Task<ApiAccessRequestReply> CancelAccessRequestAsync(AccessRequestCancellationDataInput data)
+        {
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Delete, "accessrequest")
+            {
+                Content = JsonContent.Create(data, mediaType: null, jsonOptions)
+            };
+            var responseMessage = await client.SendAsync(httpRequestMessage);
             return await this.HandleAccessRequestResponseAsync(responseMessage);
         }
 
