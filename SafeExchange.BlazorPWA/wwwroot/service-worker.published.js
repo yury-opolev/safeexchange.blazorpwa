@@ -40,28 +40,23 @@ async function onNotificationClick(event) {
     }
 
     const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
-    const promiseChain = clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true
-    }).then((windowClients) => {
-        let matchingClient = null;
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
 
-        for (let i = 0; i < windowClients.length; i++) {
-            const windowClient = windowClients[i];
-            if (windowClient.url === urlToOpen) {
-                matchingClient = windowClient;
-                break;
-            }
+    let matchingClient = null;
+    for (let i = 0; i < windowClients.length; i++) {
+        const windowClient = windowClients[i];
+        if (windowClient.url === urlToOpen) {
+            matchingClient = windowClient;
+            break;
         }
+    }
 
-        if (matchingClient) {
-            return matchingClient.focus();
-        } else {
-            return clients.openWindow(urlToOpen);
-        }
-    });
-
-    await promiseChain;
+    if (matchingClient) {
+        await matchingClient.navigate(urlToOpen);
+        await matchingClient.focus();
+    } else {
+        await clients.openWindow(urlToOpen);
+    }
 }
 
 const cacheNamePrefix = 'offline-cache-';
