@@ -129,6 +129,18 @@ namespace SafeExchange.Client.Web.Components
             return await this.HandleAccessResponseAsync(responseMessage);
         }
 
+        public async Task<ApiAdminConfigurationReply> GetConfigurationAsync()
+        {
+            var responseMessage = await client.GetAsync("adm/configuration");
+            return await this.HandleConfigurationResponseAsync(responseMessage);
+        }
+
+        public async Task<ApiStatusReply> SetConfigurationAsync(ServiceConfiguration configuration)
+        {
+            var responseMessage = await client.PostAsJsonAsync("adm/configuration", configuration);
+            return await this.HandleStatusResponseAsync(responseMessage);
+        }
+
         private async Task<ApiSecretReply> HandleResponseAsync(HttpResponseMessage message)
         {
             if (message.IsSuccessStatusCode)
@@ -145,6 +157,50 @@ namespace SafeExchange.Client.Web.Components
             }
 
             return new ApiSecretReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiAdminConfigurationReply> HandleConfigurationResponseAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiAdminConfigurationReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiAdminConfigurationReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiAdminConfigurationReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiStatusReply> HandleStatusResponseAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiStatusReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiStatusReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiStatusReply()
             {
                 Status = message.StatusCode.ToString(),
                 Error = responseContent
