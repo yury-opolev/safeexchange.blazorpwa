@@ -87,6 +87,28 @@
 
     <p>
         <div class="form-row">
+            <label for="vapidSubject">Vapid - Subject</label>
+            <InputText id="vapidSubject" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.Subject" placeholder="Vapid - Subject" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="vapidPrivKey">Vapid - Private Key</label>
+            <InputText id="vapidPrivKey" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.PrivateKey" placeholder="Vapid - Private Key" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="vapidPubKey">Vapid - Public Key</label>
+            <InputText id="vapidPubKey" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.PublicKey" placeholder="Vapid - Public Key" />
+        </div>
+    </p>
+
+
+    <p>
+        <div class="form-row">
             <label for="adminGroups">Administrator Groups</label>
             <InputText id="adminGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminGroups" placeholder="Administrator Groups" />
         </div>
