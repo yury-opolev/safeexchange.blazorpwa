@@ -1,0 +1,275 @@
+﻿@using SafeExchange.Client.Web.Components.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@implements IDisposable
+
+@inject NavigationManager NavManager
+@inject ApiClient apiClient
+@inject StateContainer StateContainer
+
+<div class="modal fade" id="confirmationDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">Update configuration</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to update the configuration?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="SetConfigurationAsync">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (this.IsInProgress)
+{
+    <p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+        </div>
+    </p>
+}
+
+@if (this.Notification != null)
+{
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <p>
+            <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+        </p>
+        @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+        {
+            <hr>
+            <p>
+                <button class="btn btn-warning" type="button" disabled="@IsInProgress" @onclick="() => this.NavManager.NavigateTo(this.Notification.ButtonUri)">
+                    <span>@this.Notification.ButtonText</span>
+                </button>
+            </p>
+        }
+        <button type="button" class="close" @onclick="DismissNotification">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+}
+
+@if (this.Configuration != null)
+{
+<EditForm EditContext="@editContext" OnValidSubmit="@SetConfigurationAsync">
+    <DataAnnotationsValidator />
+
+    <p>
+        <div class="form-check">
+            <label class="form-check-label">
+                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.Features.UseGroupsAuthorization" />Use 'Global Groups' Authorization
+            </label>
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="allowedGroups">Allowed Groups</label>
+            <InputText id="allowedGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.WhitelistedGroups" placeholder="Allowed Groups" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-check">
+            <label class="form-check-label">
+                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.Features.UseNotifications" />Use WebPush Notifications
+            </label>
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="adminGroups">Administrator Groups</label>
+            <InputText id="adminGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.AdminGroups" placeholder="Administrator Groups" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="cosmosDbSubscriptionId">CosmosDb - Subscription Id</label>
+            <InputText id="cosmosDbSubscriptionId" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.SubscriptionId" placeholder="Subscription Id" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="cosmosDbResourceGroupName">CosmosDb - ResourceGroup Name</label>
+            <InputText id="cosmosDbResourceGroupName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.ResourceGroupName" placeholder="ResourceGroup Name" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="cosmosDbAccountName">CosmosDb - Account Name</label>
+            <InputText id="cosmosDbAccountName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.AccountName" placeholder="Account Name" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="cosmosDbCosmosDbEndpoint">CosmosDb - CosmosDb Endpoint</label>
+            <InputText id="cosmosDbCosmosDbEndpoint" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.CosmosDbEndpoint" placeholder="CosmosDb Endpoint" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="cosmosDbDatabaseName">CosmosDb - Database Name</label>
+            <InputText id="cosmosDbDatabaseName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.DatabaseName" placeholder="Database Name" />
+        </div>
+    </p>
+
+    <p>
+        <div class="row justify-content-center">
+            <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
+        </div>
+    </p>
+
+</EditForm>
+}
+
+@code {
+
+    private NotificationData Notification;
+
+    private bool IsInProgress;
+
+    private ServiceConfiguration Configuration;
+
+    private EditContext editContext;
+
+    private bool isValidData = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.TakeNotification();
+
+        this.StateContainer.SetCurrentPageHeader($"Configuration Settings");
+
+        await this.GetConfigurationAsync();
+    }
+
+    public void Dispose()
+    {
+        if (this.editContext == null)
+        {
+            return;
+        }
+
+        editContext.OnFieldChanged -= this.HandleFieldChanged;
+    }
+
+    private void HandleFieldChanged(object sender, FieldChangedEventArgs e)
+    {
+        this.isValidData = this.IsCurrentDataValid();
+    }
+
+    private bool IsCurrentDataValid()
+    {
+        if (this.Configuration is null)
+        {
+            return false;
+        }
+
+        // TODO: remove after nested objects validation is available
+        if (!StringParser.TryGetGuidList(this.Configuration.WhitelistedGroups, out _))
+        {
+            return false;
+        }
+
+        if (!StringParser.TryGetGuidList(this.Configuration.AdminGroups, out _))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task GetConfigurationAsync()
+    {
+        try
+        {
+            var response = await this.apiClient.GetConfigurationAsync();
+
+            if (!"ok".Equals(response.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = response.Status,
+                    Message = response.Error
+                };
+                return;
+            }
+
+            this.Configuration = response.Result;
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+
+        if (this.editContext == null)
+        {
+            this.editContext = new EditContext(this.Configuration);
+            this.editContext.OnFieldChanged += this.HandleFieldChanged;
+        }
+    }
+
+    private async Task SetConfigurationAsync()
+    {
+        if (this.Configuration is null)
+        {
+            return;
+        }
+
+        this.IsInProgress = true;
+
+        try
+        {
+            var status = await this.apiClient.SetConfigurationAsync(this.Configuration);
+            if (!"ok".Equals(status.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = status.Status,
+                    Message = status.Error
+                };
+                return;
+            }
+
+            var notification = new NotificationData()
+            {
+                Type = NotificationType.Success,
+                Status = "Success",
+                Message = "Configuration updated successfully"
+            };
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.IsInProgress = false;
+        }
+    }
+
+    public void DismissNotification()
+    {
+        this.Notification = null;
+    }
+}

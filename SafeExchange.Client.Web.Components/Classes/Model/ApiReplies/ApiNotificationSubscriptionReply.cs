@@ -2,7 +2,7 @@
 /// SafeExchange
 /// </summary>
 
-namespace SafeExchange.Client.Web.Components
+namespace SafeExchange.Client.Web.Components.Model
 {
     using System;
 
