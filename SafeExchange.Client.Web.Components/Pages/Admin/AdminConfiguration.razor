@@ -62,102 +62,150 @@
 <EditForm EditContext="@editContext" OnValidSubmit="@SetConfigurationAsync">
     <DataAnnotationsValidator />
 
-    <p>
-        <div class="form-check">
-            <label class="form-check-label">
-                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.Features.UseGroupsAuthorization" />Use 'Global Groups' Authorization
-            </label>
+    <div class="mb-3 accordion" id="accordionExample">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    Administrators
+                </button>
+            </h2>
+            <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne">
+                <div class="accordion-body">
+
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="administratorGroups">Administrator Groups</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminGroups" aria-describedby="administratorGroups" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group">
+                            <span class="input-group-text" id="administratorUsers">Administrator Users</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminUsers" aria-describedby="administratorUsers" />
+                        </div>
+                    </p>
+
+                </div>
+            </div>
         </div>
-    </p>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                    Allowed Groups
+                </button>
+            </h2>
+            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo">
+                <div class="accordion-body">
 
-    <p>
-        <div class="form-row">
-            <label for="allowedGroups">Allowed Groups</label>
-            <InputText id="allowedGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.WhitelistedGroups" placeholder="Allowed Groups" />
+                    <p>
+                        <div class="form-check form-switch">
+                            <InputCheckbox class="form-check-input" type="checkbox" id="globalGroupsSwitch" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.Features.UseGroupsAuthorization" />
+                            <label class="form-check-label" for="globalGroupsSwitch">Use 'Global Groups' Authorization</label>
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group">
+                            <span class="input-group-text" id="allowedGroups">Allowed Groups</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.WhitelistedGroups" aria-describedby="allowedGroups" />
+                        </div>
+                    </p>
+
+                </div>
+            </div>
         </div>
-    </p>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                    Web Push
+                </button>
+            </h2>
+            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree">
+                <div class="accordion-body">
 
-    <p>
-        <div class="form-check">
-            <label class="form-check-label">
-                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.Features.UseNotifications" />Use WebPush Notifications
-            </label>
+                    <p>
+                        <div class="form-check form-switch">
+                            <InputCheckbox class="form-check-input" type="checkbox" id="notificationsSwitch" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.Features.UseNotifications" />
+                            <label class="form-check-label" for="notificationsSwitch">Use WebPush Notifications</label>
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="vapidSubject">VAPID - Subject</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.Subject" aria-describedby="vapidSubject" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="vapidPrivKey">VAPID - Private Key</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.PrivateKey" aria-describedby="vapidPrivKey" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group">
+                            <span class="input-group-text" id="vapidPubKey">VAPID - Public Key</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.PublicKey" aria-describedby="vapidPubKey" />
+                        </div>
+                    </p>
+
+                </div>
+            </div>
         </div>
-    </p>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingFour">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                    Cosmos DB
+                </button>
+            </h2>
+            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour">
+                <div class="accordion-body">
 
-    <p>
-        <div class="form-row">
-            <label for="vapidSubject">Vapid - Subject</label>
-            <InputText id="vapidSubject" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.Subject" placeholder="Vapid - Subject" />
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="subscriptionId">Subscription Id</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.SubscriptionId" aria-describedby="subscriptionId" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="resourceGroupName">ResourceGroup Name</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.ResourceGroupName" aria-describedby="resourceGroupName" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="accountName">Account Name</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.AccountName" aria-describedby="accountName" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text" id="cosmosDbEndpoint">CosmosDB Endpoint</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.CosmosDbEndpoint" aria-describedby="cosmosDbEndpoint" />
+                        </div>
+                    </p>
+
+                    <p>
+                        <div class="input-group">
+                            <span class="input-group-text" id="databaseName">Database Name</span>
+                            <InputText class="form-control" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.DatabaseName" aria-describedby="databaseName" />
+                        </div>
+                    </p>
+
+                </div>
+            </div>
         </div>
-    </p>
+    </div>
 
     <p>
-        <div class="form-row">
-            <label for="vapidPrivKey">Vapid - Private Key</label>
-            <InputText id="vapidPrivKey" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.PrivateKey" placeholder="Vapid - Private Key" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="vapidPubKey">Vapid - Public Key</label>
-            <InputText id="vapidPubKey" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.VapidOptions.PublicKey" placeholder="Vapid - Public Key" />
-        </div>
-    </p>
-
-
-    <p>
-        <div class="form-row">
-            <label for="adminGroups">Administrator Groups</label>
-            <InputText id="adminGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminGroups" placeholder="Administrator Groups" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="adminUsers">Administrator Users</label>
-            <InputText id="adminUsers" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminUsers" placeholder="Administrator Users" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="cosmosDbSubscriptionId">CosmosDb - Subscription Id</label>
-            <InputText id="cosmosDbSubscriptionId" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.SubscriptionId" placeholder="Subscription Id" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="cosmosDbResourceGroupName">CosmosDb - ResourceGroup Name</label>
-            <InputText id="cosmosDbResourceGroupName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.ResourceGroupName" placeholder="ResourceGroup Name" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="cosmosDbAccountName">CosmosDb - Account Name</label>
-            <InputText id="cosmosDbAccountName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.AccountName" placeholder="Account Name" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="cosmosDbCosmosDbEndpoint">CosmosDb - CosmosDb Endpoint</label>
-            <InputText id="cosmosDbCosmosDbEndpoint" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.CosmosDbEndpoint" placeholder="CosmosDb Endpoint" />
-        </div>
-    </p>
-
-    <p>
-        <div class="form-row">
-            <label for="cosmosDbDatabaseName">CosmosDb - Database Name</label>
-            <InputText id="cosmosDbDatabaseName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.DatabaseName" placeholder="Database Name" />
-        </div>
-    </p>
-
-    <p>
-        <div class="row justify-content-center">
+        <div class="p-2 d-flex justify-content-center">
             <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
         </div>
     </p>
