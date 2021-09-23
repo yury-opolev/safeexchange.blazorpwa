@@ -6,7 +6,7 @@ namespace SafeExchange.Client.Web.Components.Model
 {
     using System;
 
-    public class ServiceConfiguration
+    public class ConfigurationData
     {
         public Features Features { get; set; }
 
@@ -15,5 +15,7 @@ namespace SafeExchange.Client.Web.Components.Model
         public CosmosDbProviderSettings CosmosDb { get; set; }
 
         public string AdminGroups { get; set; }
+
+        public string AdminUsers { get; set; }
     }
 }

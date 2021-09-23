@@ -65,7 +65,7 @@
     <p>
         <div class="form-check">
             <label class="form-check-label">
-                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.Features.UseGroupsAuthorization" />Use 'Global Groups' Authorization
+                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.Features.UseGroupsAuthorization" />Use 'Global Groups' Authorization
             </label>
         </div>
     </p>
@@ -73,14 +73,14 @@
     <p>
         <div class="form-row">
             <label for="allowedGroups">Allowed Groups</label>
-            <InputText id="allowedGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.WhitelistedGroups" placeholder="Allowed Groups" />
+            <InputText id="allowedGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.WhitelistedGroups" placeholder="Allowed Groups" />
         </div>
     </p>
 
     <p>
         <div class="form-check">
             <label class="form-check-label">
-                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.Features.UseNotifications" />Use WebPush Notifications
+                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.Features.UseNotifications" />Use WebPush Notifications
             </label>
         </div>
     </p>
@@ -88,42 +88,49 @@
     <p>
         <div class="form-row">
             <label for="adminGroups">Administrator Groups</label>
-            <InputText id="adminGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.AdminGroups" placeholder="Administrator Groups" />
+            <InputText id="adminGroups" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminGroups" placeholder="Administrator Groups" />
+        </div>
+    </p>
+
+    <p>
+        <div class="form-row">
+            <label for="adminUsers">Administrator Users</label>
+            <InputText id="adminUsers" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.AdminUsers" placeholder="Administrator Users" />
         </div>
     </p>
 
     <p>
         <div class="form-row">
             <label for="cosmosDbSubscriptionId">CosmosDb - Subscription Id</label>
-            <InputText id="cosmosDbSubscriptionId" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.SubscriptionId" placeholder="Subscription Id" />
+            <InputText id="cosmosDbSubscriptionId" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.SubscriptionId" placeholder="Subscription Id" />
         </div>
     </p>
 
     <p>
         <div class="form-row">
             <label for="cosmosDbResourceGroupName">CosmosDb - ResourceGroup Name</label>
-            <InputText id="cosmosDbResourceGroupName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.ResourceGroupName" placeholder="ResourceGroup Name" />
+            <InputText id="cosmosDbResourceGroupName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.ResourceGroupName" placeholder="ResourceGroup Name" />
         </div>
     </p>
 
     <p>
         <div class="form-row">
             <label for="cosmosDbAccountName">CosmosDb - Account Name</label>
-            <InputText id="cosmosDbAccountName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.AccountName" placeholder="Account Name" />
+            <InputText id="cosmosDbAccountName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.AccountName" placeholder="Account Name" />
         </div>
     </p>
 
     <p>
         <div class="form-row">
             <label for="cosmosDbCosmosDbEndpoint">CosmosDb - CosmosDb Endpoint</label>
-            <InputText id="cosmosDbCosmosDbEndpoint" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.CosmosDbEndpoint" placeholder="CosmosDb Endpoint" />
+            <InputText id="cosmosDbCosmosDbEndpoint" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.CosmosDbEndpoint" placeholder="CosmosDb Endpoint" />
         </div>
     </p>
 
     <p>
         <div class="form-row">
             <label for="cosmosDbDatabaseName">CosmosDb - Database Name</label>
-            <InputText id="cosmosDbDatabaseName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.CosmosDb.DatabaseName" placeholder="Database Name" />
+            <InputText id="cosmosDbDatabaseName" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="Configuration.ConfigurationData.CosmosDb.DatabaseName" placeholder="Database Name" />
         </div>
     </p>
 
@@ -142,7 +149,7 @@
 
     private bool IsInProgress;
 
-    private ServiceConfiguration Configuration;
+    private ServiceConfigurationBundle Configuration;
 
     private EditContext editContext;
 
@@ -180,12 +187,17 @@
         }
 
         // TODO: remove after nested objects validation is available
-        if (!StringParser.TryGetGuidList(this.Configuration.WhitelistedGroups, out _))
+        if (!StringParser.TryGetGuidList(this.Configuration.ConfigurationData.WhitelistedGroups, out _))
         {
             return false;
         }
 
-        if (!StringParser.TryGetGuidList(this.Configuration.AdminGroups, out _))
+        if (!StringParser.TryGetGuidList(this.Configuration.ConfigurationData.AdminGroups, out _))
+        {
+            return false;
+        }
+
+        if (!StringParser.TryGetGuidList(this.Configuration.ConfigurationData.AdminUsers, out _))
         {
             return false;
         }

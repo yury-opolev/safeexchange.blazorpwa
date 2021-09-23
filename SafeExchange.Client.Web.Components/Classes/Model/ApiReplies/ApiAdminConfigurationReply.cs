@@ -10,7 +10,7 @@ namespace SafeExchange.Client.Web.Components.Model
     {
         public string Status { get; set; }
 
-        public ServiceConfiguration Result { get; set; }
+        public ServiceConfigurationBundle Result { get; set; }
 
         public string Error { get; set; }
     }

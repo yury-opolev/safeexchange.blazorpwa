@@ -135,7 +135,7 @@ namespace SafeExchange.Client.Web.Components
             return await this.HandleConfigurationResponseAsync(responseMessage);
         }
 
-        public async Task<ApiStatusReply> SetConfigurationAsync(ServiceConfiguration configuration)
+        public async Task<ApiStatusReply> SetConfigurationAsync(ServiceConfigurationBundle configuration)
         {
             var responseMessage = await client.PostAsJsonAsync("adm/configuration", configuration);
             return await this.HandleStatusResponseAsync(responseMessage);
