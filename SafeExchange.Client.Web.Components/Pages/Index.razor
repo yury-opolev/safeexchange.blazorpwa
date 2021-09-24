@@ -29,21 +29,21 @@
             </button>
         </p>
     }
-    <button type="button" class="close" @onclick="DismissNotification">
-        <span aria-hidden="true">&times;</span>
-    </button>
+    <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
 </div>
 }
 
 <p>
-    <h4>Find secret:</h4>
+    <h5>Find secret:</h5>
 </p>
 
 <nav class="navbar navbar-light bg-light">
-    <EditForm class="form-inline col-12" Model="@this.searchInput" OnValidSubmit="@ViewObject">
-        <InputText class="form-control mr-sm-2 col-10" @bind-Value="this.searchInput.SearchText" placeholder="Secret Name" aria-label="Search" />
-        <button class="btn btn-outline-success my-2 my-sm-0" type="submit" disabled="@this.IsInProgress" >Search</button>
-    </EditForm>
+    <div class="container-fluid">
+        <EditForm class="d-flex" Model="@this.searchInput" OnValidSubmit="@ViewObject">
+            <InputText class="form-control me-2" @bind-Value="this.searchInput.SearchText" placeholder="Secret Name" aria-label="Search" />
+            <button class="btn btn-outline-success" type="submit" disabled="@this.IsInProgress">Search</button>
+        </EditForm>
+    </div>
 </nav>
 
 @code {

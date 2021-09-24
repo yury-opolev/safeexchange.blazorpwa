@@ -13,16 +13,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalLabel">Delete secret</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 Are you sure you want to delete the secret?
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="DeleteSecretAsync">Yes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @onclick="DeleteSecretAsync">Yes</button>
             </div>
         </div>
     </div>
@@ -52,9 +50,7 @@
                 </button>
             </p>
         }
-        <button type="button" class="close" @onclick="DismissNotification">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
     </div>
 
 }
@@ -65,22 +61,20 @@
         <DataAnnotationsValidator />
 
         <p>
-            <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
+            <InputTextArea class="form-control col" rows="18" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
             <ValidationMessage For="@(() => inputModel.Data.Value)" />
         </p>
 
         <p>
-            <div class="form-check">
-                <label class="form-check-label">
-                    <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />Destroy After Read
-                </label>
+            <div class="form-check form-switch">
+                <InputCheckbox class="form-check-input" type="checkbox" id="destroyAfterReadSwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />
+                <label class="form-check-label" for="destroyAfterReadSwitch">Destroy After Read</label>
             </div>
         </p>
         <p>
-            <div class="form-check">
-                <label class="form-check-label">
-                    <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />Schedule Destroy
-                </label>
+            <div class="form-check form-switch">
+                <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />
+                <label class="form-check-label" for="scheduleDestroySwitch">Schedule Destroy</label>
             </div>
         </p>
         <p>
@@ -92,9 +86,7 @@
             </div>
         </p>
 
-        <p class="h4">
-            Access list:
-        </p>
+        <h5>Access list:</h5>
 
         @for (int i = 0; i < inputModel.AccessList.Count; i++)
         {
@@ -142,9 +134,9 @@
         </p>
 
         <p>
-            <div class="row justify-content-center">
+            <div class="d-flex justify-content-center">
                 <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
-                <button type="button" class="btn btn-danger mx-2" data-toggle="modal" data-target="#deletionDialog" disabled="@IsInProgress">
+                <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@IsInProgress">
                     Delete
                 </button>
             </div>

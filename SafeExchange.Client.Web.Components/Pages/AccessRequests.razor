@@ -37,9 +37,7 @@
 {
     <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
         <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
-        <button type="button" class="close" @onclick="DismissNotification">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
     </div>
 }
 
