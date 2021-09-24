@@ -51,15 +51,13 @@
                 </button>
             </p>
         }
-        <button type="button" class="close" @onclick="DismissNotification">
-            <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
     </div>
 }
 
 @if (this.Configuration != null)
 {
-<EditForm EditContext="@editContext" OnValidSubmit="@SetConfigurationAsync">
+<EditForm EditContext="@editContext">
     <DataAnnotationsValidator />
 
     <div class="mb-3 accordion" id="accordionExample">
@@ -206,7 +204,7 @@
 
     <p>
         <div class="p-2 d-flex justify-content-center">
-            <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
+            <button type="button" class="btn btn-primary mx-2" data-bs-toggle="modal" data-bs-target="#confirmationDialog" disabled="@(IsInProgress || !this.isValidData)">Update</button>
         </div>
     </p>
 
@@ -333,7 +331,7 @@
                 return;
             }
 
-            var notification = new NotificationData()
+            this.Notification = new NotificationData()
             {
                 Type = NotificationType.Success,
                 Status = "Success",
