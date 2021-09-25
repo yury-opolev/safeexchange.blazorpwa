@@ -34,17 +34,20 @@
 }
 
 <p>
-    <h5>Find secret:</h5>
+    <strong>Find secret:</strong>
 </p>
 
-<nav class="navbar navbar-light bg-light">
-    <div class="container-fluid">
-        <EditForm class="d-flex" Model="@this.searchInput" OnValidSubmit="@ViewObject">
-            <InputText class="form-control me-2" @bind-Value="this.searchInput.SearchText" placeholder="Secret Name" aria-label="Search" />
-            <button class="btn btn-outline-success" type="submit" disabled="@this.IsInProgress">Search</button>
-        </EditForm>
+<EditForm Model="@this.searchInput" OnValidSubmit="@ViewObject">
+    <div class="row">
+        <div class="col-md-8">
+            <InputText class="form-control" @bind-Value="this.searchInput.SearchText" placeholder="Secret Name" aria-label="Secret To Search" />
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-success" type="submit" disabled="@this.IsInProgress" aria-label="Search">Search</button>
+        </div>
     </div>
-</nav>
+
+</EditForm>
 
 @code {
 

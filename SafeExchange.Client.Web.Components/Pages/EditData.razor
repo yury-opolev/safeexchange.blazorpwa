@@ -12,7 +12,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalLabel">Delete secret</h5>
+                <p class="modal-title" id="modalLabel"><strong>Delete secret</strong></p>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -86,7 +86,9 @@
             </div>
         </p>
 
-        <h5>Access list:</h5>
+        <p>
+            <strong>Access list:</strong>
+        </p>
 
         @for (int i = 0; i < inputModel.AccessList.Count; i++)
         {
