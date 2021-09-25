@@ -129,6 +129,12 @@ namespace SafeExchange.Client.Web.Components
             return await this.HandleAccessResponseAsync(responseMessage);
         }
 
+        public async Task<ApiAdminStatusReply> GetAdminStatusAsync()
+        {
+            var responseMessage = await client.GetAsync("adm/status");
+            return await this.HandleAdminStatusResponseAsync(responseMessage);
+        }
+
         public async Task<ApiAdminConfigurationReply> GetConfigurationAsync()
         {
             var responseMessage = await client.GetAsync("adm/configuration");
@@ -201,6 +207,28 @@ namespace SafeExchange.Client.Web.Components
             }
 
             return new ApiStatusReply()
+            {
+                Status = message.StatusCode.ToString(),
+                Error = responseContent
+            };
+        }
+
+        private async Task<ApiAdminStatusReply> HandleAdminStatusResponseAsync(HttpResponseMessage message)
+        {
+            if (message.IsSuccessStatusCode)
+            {
+                return await message.Content.ReadFromJsonAsync<ApiAdminStatusReply>();
+            }
+
+            var responseContent = await message.Content.ReadAsStringAsync();
+            var response = JsonSerializer.Deserialize<ApiAdminStatusReply>(responseContent, this.jsonOptions);
+
+            if (!string.IsNullOrEmpty(response.Status))
+            {
+                return response;
+            }
+
+            return new ApiAdminStatusReply()
             {
                 Status = message.StatusCode.ToString(),
                 Error = responseContent

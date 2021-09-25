@@ -23,6 +23,7 @@
         if (this.StateContainerInstance.CachedAccessRequests == default(ApiAccessRequestsListReply))
         {
             await this.StateContainerInstance.TryFetchAccessRequestsAsync(this.apiClient);
+            await this.StateContainerInstance.TryGetAdminStatusAsync(this.apiClient);
         }
 
         return string.Empty;

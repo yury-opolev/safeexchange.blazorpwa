@@ -17,6 +17,8 @@ namespace SafeExchange.Client.Web.Components
 
         public event Action OnChange;
 
+        public bool IsAdministrator { get; set; }
+
         public bool IsFetchingAccessRequests { get; set; }
 
         public ApiAccessRequestsListReply CachedAccessRequests { get; set; }
@@ -58,6 +60,24 @@ namespace SafeExchange.Client.Web.Components
             }
 
             return this.CachedAccessRequests;
+        }
+
+        public async ValueTask TryGetAdminStatusAsync(ApiClient apiClient)
+        {
+            if (this.IsAdministrator)
+            {
+                return;
+            }
+
+            try
+            {
+                var adminStatus = await apiClient.GetAdminStatusAsync();
+                this.IsAdministrator = "ok".Equals(adminStatus.Status) && adminStatus.Result?.Status == true;
+            }
+            finally
+            {
+                NotifyStateChanged();
+            }
         }
 
         private void NotifyStateChanged() => OnChange?.Invoke();
