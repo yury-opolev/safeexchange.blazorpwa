@@ -273,6 +273,7 @@
 
     private async Task GetConfigurationAsync()
     {
+        this.IsInProgress = true;
         try
         {
             var response = await this.apiClient.GetConfigurationAsync();
