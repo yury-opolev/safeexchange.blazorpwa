@@ -29,26 +29,24 @@
     <DataAnnotationsValidator />
 
     <p>
-        <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="inputModel.Name" placeholder="Name" />
+        <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="inputModel.Name" placeholder="Name" aria-label="Name" />
         <ValidationMessage For="@(() => inputModel.Name)" />
     </p>
     <p>
-        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
+        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" />
         <ValidationMessage For="@(() => inputModel.Data.Value)" />
     </p>
 
     <p>
-        <div class="form-check">
-            <label class="form-check-label">
-                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />Destroy After Read
-            </label>
+        <div class="form-check form-switch">
+            <InputCheckbox class="form-check-input" type="checkbox" id="destroyAfterReadSwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />
+            <label class="form-check-label" for="destroyAfterReadSwitch">Destroy After Read</label>
         </div>
     </p>
     <p>
-        <div class="form-check">
-            <label class="form-check-label">
-                <InputCheckbox class="form-check-input" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />Schedule Destroy
-            </label>
+        <div class="form-check form-switch">
+            <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />
+            <label class="form-check-label" for="scheduleDestroySwitch">Schedule Destroy</label>
         </div>
     </p>
     <p>

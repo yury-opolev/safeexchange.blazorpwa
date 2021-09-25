@@ -61,7 +61,7 @@
         <DataAnnotationsValidator />
 
         <p>
-            <InputTextArea class="form-control col" rows="18" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" />
+            <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" />
             <ValidationMessage For="@(() => inputModel.Data.Value)" />
         </p>
 

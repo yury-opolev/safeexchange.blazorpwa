@@ -9,28 +9,28 @@
     </button>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+<div class="@NavMenuCssClass" role="navigation" @onclick="ToggleNavMenu">
     <ul class="nav flex-column">
         <li class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <NavLinkAccessibility class="nav-link" href="" ActiveAttributes="ActiveAttributes" Match="NavLinkMatch.All">
                 <span class="oi oi-home" aria-hidden="true"></span> Home
-            </NavLink>
+            </NavLinkAccessibility>
         </li>
         <li class="nav-item px-3">
-            <NavLink class="nav-link" href="createdata">
+            <NavLinkAccessibility class="nav-link" href="createdata" ActiveAttributes="ActiveAttributes">
                 <span class="oi oi-plus" aria-hidden="true"></span> Add Secret
-            </NavLink>
+            </NavLinkAccessibility>
         </li>
         <li class="nav-item px-3">
-            <NavLink class="nav-link" href="listdata">
+            <NavLinkAccessibility class="nav-link" href="listdata" ActiveAttributes="ActiveAttributes">
                 <span class="oi oi-book" aria-hidden="true"></span> My Secrets
-            </NavLink>
+            </NavLinkAccessibility>
         </li>
         <AuthorizeView>
             <Authorized>
                 <li><hr class="dropdown-divider"></li>
                 <li class="nav-item px-3">
-                    <NavLink class="nav-link" href="accessrequests">
+                    <NavLinkAccessibility class="nav-link" href="accessrequests" ActiveAttributes="ActiveAttributes">
                         <span class="oi oi-people" aria-hidden="true"></span> My Requests &nbsp;
                         @if (this.StateContainerInstance.IsFetchingAccessRequests)
                         {
@@ -47,20 +47,20 @@
                                 <span class="badge badge-pill badge-light">@(this.StateContainerInstance.OutgoingAccessRequestsCount)</span>
                             }
                         }
-                    </NavLink>
+                    </NavLinkAccessibility>
                 </li>
                 <li class="nav-item px-3">
-                    <NavLink class="nav-link" href="addrequest">
+                    <NavLinkAccessibility class="nav-link" href="addrequest" ActiveAttributes="ActiveAttributes">
                         <span class="oi oi-bell" aria-hidden="true"></span> Add Request
-                    </NavLink>
+                    </NavLinkAccessibility>
                 </li>
                 @if (this.StateContainerInstance.IsAdministrator)
                 {
                 <li><hr class="dropdown-divider"></li>
                 <li class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/configuration">
+                    <NavLinkAccessibility class="nav-link" href="admin/configuration" ActiveAttributes="ActiveAttributes">
                         <span class="oi oi-cog" aria-hidden="true"></span> Configuration
-                    </NavLink>
+                    </NavLinkAccessibility>
                 </li>
                 }
             </Authorized>
@@ -72,6 +72,8 @@
     private bool collapseNavMenu = true;
 
     private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private Dictionary<string, object> ActiveAttributes { get; set; } = new Dictionary<string, object>() { { "aria-current", "page" } };
 
     protected override void OnInitialized()
     {
