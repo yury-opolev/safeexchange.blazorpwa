@@ -49,18 +49,20 @@
         <div class="collapse" id="collapseAccessList">
             <div class="card card-body">
 
+                @{ int i = 0; }
                 @foreach (var accessItem in inputModel.AccessList)
                 {
-                <div>
-                    <div class="row">
-                        <div class="col">
-                            <InputText class="form-control" @bind-Value="accessItem.Subject" readonly />
-                        </div>
-                        <div class="col">
-                            <InputText class="form-control" @bind-Value="accessItem.Permission" readonly />
+                    <div>
+                        <div class="row">
+                            <div class="col">
+                                <InputText id="@($"username-{i}")" class="form-control-plaintext" @bind-Value="accessItem.Subject" readonly aria-label="Username" />
+                            </div>
+                            <div class="col">
+                                <InputText id="@($"permissions-{i}")" class="form-control-plaintext" @bind-Value="accessItem.Permission" readonly aria-label="Permissions" aria-labelledby="@($"permissions-{i} username-{i}")" />
+                            </div>
                         </div>
                     </div>
-                </div>
+                    i += 1;
                 }
 
                 @if (inputModel.AccessList.Count == 0)

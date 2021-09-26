@@ -57,93 +57,93 @@
 
 @if (this.inputModel != null)
 {
-    <EditForm EditContext="@editContext" OnValidSubmit="@TryUpdateSecretAsync">
-        <DataAnnotationsValidator />
+<EditForm EditContext="@editContext" OnValidSubmit="@TryUpdateSecretAsync">
+    <DataAnnotationsValidator />
 
-        <p>
-            <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" />
-            <ValidationMessage For="@(() => inputModel.Data.Value)" />
-        </p>
+    <p>
+        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" />
+        <ValidationMessage For="@(() => inputModel.Data.Value)" />
+    </p>
 
-        <p>
-            <div class="form-check form-switch">
-                <InputCheckbox class="form-check-input" type="checkbox" id="destroyAfterReadSwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />
-                <label class="form-check-label" for="destroyAfterReadSwitch">Destroy After Read</label>
+    <p>
+        <div class="form-check form-switch">
+            <InputCheckbox class="form-check-input" type="checkbox" id="destroyAfterReadSwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />
+            <label class="form-check-label" for="destroyAfterReadSwitch">Destroy After Read</label>
+        </div>
+    </p>
+    <p>
+        <div class="form-check form-switch">
+            <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />
+            <label class="form-check-label" for="scheduleDestroySwitch">Schedule Destroy</label>
+        </div>
+    </p>
+    <p>
+        <div class="form-group form-row">
+            <label for="destroy-datetime-input" class="col-2 col-form-label">Destroy At:</label>
+            <div class="col-10">
+                <InputDateTime id="destroy-datetime-input" class="form-control" type="datetime-local" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAt" DisplayName="DestroyAt" />
             </div>
-        </p>
-        <p>
-            <div class="form-check form-switch">
-                <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />
-                <label class="form-check-label" for="scheduleDestroySwitch">Schedule Destroy</label>
-            </div>
-        </p>
-        <p>
-            <div class="form-group form-row">
-                <label for="destroy-datetime-input" class="col-2 col-form-label">Destroy At:</label>
-                <div class="col-10">
-                    <InputDateTime id="destroy-datetime-input" class="form-control" type="datetime-local" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAt" DisplayName="DestroyAt" />
-                </div>
-            </div>
-        </p>
+        </div>
+    </p>
 
-        <p>
-            <strong>Access list:</strong>
-        </p>
+    <p>
+        <strong>Access list:</strong>
+    </p>
 
-        @for (int i = 0; i < inputModel.AccessList.Count; i++)
-        {
-            var tempIndex = i;
-            <p>
-                <div class="row">
-                    <div class="col">
-                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-label="Username"/>
-                        <ValidationMessage For="@(() => inputModel.AccessList[tempIndex].Subject)" />
-                    </div>
-                    <div class="col">
-                        @if (tempIndex < this.FixedAccessItemCount)
-                        {
-                            <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" readonly aria-label="Permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")"/>
-                        }
-                        else
-                        {
-                            <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-label="Select permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
-                                <option>Read</option>
-                                <option>Read,Write</option>
-                                <option>Read,Write,GrantAccess</option>
-                                <option>Read,Write,GrantAccess,RevokeAccess</option>
-                            </InputSelect>
-                        }
-                    </div>
-                    <div class="col-3">
-                        @if (this.IsDeleted(tempIndex))
-                        {
-                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
-                        }
-                        else
-                        {
-                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
-                        }
-                    </div>
-                </div>
-            </p>
-        }
+    @for (int i = 0; i < inputModel.AccessList.Count; i++)
+    {
+        var tempIndex = i;
         <p>
             <div class="row">
                 <div class="col">
-                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                    <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-label="Username" />
+                    <ValidationMessage For="@(() => inputModel.AccessList[tempIndex].Subject)" />
+                </div>
+                <div class="col">
+                    @if (tempIndex < this.FixedAccessItemCount)
+                    {
+                        <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" readonly aria-label="Permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
+                    }
+                    else
+                    {
+                        <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-label="Select permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                            <option>Read</option>
+                            <option>Read,Write</option>
+                            <option>Read,Write,GrantAccess</option>
+                            <option>Read,Write,GrantAccess,RevokeAccess</option>
+                        </InputSelect>
+                    }
+                </div>
+                <div class="col-3">
+                    @if (this.IsDeleted(tempIndex))
+                    {
+                        <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
+                    }
+                    else
+                    {
+                        <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
+                    }
                 </div>
             </div>
         </p>
-
-        <p>
-            <div class="d-flex justify-content-center">
-                <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
-                <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@IsInProgress">
-                    Delete
-                </button>
+    }
+    <p>
+        <div class="row">
+            <div class="col">
+                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
             </div>
-        </p>
-    </EditForm>
+        </div>
+    </p>
+
+    <p>
+        <div class="d-flex justify-content-center">
+            <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
+            <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@IsInProgress">
+                Delete
+            </button>
+        </div>
+    </p>
+</EditForm>
 }
 
 @code {

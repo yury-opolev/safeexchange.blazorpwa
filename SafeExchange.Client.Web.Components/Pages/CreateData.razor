@@ -68,11 +68,11 @@
         <p>
             <div class="row">
                 <div class="col">
-                    <InputText class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" />
+                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" aria-label="Username" />
                     <ValidationMessage For="@(() => inputModel.AccessList[tempIndex].Subject)" />
                 </div>
                 <div class="col">
-                    <InputSelect class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission">
+                    <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-label="Select permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
                         <option>Read</option>
                         <option>Read,Write</option>
                         <option>Read,Write,GrantAccess</option>
@@ -80,7 +80,7 @@
                     </InputSelect>
                 </div>
                 <div class="col-3">
-                    <button class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))"><span class="oi oi-x"></span></button>
+                    <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
                 </div>
             </div>
         </p>
