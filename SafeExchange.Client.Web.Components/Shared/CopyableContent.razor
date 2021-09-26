@@ -1,9 +1,11 @@
 ﻿@inject ClipboardService ClipboardServiceInstance
 @inject TooltipsInitializer TooltipsInitializerInstance
 
-<div class="to-hover">
+<div>
     @ChildContent
-    <img class="to-show-on-hover" src="copy.svg" alt="Copy to Clipboard" width="20" data-toggle="tooltip" data-placement="top" title="Copy to clipboard" @onclick="@(async () => await CopyDataToClipboard())">
+    <button type="button" class="btn d-inline-flex btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to Clipboard" @onclick="@(async () => await CopyDataToClipboard())">
+        <img src="copy.svg" alt="Copy to Clipboard" width="20"/>
+    </button>
 </div>
 
 @code {

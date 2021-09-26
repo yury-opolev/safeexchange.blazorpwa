@@ -79,11 +79,3 @@ a, .btn-link {
         right: 0.75rem;
         top: 0.5rem;
     }
-
-.to-show-on-hover {
-    display: none;
-}
-
-.to-hover:hover .to-show-on-hover {
-    display: inline;
-}
