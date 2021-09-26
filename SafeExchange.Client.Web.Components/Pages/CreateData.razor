@@ -29,12 +29,12 @@
     <DataAnnotationsValidator />
 
     <p>
-        <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="inputModel.Name" placeholder="Name" aria-label="Name" />
-        <ValidationMessage For="@(() => inputModel.Name)" />
+        <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="inputModel.Name" placeholder="Name" aria-label="Name" aria-describedby="name-validation" />
+        <ValidationMessage id="name-validation" For="@(() => inputModel.Name)" />
     </p>
     <p>
-        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" />
-        <ValidationMessage For="@(() => inputModel.Data.Value)" />
+        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" aria-describedby="content-validation" />
+        <ValidationMessage id="content-validation" For="@(() => inputModel.Data.Value)" />
     </p>
 
     <p>
@@ -68,8 +68,8 @@
         <p>
             <div class="row">
                 <div class="col">
-                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" aria-label="Username" />
-                    <ValidationMessage For="@(() => inputModel.AccessList[tempIndex].Subject)" />
+                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" aria-label="Username" aria-describedby="@($"un-validation-{i}")" />
+                    <ValidationMessage id="@($"un-validation-{i}")" For="@(() => inputModel.AccessList[tempIndex].Subject)" />
                 </div>
                 <div class="col">
                     <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-label="Select permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">

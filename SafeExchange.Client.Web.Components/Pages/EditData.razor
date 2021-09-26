@@ -61,8 +61,8 @@
     <DataAnnotationsValidator />
 
     <p>
-        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" />
-        <ValidationMessage For="@(() => inputModel.Data.Value)" />
+        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" aria-describedby="content-validation" />
+        <ValidationMessage id="content-validation" For="@(() => inputModel.Data.Value)" />
     </p>
 
     <p>
@@ -96,8 +96,8 @@
         <p>
             <div class="row">
                 <div class="col">
-                    <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-label="Username" />
-                    <ValidationMessage For="@(() => inputModel.AccessList[tempIndex].Subject)" />
+                    <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-label="Username" aria-describedby="@($"un-validation-{i}")" />
+                    <ValidationMessage id="@($"un-validation-{i}")" For="@(() => inputModel.AccessList[tempIndex].Subject)" />
                 </div>
                 <div class="col">
                     @if (tempIndex < this.FixedAccessItemCount)
