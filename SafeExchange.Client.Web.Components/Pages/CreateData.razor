@@ -66,18 +66,24 @@
     {
         var tempIndex = i;
         <p>
-            <div class="row">
+            <div class="row align-items-center">
                 <div class="col">
-                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" aria-label="Username" aria-describedby="@($"un-validation-{i}")" />
+                    <div class="form-floating">
+                        <InputText id="@($"username-input-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
+                        <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                    </div>
                     <ValidationMessage id="@($"un-validation-{i}")" For="@(() => inputModel.AccessList[tempIndex].Subject)" />
                 </div>
                 <div class="col">
-                    <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-label="Select permissions" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
-                        <option>Read</option>
-                        <option>Read,Write</option>
-                        <option>Read,Write,GrantAccess</option>
-                        <option>Read,Write,GrantAccess,RevokeAccess</option>
-                    </InputSelect>
+                    <div class="form-floating">
+                        <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                            <option>Read</option>
+                            <option>Read,Write</option>
+                            <option>Read,Write,GrantAccess</option>
+                            <option>Read,Write,GrantAccess,RevokeAccess</option>
+                        </InputSelect>
+                        <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
+                    </div>
                 </div>
                 <div class="col-3">
                     <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
