@@ -16,7 +16,7 @@
 
 @if (this.Notification != null)
 {
-    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
         <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
         <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
     </div>

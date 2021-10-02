@@ -40,11 +40,11 @@
                         {
                             if (this.StateContainerInstance.IncomingAccessRequestsCount > 0)
                             {
-                                <span class="badge badge-pill badge-danger">@(this.StateContainerInstance.IncomingAccessRequestsCount)</span><span>&nbsp;</span>
+                                <span class="badge rounded-pill bg-danger">@(this.StateContainerInstance.IncomingAccessRequestsCount)</span><span>&nbsp;</span>
                             }
                             if (this.StateContainerInstance.OutgoingAccessRequestsCount > 0)
                             {
-                                <span class="badge badge-pill badge-light">@(this.StateContainerInstance.OutgoingAccessRequestsCount)</span>
+                                <span class="badge rounded-pill bg-light text-dark">@(this.StateContainerInstance.OutgoingAccessRequestsCount)</span>
                             }
                         }
                     </NavLinkAccessibility>

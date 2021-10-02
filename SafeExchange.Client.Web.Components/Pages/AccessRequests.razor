@@ -15,8 +15,8 @@
                 Are you sure you want to cancel the request?
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="@(e => this.CancelAccessRequestAsync())">Proceed</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @onclick="@(e => this.CancelAccessRequestAsync())">Proceed</button>
             </div>
         </div>
     </div>
@@ -33,7 +33,7 @@
 
 @if (this.Notification != null)
 {
-    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
         <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
         <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
     </div>
@@ -89,7 +89,7 @@
                                 <small>&nbsp;-&nbsp;</small>
                                 <small class="text-secondary my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
-                            <button type="button" class="btn btn-outline-danger" data-toggle="modal" data-target="#cancellationDialog" disabled="@IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Cancel</span></button>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancellationDialog" disabled="@IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Cancel</span></button>
                         </li>
                     }
                 </ul>
