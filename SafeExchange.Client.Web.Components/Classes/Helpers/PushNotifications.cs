@@ -18,6 +18,12 @@ namespace SafeExchange.Client.Web.Components
                "import", "./_content/SafeExchange.Client.Web.Components/pushNotifications.js").AsTask());
         }
 
+        public async ValueTask<bool> IsWebPushAvailable()
+        {
+            var module = await moduleTask.Value;
+            return await module.InvokeAsync<bool>("isPushManagerAvailable");
+        }
+
         public async ValueTask<NotificationSubscription> RequestSubscription(string applicationServerPublicKey)
         {
             var module = await moduleTask.Value;

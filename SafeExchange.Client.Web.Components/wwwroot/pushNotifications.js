@@ -1,7 +1,17 @@
 
+async function isPushManagerAvailable() {
+    var pushManager = await getPushManager();
+    return !(pushManager == null);
+}
+
 async function requestSubscription(applicationServerPublicKey) {
-    const worker = await window.navigator.serviceWorker.getRegistration();
-    const existingSubscription = await worker.pushManager.getSubscription();
+    const pushManager = await getPushManager();
+    if (!pushManager) {
+        console.log("pushManager not available via web standard.");
+        return null;
+    }
+
+    const existingSubscription = await pushManager.getSubscription();
     if (existingSubscription) {
         return {
             url: existingSubscription.endpoint,
@@ -10,7 +20,7 @@ async function requestSubscription(applicationServerPublicKey) {
         };
     }
 
-    const subscription = await subscribe(worker, applicationServerPublicKey);
+    const subscription = await subscribe(pushManager, applicationServerPublicKey);
     if (subscription) {
         return {
             url: subscription.endpoint,
@@ -21,8 +31,13 @@ async function requestSubscription(applicationServerPublicKey) {
 }
 
 async function getSubscription() {
-    const worker = await window.navigator.serviceWorker.getRegistration();
-    const existingSubscription = await worker.pushManager.getSubscription();
+    const pushManager = await getPushManager();
+    if (!pushManager) {
+        console.log("pushManager not available via web standard.");
+        return null;
+    }
+
+    const existingSubscription = await pushManager.getSubscription();
     if (!existingSubscription) {
         return null;
     }
@@ -34,17 +49,22 @@ async function getSubscription() {
 }
 
 async function deleteSubscription() {
-    const worker = await window.navigator.serviceWorker.getRegistration();
-    const existingSubscription = await worker.pushManager.getSubscription();
+    const pushManager = await getPushManager();
+    if (!pushManager) {
+        console.log("pushManager not available via web standard.");
+        return false;
+    }
+
+    const existingSubscription = await pushManager.getSubscription();
     if (!existingSubscription) {
         return false;
     }
     return await existingSubscription.unsubscribe();
 }
 
-async function subscribe(worker, applicationServerPublicKey) {
+async function subscribe(pushManager, applicationServerPublicKey) {
     try {
-        return await worker.pushManager.subscribe({
+        return await pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: applicationServerPublicKey
         });
@@ -54,6 +74,11 @@ async function subscribe(worker, applicationServerPublicKey) {
         }
         throw error;
     }
+}
+
+async function getPushManager() {
+    const worker = await window.navigator.serviceWorker.getRegistration();
+    return worker.pushManager;
 }
 
 function arrayBufferToBase64(buffer) {
@@ -66,4 +91,4 @@ function arrayBufferToBase64(buffer) {
     return window.btoa(binary);
 }
 
-export { requestSubscription, getSubscription, deleteSubscription };
+export { isPushManagerAvailable, requestSubscription, getSubscription, deleteSubscription };
