@@ -1,8 +1,12 @@
-﻿@using SafeExchange.Client.Web.Components.Model
+﻿@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using SafeExchange.Client.Web.Components.Helpers
+@using SafeExchange.Client.Web.Components.Model
 
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
+
 <!-- Modal -->
 <div class="modal fade" id="cancellationDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -21,15 +25,6 @@
         </div>
     </div>
 </div>
-
-@if (this.IsInProgress)
-{
-    <p>
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
-        </div>
-    </p>
-}
 
 @if (this.Notification != null)
 {
@@ -57,14 +52,14 @@
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                             <div>
-                                <div>@(accessRequest.UserName)</div>
+                                <div>@(accessRequest.Requestor)</div>
                                 <div><strong>@(accessRequest.SecretName)</strong></div>
-                                <small class="text-secondary my-0">@(accessRequest.Permissions)</small>
+                                <small class="text-secondary my-0">@(accessRequest.PermissionsString)</small>
                                 <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
                             <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
-                                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, true))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
-                                <button class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, false))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
+                                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, true))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
+                                <button class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, false))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
                             </div>
                         </li>
                     }
@@ -83,13 +78,13 @@
                     {
                         <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                             <div>
-                                <div>@(accessRequest.UserName)</div>
+                                <div>@(accessRequest.Requestor)</div>
                                 <div><strong>@(accessRequest.SecretName)</strong></div>
-                                <small class="my-0">@(accessRequest.Permissions)</small>
+                                <small class="my-0">@(accessRequest.PermissionsString)</small>
                                 <small>&nbsp;-&nbsp;</small>
                                 <small class="text-secondary my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
-                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancellationDialog" disabled="@IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Cancel</span></button>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancellationDialog" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Cancel</span></button>
                         </li>
                     }
                 </ul>
@@ -108,79 +103,36 @@
 
 @code {
 
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
+    private AuthenticationState authenticationState;
+
     private NotificationData Notification;
 
-    private bool IsInProgress;
+    private IList<AccessRequest> IncomingAccessRequests;
 
-    private IList<AccessRequestData> IncomingAccessRequests;
+    private IList<AccessRequest> OutgoingAccessRequests;
 
-    private IList<AccessRequestData> OutgoingAccessRequests;
-
-    private AccessRequestData RequestToCancel;
+    private AccessRequest RequestToCancel;
 
     protected override async Task OnInitializedAsync()
     {
+        this.StateContainer.IsInProgress = false;
         this.StateContainer.TakeNotification();
         this.StateContainer.SetCurrentPageHeader($"Access Requests");
 
+        this.authenticationState = await this.AuthenticationStateTask;
         await this.FetchAccessRequestsAsync();
     }
 
     private async Task FetchAccessRequestsAsync()
     {
-        this.IsInProgress = true;
-
+        this.StateContainer.IsInProgress = true;
         try
         {
-            var accessRequests = await this.StateContainer.TryFetchAccessRequestsAsync(this.apiClient);
-            if (!"ok".Equals(accessRequests.Status))
-            {
-                this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = accessRequests.Status,
-                    Message = accessRequests.Error
-                };
-                return;
-            }
-
-            this.IncomingAccessRequests = new List<AccessRequestData>(accessRequests.AccessRequests.Count);
-            this.OutgoingAccessRequests = new List<AccessRequestData>(accessRequests.AccessRequests.Count);
-            foreach (var accessRequest in accessRequests.AccessRequests)
-            {
-                if (accessRequest.RequestType == AccessRequestType.Incoming)
-                {
-                    this.IncomingAccessRequests.Add(accessRequest);
-                }
-                else
-                {
-                    this.OutgoingAccessRequests.Add(accessRequest);
-                }
-            }
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
-        }
-        finally
-        {
-            this.IsInProgress = false;
-        }
-    }
-
-    private async Task ProcessAccessRequestAsync(AccessRequestData accessRequest, bool grant)
-    {
-        this.IsInProgress = true;
-        try
-        {
-            var processingInput = new AccessRequestProcessingDataInput
-            {
-                RequestId = accessRequest.RequestId,
-                SecretId = accessRequest.SecretName,
-                Grant = grant
-            };
-            var reply = await apiClient.ProcessAccessRequestAsync(processingInput);
-
+            var currentUserUpn = TokenHandler.GetName(authenticationState.User);
+            var reply = await this.StateContainer.TryFetchAccessRequestsAsync(this.apiClient, currentUserUpn);
             if (!"ok".Equals(reply.Status))
             {
                 this.Notification = new NotificationData()
@@ -189,6 +141,37 @@
                     Status = reply.Status,
                     Message = reply.Error
                 };
+                return;
+            }
+
+            this.IncomingAccessRequests = new List<AccessRequest>(this.StateContainer.IncomingAccessRequests);
+            this.OutgoingAccessRequests = new List<AccessRequest>(this.StateContainer.OutgoingAccessRequests);
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.StateContainer.IsInProgress = false;
+        }
+    }
+
+    private async Task ProcessAccessRequestAsync(AccessRequest accessRequest, bool grant)
+    {
+        this.StateContainer.IsInProgress = true;
+        try
+        {
+            var reply = await apiClient.ProcessAccessRequestAsync(accessRequest.SecretName, accessRequest.ToUpdateDto(grant));
+            if (!"ok".Equals(reply.Status))
+            {
+                this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = reply.Status,
+                    Message = reply.Error
+                };
+
                 return;
             }
 
@@ -205,29 +188,23 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
         }
 
         await FetchAccessRequestsAsync();
     }
 
-    private void SetRequestToCancellation(AccessRequestData accessRequest)
+    private void SetRequestToCancellation(AccessRequest accessRequest)
     {
         this.RequestToCancel = accessRequest;
     }
 
     private async Task CancelAccessRequestAsync()
     {
-        this.IsInProgress = true;
+        this.StateContainer.IsInProgress = true;
         try
         {
-            var processingInput = new AccessRequestCancellationDataInput
-            {
-                RequestId = this.RequestToCancel.RequestId,
-                SecretId = this.RequestToCancel.SecretName,
-            };
-            var reply = await apiClient.CancelAccessRequestAsync(processingInput);
-
+            var reply = await apiClient.CancelAccessRequestAsync(this.RequestToCancel.SecretName, this.RequestToCancel.ToDeletionDto());
             if (!"ok".Equals(reply.Status))
             {
                 this.Notification = new NotificationData()
@@ -236,6 +213,7 @@
                     Status = reply.Status,
                     Message = reply.Error
                 };
+
                 return;
             }
 
@@ -253,7 +231,7 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
         }
 
         await FetchAccessRequestsAsync();

@@ -1,11 +1,14 @@
 ﻿/// <summary>
-/// ...
+/// StateContainer
 /// </summary>
 
 namespace SafeExchange.Client.Web.Components
 {
+    using SafeExchange.Client.Common;
+    using SafeExchange.Client.Common.Model;
     using SafeExchange.Client.Web.Components.Model;
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
 
@@ -17,15 +20,24 @@ namespace SafeExchange.Client.Web.Components
 
         public event Action OnChange;
 
-        public bool IsAdministrator { get; set; }
+        private bool isInProgress = false;
+
+        public bool IsInProgress
+        {
+            get => this.isInProgress;
+
+            set
+            {
+                this.isInProgress = value;
+                this.NotifyStateChanged();
+            }
+        }
 
         public bool IsFetchingAccessRequests { get; set; }
 
-        public ApiAccessRequestsListReply CachedAccessRequests { get; set; }
+        public List<AccessRequest> IncomingAccessRequests { get; set; }
 
-        public int IncomingAccessRequestsCount => this.CachedAccessRequests?.AccessRequests.Where(ar => (ar.RequestType == AccessRequestType.Incoming)).Count() ?? 0;
-
-        public int OutgoingAccessRequestsCount => this.CachedAccessRequests?.AccessRequests.Where(ar => (ar.RequestType == AccessRequestType.Outgoing)).Count() ?? 0;
+        public List<AccessRequest> OutgoingAccessRequests { get; set; }
 
         public void SetNextNotification(NotificationData notification)
         {
@@ -45,37 +57,40 @@ namespace SafeExchange.Client.Web.Components
             NotifyStateChanged();
         }
 
-        public async Task<ApiAccessRequestsListReply> TryFetchAccessRequestsAsync(ApiClient apiClient)
+        public async Task<ResponseStatus> TryFetchAccessRequestsAsync(ApiClient apiClient, string currentUserUpn)
         {
             this.IsFetchingAccessRequests = true;
+            this.IncomingAccessRequests = new List<AccessRequest>();
+            this.OutgoingAccessRequests = new List<AccessRequest>();
+
             try
             {
-                this.CachedAccessRequests = null;
-                this.CachedAccessRequests = await apiClient.GetAccessRequestsAsync();
+                var requests = await apiClient.GetAccessRequestsAsync();
+                if (requests.Status == "ok")
+                {
+                    var accessRequests = requests.Result.Select(ar => new AccessRequest(ar)).ToList();
+                    foreach (var accessRequest in accessRequests)
+                    {
+                        if (accessRequest.Requestor.Equals(currentUserUpn))
+                        {
+                            this.OutgoingAccessRequests.Add(accessRequest);
+                        }
+                        else
+                        {
+                            this.IncomingAccessRequests.Add(accessRequest);
+                        }
+                    }
+                }
+                else
+                {
+                    // no-op
+                }
+
+                return requests.ToResponseStatus();
             }
             finally
             {
                 this.IsFetchingAccessRequests = false;
-                NotifyStateChanged();
-            }
-
-            return this.CachedAccessRequests;
-        }
-
-        public async ValueTask TryGetAdminStatusAsync(ApiClient apiClient)
-        {
-            if (this.IsAdministrator)
-            {
-                return;
-            }
-
-            try
-            {
-                var adminStatus = await apiClient.GetAdminStatusAsync();
-                this.IsAdministrator = "ok".Equals(adminStatus.Status) && adminStatus.Result?.Status == true;
-            }
-            finally
-            {
                 NotifyStateChanged();
             }
         }

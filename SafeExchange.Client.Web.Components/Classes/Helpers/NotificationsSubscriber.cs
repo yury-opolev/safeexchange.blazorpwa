@@ -5,7 +5,8 @@
 namespace SafeExchange.Client.Web.Components
 {
     using Microsoft.Extensions.Configuration;
-    using SafeExchange.Client.Web.Components.Model;
+    using SafeExchange.Client.Common;
+    using SafeExchange.Client.Common.Model;
     using System;
     using System.Threading.Tasks;
 
@@ -50,11 +51,11 @@ namespace SafeExchange.Client.Web.Components
             return subscription != default(NotificationSubscription);
         }
 
-        public async Task<NotificationSubscriptionOperationResult> Subscribe()
+        public async Task<ResponseStatus> Subscribe()
         {
             if (!await this.IsAvailable())
             {
-                return new NotificationSubscriptionOperationResult()
+                return new ResponseStatus()
                 {
                     Status = "no_content",
                     Error = "Your browser does not support push notifications."
@@ -64,31 +65,27 @@ namespace SafeExchange.Client.Web.Components
             var subscription = await pushNotifications.RequestSubscription(applicationServerPublicKey);
             if (subscription == default(NotificationSubscription))
             {
-                return new NotificationSubscriptionOperationResult()
+                return new ResponseStatus()
                 {
                     Status = "no_content",
                     Error = "Could not request browser push notifications."
                 };
             }
 
-            var response = await apiClient.Subscribe(subscription);
+            var response = await apiClient.RegisterWebPushSubscriptionAsync(subscription.ToCreationDto());
             if (!response.Status.Equals("ok"))
             {
                 await pushNotifications.DeleteSubscription();
             }
 
-            return new NotificationSubscriptionOperationResult()
-            {
-                Status = response.Status,
-                Error = response.Error
-            };
+            return response.ToResponseStatus();
         }
 
-        public async Task<NotificationSubscriptionOperationResult> Unsubscribe()
+        public async Task<ResponseStatus> Unsubscribe()
         {
             if (!await this.IsAvailable())
             {
-                return new NotificationSubscriptionOperationResult()
+                return new ResponseStatus()
                 {
                     Status = "no_content",
                     Error = "Your browser does not support push notifications."
@@ -98,7 +95,7 @@ namespace SafeExchange.Client.Web.Components
             var subscription = await pushNotifications.GetSubscription();
             if (subscription == default(NotificationSubscription))
             {
-                return new NotificationSubscriptionOperationResult()
+                return new ResponseStatus()
                 {
                     Status = "no_content",
                     Error = "Not found browser push notifications subscription."
@@ -106,12 +103,9 @@ namespace SafeExchange.Client.Web.Components
             }
             
             await pushNotifications.DeleteSubscription();
-            var response = await apiClient.Unsubscribe(subscription);
-            return new NotificationSubscriptionOperationResult()
-            {
-                Status = response.Status,
-                Error = response.Error
-            };
+
+            var response = await apiClient.UnregisterWebPushSubscriptionAsync(subscription.ToDeletionDto());
+            return response.ToResponseStatus();
         }
     }
 }

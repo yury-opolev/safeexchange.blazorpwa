@@ -1,50 +1,43 @@
-﻿@using SafeExchange.Client.Web.Components.Model
+﻿@using SafeExchange.Client.Common
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Model
 
 @inject NavigationManager NavigationManager
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
 
-@if (this.IsInProgress)
-{
-    <p>
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
-        </div>
-    </p>
-}
-
 @if (this.Notification != null)
 {
-    <div class="alert @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
         <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
         <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
     </div>
 }
 
-@if (this.ObjectDescriptions != null)
+@if (this.SecretsPermissions != null)
 {
     <ul class="list-group list-group-flush">
-        @for (int i = 0; i < this.ObjectDescriptions.Count; i++)
+        @for (int i = 0; i < this.SecretsPermissions.Count; i++)
         {
-            var objectDescription = this.ObjectDescriptions[i];
-            var objectUri = this.GetViewUri(objectDescription.ObjectName);
+            var secretPermissions = this.SecretsPermissions[i];
+            var objectUri = this.GetViewUri(secretPermissions.ObjectName);
             <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                 <div>
                     <CopyableContent Data="@objectUri">
-                        <span>@objectDescription.ObjectName</span>
+                        <span>@secretPermissions.ObjectName</span>
                     </CopyableContent>
-                    <small class="text-secondary my-0">@(objectDescription.CreatePermissionsString())</small>
+                    <small class="text-secondary my-0">@secretPermissions.PermissionsString</small>
                 </div>
                 <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
-                    <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="@(e => this.ViewObject(objectDescription.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
-                    <button class="btn btn-outline-primary" type="button" disabled="@(!objectDescription.CanWrite || IsInProgress)" @onclick="@(e => this.EditObject(objectDescription.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ViewObject(secretPermissions.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@(!secretPermissions.CanWrite || this.StateContainer.IsInProgress)" @onclick="@(e => this.EditObject(secretPermissions.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
                 </div>
             </li>
         }
     </ul>
 
-    @if (this.ObjectDescriptions.Count == 0)
+    @if (this.SecretsPermissions.Count == 0)
     {
         <p>
             - No secrets found -
@@ -56,12 +49,11 @@
 
     private NotificationData Notification;
 
-    private bool IsInProgress;
-
-    private IList<SecretDescriptionData> ObjectDescriptions;
+    private List<SubjectPermissions> SecretsPermissions;
 
     protected override async Task OnInitializedAsync()
     {
+        this.StateContainer.IsInProgress = false;
         this.StateContainer.TakeNotification();
 
         this.StateContainer.SetCurrentPageHeader($"My secrets");
@@ -95,26 +87,27 @@
 
     private async Task FetchSecretNamesAsync()
     {
-        this.IsInProgress = true;
+        this.StateContainer.IsInProgress = true;
         try
         {
-            var secretDescriptions = await apiClient.ListSecretsAsync();
+            var secretPermissionsOutput = await apiClient.ListSecretMetadataAsync();
 
-            if (!"ok".Equals(secretDescriptions.Status))
+            if (!"ok".Equals(secretPermissionsOutput.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
-                    Status = secretDescriptions.Status,
-                    Message = secretDescriptions.Error
+                    Status = secretPermissionsOutput.Status,
+                    Message = secretPermissionsOutput.Error
                 };
+
                 return;
             }
 
-            this.ObjectDescriptions = new List<SecretDescriptionData>(secretDescriptions.Secrets.Count);
-            foreach (var secretDescription in secretDescriptions.Secrets)
+            this.SecretsPermissions = new List<SubjectPermissions>(secretPermissionsOutput.Result.Count);
+            foreach (var secretPermissionsOutputItem in secretPermissionsOutput.Result)
             {
-                this.ObjectDescriptions.Add(secretDescription);
+                this.SecretsPermissions.Add(new SubjectPermissions(secretPermissionsOutputItem));
             }
         }
         catch (AccessTokenNotAvailableException exception)
@@ -123,7 +116,7 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
         }
     }
 

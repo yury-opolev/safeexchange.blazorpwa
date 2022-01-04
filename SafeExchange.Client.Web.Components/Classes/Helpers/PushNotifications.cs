@@ -5,6 +5,7 @@
 namespace SafeExchange.Client.Web.Components
 {
     using Microsoft.JSInterop;
+    using SafeExchange.Client.Common.Model;
     using System;
     using System.Threading.Tasks;
 

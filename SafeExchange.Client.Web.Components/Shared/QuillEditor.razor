@@ -1,0 +1,154 @@
+﻿@using System.Text
+
+@inject RichTextEditor richTextEditor
+
+@implements IDisposable
+
+<div id="richtext-editor" @ref="@EditorRef" @attributes="@InputAttributes" ></div>
+
+@code {
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> InputAttributes { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; }
+
+    [Parameter]
+    public bool IsRichContent { get; set; } = true;
+
+    private string content;
+
+    public bool IsDirty { get; private set; }
+
+    [Parameter]
+    public string Value
+    {
+        get => this.content;
+
+        set
+        {
+            if (string.Equals(value, this.content))
+            {
+                return;
+            }
+
+            this.content = value;
+            _ = this.SetVisibleContentAsync();
+            this.IsDirty = false;
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnFocus { get; set; }
+
+    [Parameter]
+    public EventCallback OnBlur { get; set; }
+
+    public ElementReference EditorRef { get; protected set; }
+
+    private ElementReference richEditorElement;
+
+    private bool initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.richTextEditor.InitializeEditorAsync(this.EditorRef, this.Placeholder, this.ReadOnly);
+            this.richTextEditor.OnFocus += this.HandleOnFocus;
+            this.richTextEditor.OnBlur += this.HandleOnBlur;
+            this.richTextEditor.OnTextChange += this.HandleOnTextChange;
+            this.initialized = true;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (!this.initialized)
+        {
+            return;
+        }
+
+        this.richTextEditor.OnFocus -= this.HandleOnFocus;
+        this.richTextEditor.OnBlur -= this.HandleOnBlur;
+        this.richTextEditor.OnTextChange -= this.HandleOnTextChange;
+    }
+
+    public async Task RefreshContentAsync()
+    {
+        if (!this.IsDirty)
+        {
+            return;
+        }
+
+        this.content = this.IsRichContent ? await this.GetHtmlAsync() : await this.GetTextAsync();
+        this.IsDirty = false;
+    }
+
+    public async Task SetEnabledAsync(bool enabled)
+    {
+        await this.richTextEditor.SetEnabledAsync(this.EditorRef, enabled);
+    }
+
+    public async Task<string> GetHtmlAsync()
+    {
+        return await this.richTextEditor.GetHtmlAsync(this.EditorRef);
+    }
+
+    public async Task SetHtmlAsync(string contents)
+    {
+        await this.richTextEditor.SetHtmlAsync(this.EditorRef, contents);
+    }
+
+    public async Task<string> GetContentsAsync()
+    {
+        return await this.richTextEditor.GetContentsAsync(this.EditorRef);
+    }
+
+    public async Task SetContentsAsync(string contents)
+    {
+        await this.richTextEditor.SetContentsAsync(this.EditorRef, contents);
+    }
+
+    public async Task<string> GetTextAsync()
+    {
+        return await this.richTextEditor.GetTextAsync(this.EditorRef);
+    }
+
+    public async Task SetTextAsync(string text)
+    {
+        await this.richTextEditor.SetTextAsync(this.EditorRef, text);
+    }
+
+    private void HandleOnFocus(object sender, EventArgs e)
+    {
+        _ = this.OnFocus.InvokeAsync();
+    }
+
+    private void HandleOnBlur(object sender, EventArgs e)
+    {
+        _ = this.OnBlur.InvokeAsync();
+    }
+
+    private void HandleOnTextChange(object sender, EventArgs e)
+    {
+        this.IsDirty = true;
+    }
+
+    private async Task SetVisibleContentAsync()
+    {
+        if (this.IsRichContent)
+        {
+            await this.SetHtmlAsync(this.content);
+            return;
+        }
+
+        await this.SetTextAsync(this.content);
+    }
+}

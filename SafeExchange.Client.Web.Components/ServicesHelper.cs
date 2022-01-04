@@ -9,6 +9,7 @@ namespace SafeExchange.Client.Web.Components
     using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using SafeExchange.Client.Common;
 
     public class ServicesHelper
     {
@@ -30,12 +31,14 @@ namespace SafeExchange.Client.Web.Components
             builder.Services.AddScoped<TooltipsInitializer>();
             builder.Services.AddScoped<PushNotifications>();
             builder.Services.AddScoped<NotificationsSubscriber>();
+            builder.Services.AddScoped<RichTextEditor>();
+            builder.Services.AddScoped<DownloadUploadHelper>();
 
             builder.Services.AddMsalAuthentication(options =>
             {
                 builder.Configuration.Bind("AzureAdB2C", options.ProviderOptions.Authentication);
                 builder.Configuration.Bind("AccessTokenScopes", options.ProviderOptions.DefaultAccessTokenScopes);
-                builder.Configuration.Bind("AdditionalScopesToConsent", options.ProviderOptions.AdditionalScopesToConsent);
+                // builder.Configuration.Bind("AdditionalScopesToConsent", options.ProviderOptions.AdditionalScopesToConsent);
             });
         }
     }

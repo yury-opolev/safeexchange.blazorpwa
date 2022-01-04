@@ -1,7 +1,17 @@
 ﻿@inject StateContainer StateContainerInstance
+
 @implements IDisposable
 
+@if (this.StateContainerInstance.IsInProgress)
+{
+<div class="spinner-border spinner-border-sm" role="status">
+    <span class="visually-hidden">In progress...</span>
+</div>
+<span class="mr-2"></span>
+}
+<span>
     @StateContainerInstance.CurrentPageHeader
+</span>
 
 @code{
     protected override void OnInitialized()

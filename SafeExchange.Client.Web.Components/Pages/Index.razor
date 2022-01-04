@@ -43,7 +43,7 @@
             <InputText class="form-control" @bind-Value="this.searchInput.SearchText" placeholder="Secret Name" aria-label="Secret To Search" />
         </div>
         <div class="col-md-4">
-            <button class="btn btn-outline-success" type="submit" disabled="@this.IsInProgress" aria-label="Search">Search</button>
+            <button class="btn btn-outline-success" type="submit" disabled="@this.StateContainer.IsInProgress" aria-label="Search">Search</button>
         </div>
     </div>
 
@@ -55,10 +55,9 @@
 
     private SearchInput searchInput;
 
-    private bool IsInProgress;
-
     protected override void OnInitialized()
     {
+        this.StateContainer.IsInProgress = false;
         this.StateContainer.SetCurrentPageHeader($"Home");
         this.Notification = this.StateContainer.TakeNotification();
         this.searchInput = new SearchInput();

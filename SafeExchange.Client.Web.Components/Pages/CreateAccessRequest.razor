@@ -1,18 +1,11 @@
-﻿@using SafeExchange.Client.Web.Components.Model
+﻿@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using SafeExchange.Client.Web.Components.Model
 
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
 @inject NavigationManager NavManager
-
-@if (this.IsInProgress)
-{
-    <p>
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
-        </div>
-    </p>
-}
 
 @if (this.Notification != null)
 {
@@ -26,25 +19,25 @@
     <div class="card-header"><strong>New Access Request:</strong></div>
     <div class="card-body">
 
-        <EditForm Model="@this.AccessRequestInput" OnValidSubmit="@RequestAccessAsync">
+        <EditForm Model="@this.AccessRequest" OnValidSubmit="@RequestAccessAsync">
             <DataAnnotationsValidator />
             <p>
-                <InputText class="form-control col" disabled="@IsInProgress" @bind-Value="this.AccessRequestInput.SecretId" placeholder="Secret Id" />
-                <ValidationMessage For="@(() => this.AccessRequestInput.SecretId)" />
+                <InputText class="form-control col" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.AccessRequest.SecretName" placeholder="Secret Id" />
+                <ValidationMessage For="@(() => this.AccessRequest.SecretName)" />
             </p>
             <p>
                 <label>
                     Permissions:
-                    <InputSelect class="form-control" disabled="@IsInProgress" @bind-Value="this.AccessRequestInput.Permission">
-                        <option>Read</option>
-                        <option>Read,Write</option>
-                        <option>Read,Write,GrantAccess</option>
-                        <option>Read,Write,GrantAccess,RevokeAccess</option>
+                    <InputSelect class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.AccessRequest.PermissionsString" >
+                        <option value="Read">Read</option>
+                        <option value="Read,Write">Read,Write</option>
+                        <option value="Read,Write,GrantAccess">Read,Write,GrantAccess</option>
+                        <option value="Read,Write,GrantAccess,RevokeAccess">Read,Write,GrantAccess,RevokeAccess</option>
                     </InputSelect>
                 </label>
             </p>
             <p>
-                <button class="btn btn-outline-primary" type="submit" disabled="@IsInProgress"><span class="oi oi-cloud-upload"></span>&nbsp; Request Access</button>
+                <button class="btn btn-outline-primary" type="submit" disabled="@this.StateContainer.IsInProgress"><span class="oi oi-cloud-upload"></span>&nbsp; Request Access</button>
             </p>
         </EditForm>
     </div>
@@ -54,31 +47,38 @@
 
     private NotificationData Notification;
 
-    private bool IsInProgress;
-
-    private AccessRequestDataInput AccessRequestInput { get; set; } = new AccessRequestDataInput() { Permission = "Read" };
+    private AccessRequest AccessRequest { get; set; } = new AccessRequest() { CanRead = true };
 
     protected override void OnInitialized()
     {
+        this.StateContainer.IsInProgress = false;
         this.StateContainer.TakeNotification();
         this.StateContainer.SetCurrentPageHeader($"Create Access Request");
 
         if (NavManager.TryGetQueryString("subject", out string subjectValue))
         {
-            this.AccessRequestInput.SecretId = subjectValue;
+            this.AccessRequest.SecretName = subjectValue;
         }
+
         if (NavManager.TryGetQueryString("permission", out string permissionValue))
         {
-            this.AccessRequestInput.Permission = permissionValue;
+            if (PermissionsConverter.TryParsePermissionString(permissionValue, out _, out _, out _, out _))
+            {
+                this.AccessRequest.PermissionsString = permissionValue;
+            }
+            else
+            {
+                this.AccessRequest.PermissionsString = "Read";
+            }
         }
     }
 
     private async Task RequestAccessAsync()
     {
-        this.IsInProgress = true;
+        this.StateContainer.IsInProgress = true;
         try
         {
-            var reply = await apiClient.CreateAccessRequestAsync(this.AccessRequestInput);
+            var reply = await apiClient.CreateAccessRequestAsync(this.AccessRequest.SecretName, this.AccessRequest.ToCreationDto());
 
             if (!"ok".Equals(reply.Status))
             {
@@ -91,8 +91,11 @@
                 return;
             }
 
-            this.AccessRequestInput.SecretId = string.Empty;
-            this.AccessRequestInput.Permission = string.Empty;
+            this.AccessRequest.SecretName = string.Empty;
+            this.AccessRequest.CanRead = true;
+            this.AccessRequest.CanWrite = false;
+            this.AccessRequest.CanGrantAccess = false;
+            this.AccessRequest.CanRevokeAccess = false;
 
             this.Notification = new NotificationData()
             {
@@ -107,7 +110,7 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
         }
     }
 

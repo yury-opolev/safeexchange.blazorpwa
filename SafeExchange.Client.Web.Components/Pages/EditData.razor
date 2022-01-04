@@ -1,12 +1,18 @@
-﻿@using SafeExchange.Client.Web.Components.Model
+﻿@using SafeExchange.Client.Common
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using System.Text.RegularExpressions;
+@using System.Text
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Model
+@using System.IO
+@using System.Threading
 
 @implements IDisposable
 
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
+@inject DownloadUploadHelper downloadUploadHelper
 
 <div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -26,15 +32,6 @@
     </div>
 </div>
 
-@if (this.IsInProgress)
-{
-    <p>
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
-        </div>
-    </p>
-}
-
 @if (this.Notification != null)
 {
     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
@@ -45,7 +42,7 @@
         {
             <hr>
             <p>
-                <button class="btn btn-warning" type="button" disabled="@IsInProgress" @onclick="() => this.NavManager.NavigateTo(this.Notification.ButtonUri)">
+                <button class="btn btn-warning" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="() => this.NavManager.NavigateTo(this.Notification.ButtonUri)">
                     <span>@this.Notification.ButtonText</span>
                 </button>
             </p>
@@ -55,33 +52,126 @@
 
 }
 
-@if (this.inputModel != null)
+@if (this.compoundModel != null)
 {
-<EditForm EditContext="@editContext" OnValidSubmit="@TryUpdateSecretAsync">
-    <DataAnnotationsValidator />
+<EditForm EditContext="@editContext" OnSubmit="@OnSubmitAsync">
+    <CompoundModelValidator />
 
     <p>
-        <InputTextArea class="form-control col" rows="12" disabled="@IsInProgress" @bind-Value="inputModel.Data.Value" placeholder="Content" aria-label="Content" aria-describedby="content-validation" />
-        <ValidationMessage id="content-validation" For="@(() => inputModel.Data.Value)" />
+        <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
+            <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" ></QuillEditor>
+        </div>
+        <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
+    </p>
+
+    <p>
+    <div class="collapsible-content">
+        <button class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+            &nbsp; Attachments
+        </button>
+        <div class="collapse" id="collapseAttachments">
+            <div class="card card-body">
+
+                
+                @if ((this.ExistingAttachments?.Count ?? 0) > 0)
+                {
+                    <ul class="list-group list-group-flush">
+                        @for (int ai = 0; ai < this.ExistingAttachments.Count; ai++)
+                        {
+                            var attachment = this.ExistingAttachments[ai];
+                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap attachment-row">
+                                <div>
+                                    <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control bg-light")" >
+                                        @attachment.FileName
+                                        <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                                    </span>
+                                </div>
+                                <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
+                                @if (this.IsAttachmentDeleted(attachment))
+                                {
+                                    <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-action-undo"></span></button>
+                                }
+                                else
+                                {
+                                    <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-x"></span></button>
+                                }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if ((this.Attachments?.Count ?? 0) > 0)
+                {
+                    <ul class="list-group list-group-flush">
+                        @for (int i = 0; i < this.Attachments.Count; i++)
+                        {
+                            var attachmentIndex = i;
+                            var attachment = this.Attachments[i];
+                            <li class="attachment-row list-group-item d-flex justify-content-start align-items-center flex-wrap">
+                                <div class="px-2">
+                                    @switch (attachment.Status)
+                                    {
+                                        case (UploadStatus.NotStarted):
+                                            <i class="oi oi-file text-secondary"></i>
+                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                            break;
+
+                                        case (UploadStatus.InProgress):
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            <span>@($"{attachment.ProgressPercents:00}")%&nbsp;</span>
+                                            break;
+
+                                        case (UploadStatus.Success):
+                                            <i class="oi oi-check text-success"></i>
+                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                            break;
+
+                                        case (UploadStatus.Error):
+                                            <i class="oi oi-warning text-warning"></i>
+                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                            break;
+                                    }
+                                </div>
+                                <div>
+                                    <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
+                                    <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
+                                </div>
+                                <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
+                                    <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
+                                </div>
+                            </li>
+                        }
+                    </ul>                        
+                }
+
+                <div class="mt-3" >
+                    <button id="attachButton" class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(async () => await this.ClickFileInputAsync())">Attach file(s)</button>
+                    <InputFile id="attachedFileList1" @ref="this.inputFile" style="display:none" OnChange="@this.AddFiles" multiple disabled="@this.StateContainer.IsInProgress" />
+                </div>
+
+            </div>
+        </div>
+    </div>
     </p>
 
     <p>
         <div class="form-check form-switch">
-            <InputCheckbox class="form-check-input" type="checkbox" id="destroyAfterReadSwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAfterRead" />
+            <InputCheckbox class="form-check-input" type="checkbox" id="destroyAfterReadSwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireAfterRead" />
             <label class="form-check-label" for="destroyAfterReadSwitch">Destroy After Read</label>
         </div>
     </p>
     <p>
         <div class="form-check form-switch">
-            <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.ScheduleDestroy" />
+            <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ScheduleExpiration" />
             <label class="form-check-label" for="scheduleDestroySwitch">Schedule Destroy</label>
         </div>
     </p>
     <p>
         <div class="form-group form-row">
             <label for="destroy-datetime-input" class="col-2 col-form-label">Destroy At:</label>
-            <div class="col-10">
-                <InputDateTime id="destroy-datetime-input" class="form-control" type="datetime-local" disabled="@IsInProgress" @bind-Value="inputModel.Data.DestroySettings.DestroyAt" DisplayName="DestroyAt" />
+            <div class="col-4">
+                <InputDate id="destroy-datetime-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireAt" Type=InputDateType.DateTimeLocal DisplayName="Expire At" />
             </div>
         </div>
     </p>
@@ -90,30 +180,30 @@
         <strong>Access list:</strong>
     </p>
 
-    @for (int i = 0; i < inputModel.AccessList.Count; i++)
+    @for (int i = 0; i < this.compoundModel.Permissions.Count; i++)
     {
         var tempIndex = i;
         <p>
             <div class="row align-items-center">
                 <div class="col">
                     <div class="form-floating">
-                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Subject" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
+                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
                         <label for="@($"username-input-{i}")" class="form-label">Username</label>
                     </div>
-                    <ValidationMessage id="@($"un-validation-{i}")" For="@(() => inputModel.AccessList[tempIndex].Subject)" />
+                    <ValidationMessage id="@($"un-validation-{i}")" For="@(() => this.compoundModel.Permissions[tempIndex].SubjectName)" />
                 </div>
                 <div class="col">
                     @if (tempIndex < this.FixedAccessItemCount)
                     {
                         <div class="form-floating">
-                            <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
+                            <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
                             <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
                         </div>
                     }
                     else
                     {
                         <div class="form-floating">
-                            <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@IsInProgress" @bind-Value="inputModel.AccessList[tempIndex].Permission" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                            <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
                                 <option>Read</option>
                                 <option>Read,Write</option>
                                 <option>Read,Write,GrantAccess</option>
@@ -123,14 +213,14 @@
                         </div>
                     }
                 </div>
-                <div class="col-3">
+                <div class="col-2">
                     @if (this.IsDeleted(tempIndex))
                     {
-                        <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
+                        <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
                     }
                     else
                     {
-                        <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
+                        <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
                     }
                 </div>
             </div>
@@ -139,16 +229,34 @@
     <p>
         <div class="row">
             <div class="col">
-                <button class="btn btn-outline-primary" type="button" disabled="@IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
             </div>
         </div>
     </p>
 
     <p>
         <div class="d-flex justify-content-center">
-            <button type="submit" class="btn btn-primary mx-2" disabled="@(IsInProgress || !this.isValidData)">Update</button>
-            <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@IsInProgress">
-                Delete
+            <button type="submit" class="btn btn-primary mx-2" disabled="@this.StateContainer.IsInProgress">
+                @if (this.StateContainer.IsInProgress)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <i class="oi oi-cloud-upload"></i>  
+                }
+                <span>&nbsp;Update</span>
+            </button>
+            <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@this.StateContainer.IsInProgress">
+                @if (this.StateContainer.IsInProgress)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                }
+                else
+                {
+                    <i class="oi oi-x"></i>
+                }
+                <span>&nbsp;Delete</span>
             </button>
         </div>
     </p>
@@ -157,103 +265,139 @@
 
 @code {
 
+    public const int MaxAttachments = 5;
+
     [Parameter]
     public string ObjectName { get; set; }
 
-    private NotificationData Notification;
+    private QuillEditor quillEditor;
 
-    private bool IsInProgress;
+    private List<ContentMetadata> ExistingAttachments { get; set; } = new();
+
+    private List<ContentMetadata> DeletedAttachments { get; set; } = new();
+
+    private List<AttachmentModel> Attachments { get; set; } = new();
+
+    private NotificationData Notification;
 
     private EditContext editContext;
 
-    private bool isValidData = true;
+    private CompoundModel compoundModel = new CompoundModel()
+    {
+        Metadata = new ObjectMetadata()
+        {
+            ObjectName = string.Empty,
+            Content = new List<ContentMetadata>(),
+            ExpirationMetadata = new ExpirationMetadata()
+            {
+                ExpireAfterRead = false,
+                ScheduleExpiration = false,
+                ExpireAt = DateTime.MinValue
+            }
+        },
+        Permissions = new List<SubjectPermissions>()
+        {
+            new SubjectPermissions()
+            {
+                ObjectName = string.Empty,
+                SubjectName = string.Empty,
 
-    private SecretInput inputModel;
+                CanRead = true,
+                CanWrite = false,
+                CanGrantAccess = false,
+                CanRevokeAccess = false
+            }
+        },
+        MainData = string.Empty
+    };
+
+    private ObjectMetadata originalMetadata;
 
     private int FixedAccessItemCount = 0;
 
     private List<int> DeletedAccessItems = new List<int>();
 
+    private InputFile inputFile;
+
     public void Dispose()
     {
-        editContext.OnFieldChanged -= this.HandleFieldChanged;
+        //...
     }
 
     protected override async Task OnInitializedAsync()
     {
+        this.StateContainer.IsInProgress = false;
         this.StateContainer.TakeNotification();
 
         this.ObjectName = this.ObjectName ?? string.Empty;
         this.StateContainer.SetCurrentPageHeader($"Edit '{this.ObjectName}'");
 
+        this.editContext = new EditContext(this.compoundModel);
         await this.FetchSecretAsync(this.ObjectName);
-
-        this.editContext = new EditContext(this.inputModel);
-        this.editContext.OnFieldChanged += this.HandleFieldChanged;
     }
 
-    private void HandleFieldChanged(object sender, FieldChangedEventArgs e)
+    private async Task ClickFileInputAsync()
     {
-        isValidData = this.IsCurrentDataValid();
+        await this.downloadUploadHelper.InvokeAttachFileAsync(this.inputFile);
     }
 
-    private bool IsCurrentDataValid()
+    private void AddFiles(InputFileChangeEventArgs e)
     {
-        // TODO: remove after nested objects validation is available
-        if (string.IsNullOrEmpty(this.inputModel?.Name))
+        this.Attachments.Clear();
+        foreach (var file in e.GetMultipleFiles())
         {
-            return false;
-        }
-
-        if (this.inputModel.Name.Length > 63)
-        {
-            return false;
-        }
-
-        var nameRegex = new Regex(@"^[0-9a-zA-Z-]+$");
-        if (!nameRegex.IsMatch(this.inputModel.Name))
-        {
-            return false;
-        }
-
-        if (string.IsNullOrEmpty(this.inputModel.Data?.Value))
-        {
-            return false;
-        }
-
-        if ((this.inputModel.Data?.Value?.Length ?? 0) > 25000)
-        {
-            return false;
-        }
-
-        var regex = new Regex(@"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-        var accessList = this.inputModel.AccessList ?? new List<AccessDataInput>();
-        foreach (var accessItem in accessList)
-        {
-            if (string.IsNullOrEmpty(accessItem.Subject))
+            try
             {
-                continue;
+                this.Attachments.Add(new(file));
+                if (this.Attachments.Count >= MaxAttachments)
+                {
+                    break;
+                }
             }
-
-            if (accessItem.Subject.Length > 63 || !regex.IsMatch(accessItem.Subject))
+            catch (Exception exception)
             {
-                return false;
+                Console.WriteLine($"{exception.GetType()}: {exception.Message}");
             }
         }
+    }
 
-        return true;
+    private async Task HandleEditorLostFocus()
+    {
+        if (!this.quillEditor.IsDirty)
+        {
+            return;
+        }
+
+        await this.quillEditor.RefreshContentAsync();
+        this.compoundModel.MainData = this.quillEditor.Value;
+        this.ValidateContent();
+    }
+
+    private void ValidateContent()
+    {
+        var fieldIdentifier = this.editContext.Field("MainData");
+        this.editContext.NotifyFieldChanged(fieldIdentifier);
     }
 
     private void AddPermissionItem()
     {
-        this.inputModel.AccessList.Add(new AccessDataInput() { Permission = "Read" });
+        this.compoundModel.Permissions.Add(new SubjectPermissions()
+        {
+            ObjectName = string.Empty,
+            SubjectName = string.Empty,
+
+            CanRead = true,
+            CanWrite = false,
+            CanGrantAccess = false,
+            CanRevokeAccess = false
+        });
     }
 
     private void RemovePermissionItem(int index)
     {
         if (index >= this.FixedAccessItemCount)
         {
-            this.inputModel.AccessList.RemoveAt(index);
+            this.compoundModel.Permissions.RemoveAt(index);
             return;
         }
 
@@ -272,59 +416,57 @@
         return this.DeletedAccessItems.Contains(index);
     }
 
+    private bool IsAttachmentDeleted(ContentMetadata attachment)
+    {
+        return this.DeletedAttachments.Contains(attachment);
+    }
+
+    private void DeleteExistingAttachment(ContentMetadata attachment)
+    {
+        this.DeletedAttachments.Add(attachment);
+    }
+
+    private void UndeleteExistingAttachment(ContentMetadata attachment)
+    {
+        this.DeletedAttachments.Remove(attachment);
+    }
+
     private async Task FetchSecretAsync(string objectName)
     {
-        this.IsInProgress = true;
+        this.StateContainer.IsInProgress = true;
+        if (this.quillEditor != null)
+        {
+            await this.quillEditor.SetEnabledAsync(false);
+        }
         try
         {
-            var accessData = await apiClient.ReadAccessAsync(objectName);
-            if (!"ok".Equals(accessData.Status))
+            var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
+            if (!"ok".Equals(compoundModelResult.Status))
             {
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
-                    Status = accessData.Status,
-                    Message = accessData.Error,
-                    ButtonText = "unauthorized".Equals(accessData.Status) ? "Request Access" : string.Empty,
-                    ButtonUri = this.CreateAccessRequestUri("Read,Write")
+                    Status = compoundModelResult.Status,
+                    Message = compoundModelResult.Error,
+                    ButtonText = "unauthorized".Equals(compoundModelResult.Status) ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri("Read")
                 };
+
                 return;
             }
 
-            var secretData = await apiClient.GetSecretDataAsync(objectName);
-            if (!"ok".Equals(secretData.Status))
-            {
-                this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = secretData.Status,
-                    Message = secretData.Error,
-                    ButtonText = "unauthorized".Equals(secretData.Status) ? "Request Access" : string.Empty,
-                    ButtonUri = this.CreateAccessRequestUri("Read,Write")
-                };
-                return;
-            }
+            this.DismissNotification();
 
-            this.Notification = null;
+            this.originalMetadata = new ObjectMetadata(compoundModelResult.Result.Metadata);
+            this.FixedAccessItemCount = compoundModelResult.Result.Permissions.Count;
+            this.ExistingAttachments = new(compoundModelResult.Result.Metadata.Content.Where(c => !c.IsMain));
 
-            this.inputModel = new SecretInput()
-            {
-                Name = this.ObjectName,
-                Data = new SecretDataInput()
-                {
-                    Value = secretData.Result.Secret,
-                    ContentType = secretData.Result.ContentType,
-                    DestroySettings = secretData.Result.DestroySettings
-                },
-                AccessList = new List<AccessDataInput>()
-            };
+            this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
+            this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
+            this.compoundModel.MainData = compoundModelResult.Result.MainData;
 
-            foreach (var accessItem in accessData.AccessList)
-            {
-                this.inputModel.AccessList.Add(new AccessDataInput() { Subject = accessItem.UserName, Permission = AccessDataInput.CreatePermissionsString(accessItem) });
-            }
-
-            this.FixedAccessItemCount = this.inputModel.AccessList.Count;
+            await this.quillEditor.SetTextAsync(string.Empty);
+            await this.quillEditor.SetHtmlAsync(this.compoundModel.MainData);
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -332,62 +474,120 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
+            if (this.quillEditor != null)
+            {
+                await this.quillEditor.SetEnabledAsync(true);
+            }
         }
     }
 
-    private async Task TryUpdateSecretAsync()
+    private async Task OnSubmitAsync(EditContext editContext)
     {
-        if (this.inputModel == null || !this.IsCurrentDataValid())
+        if (this.quillEditor.IsDirty)
+        {
+            await this.quillEditor.RefreshContentAsync();
+            this.compoundModel.MainData = this.quillEditor.Value;
+        }
+
+        if (!editContext.Validate())
         {
             return;
         }
 
-        this.IsInProgress = true;
+        await TryUpdateSecretAsync();
+    }
 
-        var inputData = new SecretDataInput()
+    private async Task TryUpdateSecretAsync()
+    {
+        this.StateContainer.IsInProgress = true;
+        if (this.quillEditor != null)
         {
-            Value = this.inputModel.Data.Value,
-            ContentType = this.inputModel.Data.ContentType,
-            DestroySettings = this.inputModel.Data.DestroySettings
-        };
-
+            await this.quillEditor.SetEnabledAsync(false);
+        }
+        this.StateHasChanged();
         try
         {
-            var secretData = await apiClient.UpdateSecretDataAsync(this.inputModel.Name, inputData);
-            if (!"ok".Equals(secretData.Status))
+            await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            if (!this.compoundModel.Metadata.ExpirationMetadata.Equals(this.originalMetadata.ExpirationMetadata))
             {
-                this.Notification = new NotificationData()
+                var updatedMetadata = await this.apiClient.UpdateSecretMetadataAsync(
+                    this.compoundModel.Metadata.ObjectName,
+                    this.compoundModel.Metadata.ToUpdateDto());
+
+                if (!"ok".Equals(updatedMetadata.Status))
                 {
-                    Type = NotificationType.Warning,
-                    Status = secretData.Status,
-                    Message = secretData.Error,
-                    ButtonText = "unauthorized".Equals(secretData.Status) ? "Request Access" : string.Empty,
-                    ButtonUri = this.CreateAccessRequestUri("Read,Write")
-                };
+                    this.Notification = CreateNotificationData(updatedMetadata.ToResponseStatus());
+                    return;
+                }
+            }
+
+            var mainContent = this.originalMetadata.Content.First(c => c.IsMain);
+            var dropResult = await apiClient.DropContentDataAsync(this.compoundModel.Metadata.ObjectName, mainContent.ContentName);
+            if (!"ok".Equals(dropResult.Status))
+            {
+                this.Notification = CreateNotificationData(dropResult.ToResponseStatus());
                 return;
             }
 
+            var newMainContent = this.compoundModel.Metadata.Content.First(c => c.IsMain);
+            using (var dataStream = new MemoryStream())
+            {
+                using (var writer = new StreamWriter(dataStream, leaveOpen: true))
+                {
+                    await writer.WriteAsync(this.compoundModel.MainData);
+                    await writer.FlushAsync();
+                }
+
+                dataStream.Position = 0;
+                var secretData = await apiClient.PutSecretDataStreamAsync(
+                    this.compoundModel.Metadata.ObjectName, newMainContent.ContentName, dataStream);
+                if (!"ok".Equals(secretData.Status))
+                {
+                    this.Notification = CreateNotificationData(secretData.ToResponseStatus());
+                    return;
+                }
+            }
+
+            foreach (var deletedAttachment in this.DeletedAttachments)
+            {
+                var contentDeletionResult = await apiClient.DeleteContentMetadataAsync(this.compoundModel.Metadata.ObjectName, deletedAttachment.ContentName);
+                if (!"ok".Equals(contentDeletionResult.Status))
+                {
+                    // no-op
+                }
+            }
+
+            await this.apiClient.UploadAttachmentsAsync(this.compoundModel.Metadata.ObjectName, this.Attachments);
+
             var missingAccess = string.Empty;
+
+            var deletedPermissionItems = new List<SubjectPermissions>();
             foreach (var deletedIndex in this.DeletedAccessItems)
             {
-                var accessItem = this.inputModel.AccessList[deletedIndex];
-                var accessReply = await apiClient.RevokeAccessAsync(this.inputModel.Name, accessItem);
+                deletedPermissionItems.Add(this.compoundModel.Permissions[deletedIndex]);
+            }
+
+            if (deletedPermissionItems.Count > 0)
+            {
+                var accessReply = await apiClient.RevokeAccessAsync(
+                    this.compoundModel.Metadata.ObjectName, deletedPermissionItems.Select(sp => sp.ToDto()).ToList());
                 if (!"ok".Equals(accessReply.Status))
                 {
                     missingAccess = "Read,Write,GrantAccess,RevokeAccess";
                 }
             }
 
-            for (int index = 0; index < this.inputModel.AccessList.Count; index++)
+            var addedPermissionItems = new List<SubjectPermissions>();
+            for (int index = this.FixedAccessItemCount; index < this.compoundModel.Permissions.Count; index++)
             {
-                if (index < this.FixedAccessItemCount)
-                {
-                    continue;
-                }
+                addedPermissionItems.Add(this.compoundModel.Permissions[index]);
+            }
 
-                var accessItem = this.inputModel.AccessList[index];
-                var accessReply = await apiClient.GrantAccessAsync(this.inputModel.Name, accessItem);
+            if (addedPermissionItems.Count > 0)
+            {
+                var accessReply = await apiClient.GrantAccessAsync(
+                    this.compoundModel.Metadata.ObjectName, addedPermissionItems.Select(sp => sp.ToDto()).ToList());
                 if (!"ok".Equals(accessReply.Status))
                 {
                     missingAccess = string.IsNullOrEmpty(missingAccess) ? "Read,Write,GrantAccess" : missingAccess;
@@ -399,11 +599,12 @@
             {
                 Type = needToRequestAccess ? NotificationType.Warning : NotificationType.Success,
                 Status = needToRequestAccess ? "Success/Warning" : "Success",
-                Message = needToRequestAccess ? $"Secret '{this.inputModel.Name}' updated successfully, but access was not updated." : $"Secret '{this.inputModel.Name}' updated successfully",
-                CopyableUri = this.GetViewUri(this.inputModel.Name),
+                Message = needToRequestAccess ? $"Secret '{this.compoundModel.Metadata.ObjectName}' updated successfully, but access was not updated." : $"Secret '{this.compoundModel.Metadata.ObjectName}' updated successfully",
+                CopyableUri = this.GetViewUri(this.compoundModel.Metadata.ObjectName),
                 ButtonText = needToRequestAccess ? "Request Access" : string.Empty,
                 ButtonUri = this.CreateAccessRequestUri(missingAccess)
             };
+
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
         }
@@ -413,17 +614,21 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
+            if (this.quillEditor != null)
+            {
+                await this.quillEditor.SetEnabledAsync(true);
+            }
+            this.StateHasChanged();
         }
     }
 
     private async Task DeleteSecretAsync()
     {
-        this.IsInProgress = true;
-
+        this.StateContainer.IsInProgress = true;
         try
         {
-            var secretData = await apiClient.DeleteSecretDataAsync(this.inputModel.Name);
+            var secretData = await apiClient.DeleteSecretDataAsync(this.compoundModel.Metadata.ObjectName);
 
             if (!"ok".Equals(secretData.Status))
             {
@@ -433,6 +638,7 @@
                     Status = secretData.Status,
                     Message = secretData.Error
                 };
+
                 return;
             }
 
@@ -440,8 +646,9 @@
             {
                 Type = NotificationType.Success,
                 Status = "Success",
-                Message = $"Secret '{this.inputModel.Name}' deleted successfully"
+                Message = $"Secret '{this.compoundModel.Metadata.ObjectName}' deleted successfully"
             };
+
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
         }
@@ -451,9 +658,19 @@
         }
         finally
         {
-            this.IsInProgress = false;
+            this.StateContainer.IsInProgress = false;
         }
     }
+
+    private NotificationData CreateNotificationData(ResponseStatus status)
+        => new NotificationData()
+    {
+        Type = NotificationType.Warning,
+        Status = status.Status,
+        Message = status.Error,
+        ButtonText = "unauthorized".Equals(status.Status) ? "Request Access" : string.Empty,
+        ButtonUri = this.CreateAccessRequestUri("Read,Write")
+    };
 
     public void DismissNotification()
     {
