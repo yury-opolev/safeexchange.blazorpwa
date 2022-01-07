@@ -147,9 +147,10 @@
             Content = new List<ContentMetadata>(),
             ExpirationMetadata = new ExpirationMetadata()
             {
-                ExpireAfterRead = false,
                 ScheduleExpiration = false,
-                ExpireAt = DateTime.MinValue
+                ExpireAt = DateTime.MinValue,
+                ExpireOnIdleTime = false,
+                IdleTimeToExpire = TimeSpan.Zero
             }
         },
         Permissions = new List<SubjectPermissions>()

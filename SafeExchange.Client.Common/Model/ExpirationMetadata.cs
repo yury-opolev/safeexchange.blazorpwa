@@ -12,23 +12,27 @@ namespace SafeExchange.Client.Common.Model
 
         public ExpirationMetadata(ExpirationMetadata source)
         {
-            this.ExpireAfterRead = source.ExpireAfterRead;
             this.ScheduleExpiration = source.ScheduleExpiration;
             this.ExpireAt = source.ExpireAt;
+            this.ExpireOnIdleTime = source.ExpireOnIdleTime;
+            this.IdleTimeToExpire = source.IdleTimeToExpire;
         }
 
         public ExpirationMetadata(ExpirationSettingsOutput source)
         {
-            this.ExpireAfterRead = source.ExpireAfterRead;
             this.ScheduleExpiration = source.ScheduleExpiration;
             this.ExpireAt = source.ExpireAt;
+            this.ExpireOnIdleTime = source.ExpireOnIdleTime;
+            this.IdleTimeToExpire = source.IdleTimeToExpire;
         }
-
-        public bool ExpireAfterRead { get; set; }
 
         public bool ScheduleExpiration { get; set; }
 
         public DateTime ExpireAt { get; set; }
+
+        public bool ExpireOnIdleTime { get; set; }
+
+        public TimeSpan IdleTimeToExpire { get; set; }
 
         public override bool Equals(object? obj)
         {
@@ -38,22 +42,24 @@ namespace SafeExchange.Client.Common.Model
             }
 
             return
-                this.ExpireAfterRead == other.ExpireAfterRead &&
                 this.ScheduleExpiration == other.ScheduleExpiration &&
-                this.ExpireAt == other.ExpireAt;
+                this.ExpireAt == other.ExpireAt &&
+                this.ExpireOnIdleTime == other.ExpireOnIdleTime &&
+                this.IdleTimeToExpire == other.IdleTimeToExpire;
         }
 
         public override int GetHashCode()
-            => HashCode.Combine(this.ExpireAfterRead, this.ScheduleExpiration, this.ExpireAt);
+            => HashCode.Combine(this.ScheduleExpiration, this.ExpireAt, this.ExpireOnIdleTime, this.IdleTimeToExpire);
 
         public override string? ToString()
-            =>  $"ExpireAfterRead: {this.ExpireAfterRead}, ScheduleExpiration: {this.ScheduleExpiration}, ExpireAt: {this.ExpireAt}";
+            =>  $"ScheduleExpiration: {this.ScheduleExpiration}, ExpireAt: {this.ExpireAt}, ExpireOnIdleTime: {this.ExpireOnIdleTime}, IdleTimeToExpire: {this.IdleTimeToExpire}";
 
         public ExpirationSettingsInput ToDto() => new ()
         {
-            ExpireAfterRead = this.ExpireAfterRead,
             ScheduleExpiration = this.ScheduleExpiration,
-            ExpireAt = this.ExpireAt
+            ExpireAt = this.ExpireAt,
+            ExpireOnIdleTime = this.ExpireOnIdleTime,
+            IdleTimeToExpire = this.IdleTimeToExpire
         };
     }
 }
