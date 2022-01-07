@@ -34,6 +34,23 @@ namespace SafeExchange.Client.Common.Model
 
         public TimeSpan IdleTimeToExpire { get; set; }
 
+        public int DaysExpire
+        {
+            get => this.IdleTimeToExpire.Days;
+            set => this.IdleTimeToExpire = new TimeSpan(value, this.IdleTimeToExpire.Hours, this.IdleTimeToExpire.Minutes, this.IdleTimeToExpire.Seconds);
+        }
+
+        public DateTime TimeToExpire
+        {
+            get => DateTime.MinValue + new TimeSpan(this.IdleTimeToExpire.Hours, this.IdleTimeToExpire.Minutes, this.IdleTimeToExpire.Seconds);
+            
+            set
+            {
+                var time = value - DateTime.MinValue;
+                this.IdleTimeToExpire = new TimeSpan(this.IdleTimeToExpire.Days, time.Hours, time.Minutes, time.Seconds);
+            }
+        }
+
         public override bool Equals(object? obj)
         {
             if (obj is null || obj is not ExpirationMetadata other)
