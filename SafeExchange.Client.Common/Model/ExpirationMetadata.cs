@@ -34,7 +34,7 @@ namespace SafeExchange.Client.Common.Model
 
         public TimeSpan IdleTimeToExpire { get; set; }
 
-        public int DaysExpire
+        public int DaysToExpire
         {
             get => this.IdleTimeToExpire.Days;
             set => this.IdleTimeToExpire = new TimeSpan(value, this.IdleTimeToExpire.Hours, this.IdleTimeToExpire.Minutes, this.IdleTimeToExpire.Seconds);
