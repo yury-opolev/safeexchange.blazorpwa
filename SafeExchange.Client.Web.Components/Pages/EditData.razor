@@ -187,6 +187,7 @@
                 <div class="input-group-text">Idle Days</div>
                 <InputNumber id="idle-days-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire" DisplayName="DaysToExpire" />
             </div>
+            <ValidationMessage id="idle-days-validation" For="@(() => this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire)" />
         </div>
         <div class="col-sm">
             <label for="idle-timespan-input" class="visually-hidden">Idle time:</label>

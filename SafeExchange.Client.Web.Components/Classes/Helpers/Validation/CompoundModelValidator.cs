@@ -69,6 +69,11 @@ namespace SafeExchange.Client.Web.Components
             {
                 this.ValidateContent(model);
             }
+
+            if (force || CurrentEditContext.IsModified(() => model.Metadata.ExpirationMetadata.DaysToExpire))
+            {
+                this.ValidateExpirationIdleDays(model);
+            }
         }
 
         private bool ValidateName(CompoundModel model)
@@ -142,6 +147,20 @@ namespace SafeExchange.Client.Web.Components
             if (model.MainData.Length > 10 * 1024 * 1024)
             {
                 this.AddErrorMessage(() => model.MainData, "Content is too large (10 Mb limit).");
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        private bool ValidateExpirationIdleDays(CompoundModel model)
+        {
+            this.messageStore.Clear(() => model.Metadata.ExpirationMetadata.DaysToExpire);
+
+            var isValid = true;
+            if (model.Metadata.ExpirationMetadata.DaysToExpire < 0)
+            {
+                this.AddErrorMessage(() => model.Metadata.ExpirationMetadata.DaysToExpire, "Days cannot be negative.");
                 isValid = false;
             }
 
