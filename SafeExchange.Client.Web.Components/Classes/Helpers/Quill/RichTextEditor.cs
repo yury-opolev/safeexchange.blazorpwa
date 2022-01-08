@@ -28,12 +28,12 @@ namespace SafeExchange.Client.Web.Components
                "import", "./_content/SafeExchange.Client.Web.Components/richTextEditor.js").AsTask());
         }
 
-        public async Task InitializeEditorAsync(ElementReference elementRef, string placeholderText, bool readOnly)
+        public async Task InitializeEditorAsync(ElementReference elementRef, string placeholderText, bool readOnly, ElementReference nextElementRef)
         {
             this.objRef = DotNetObjectReference.Create(this);
 
             var module = await moduleTask.Value;
-            await module.InvokeVoidAsync("initializeEditor", this.objRef, elementRef, placeholderText, readOnly);
+            await module.InvokeVoidAsync("initializeEditor", this.objRef, elementRef, placeholderText, readOnly, nextElementRef);
         }
 
         public async Task SetEnabledAsync(ElementReference elementRef, bool enabled)

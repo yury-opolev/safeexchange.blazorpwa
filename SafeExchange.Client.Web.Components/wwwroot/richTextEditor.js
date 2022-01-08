@@ -1,5 +1,5 @@
 
-function initializeEditor(dotNetRef, quillElement, placeholder, readOnly) {
+function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextElement) {
     var options = {
         placeholder: placeholder,
         readOnly: readOnly,
@@ -20,7 +20,18 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly) {
         ];
     }
 
+    var bindings = {
+        // This will overwrite the default binding also named 'tab'
+        tab: {
+            key: 9,
+            handler: function () {
+                nextElement.focus();
+            }
+        }
+    };
+
     options.modules = {
+        keyboard: { bindings: bindings },
         toolbar: toolbarOptions,
         imageDrop: true,
         imageResize: { modules: ['Resize', 'Toolbar'] }

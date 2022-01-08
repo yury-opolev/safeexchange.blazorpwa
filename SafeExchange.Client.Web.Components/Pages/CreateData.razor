@@ -31,14 +31,14 @@
     </p>
     <p>
         <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
-            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" ></QuillEditor>
+            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
         </div>
         <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
     </p>
 
     <p>
     <div class="collapsible-content">
-        <button class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+        <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
             &nbsp; Attachments
         </button>
         <div class="collapse" id="collapseAttachments">
@@ -209,6 +209,8 @@
     private QuillEditor quillEditor;
 
     private InputFile inputFile;
+
+    private ElementReference attachmentsButtonElement;
 
     private CompoundModel compoundModel = new CompoundModel()
     {

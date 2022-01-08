@@ -50,6 +50,9 @@
     [Parameter]
     public EventCallback OnBlur { get; set; }
 
+    [Parameter]
+    public ElementReference NextElementRef { get; set; }
+
     public ElementReference EditorRef { get; protected set; }
 
     private ElementReference richEditorElement;
@@ -60,7 +63,7 @@
     {
         if (firstRender)
         {
-            await this.richTextEditor.InitializeEditorAsync(this.EditorRef, this.Placeholder, this.ReadOnly);
+            await this.richTextEditor.InitializeEditorAsync(this.EditorRef, this.Placeholder, this.ReadOnly, this.NextElementRef);
             this.richTextEditor.OnFocus += this.HandleOnFocus;
             this.richTextEditor.OnBlur += this.HandleOnBlur;
             this.richTextEditor.OnTextChange += this.HandleOnTextChange;
