@@ -12,6 +12,6 @@ namespace SafeExchange.Client.Common
 
         public const long MaxAttachmentDataLength = 1L * 1024 * 1024 * 1024 * 1024; // 1 Tb
 
-        public const int MaxChunkDataLength = 95 * 1024 * 1024; // 95 Mb
+        public const int MaxChunkDataLength = 50 * 1024 * 1024; // 50 Mb
     }
 }

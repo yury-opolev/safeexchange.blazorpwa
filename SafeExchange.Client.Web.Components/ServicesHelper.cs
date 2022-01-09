@@ -20,7 +20,11 @@ namespace SafeExchange.Client.Web.Components
             builder.Services.AddScoped<ApiAuthorizationMessageHandler>();
             var apiConfiguration = builder.Configuration.GetSection("BackendApi");
             builder.Services.AddHttpClient("BackendApi",
-                client => client.BaseAddress = new Uri(apiConfiguration["BaseAddress"]))
+                client =>
+                {
+                    client.BaseAddress = new Uri(apiConfiguration["BaseAddress"]);
+                    client.Timeout = TimeSpan.FromMinutes(3);
+                })
                 .AddHttpMessageHandler<ApiAuthorizationMessageHandler>();
 
             builder.Services.AddScoped<ApiClient>();
