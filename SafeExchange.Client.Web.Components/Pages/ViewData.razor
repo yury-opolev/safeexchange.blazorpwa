@@ -34,7 +34,14 @@
 {
     <EditForm Model="@this.compoundModel">
     <p>
-        <QuillEditor @ref="@this.quillEditor" Placeholder="Content" @bind-Value="@this.compoundModel.MainData" ReadOnly=true></QuillEditor>
+        <div class="ql-container ql-snow">
+            <div id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
+            @if (!this.StateContainer.IsInProgress)
+            {
+                @((MarkupString)this.compoundModel.MainData)
+            }
+            </div>
+        </div>
     </p>
 
     @if (this.Attachments.Count > 0)
@@ -135,8 +142,6 @@
 
     private AuthenticationState authenticationState;
 
-    private QuillEditor quillEditor;
-
     private NotificationData Notification;
 
     private CompoundModel compoundModel = new CompoundModel()
@@ -221,10 +226,6 @@
     private async Task FetchSecretAsync(string objectName)
     {
         this.StateContainer.IsInProgress = true;
-        if (this.quillEditor != null)
-        {
-            await this.quillEditor.SetEnabledAsync(false);
-        }
         try
         {
             var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
@@ -249,9 +250,6 @@
             this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
-
-            await this.quillEditor.SetTextAsync(string.Empty);
-            await this.quillEditor.SetHtmlAsync(this.compoundModel.MainData);
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -260,10 +258,6 @@
         finally
         {
             this.StateContainer.IsInProgress = false;
-            if (this.quillEditor != null)
-            {
-                await this.quillEditor.SetEnabledAsync(true);
-            }
         }
     }
 
