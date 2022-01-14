@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SafeExchange.PWA", "SafeExc
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SafeExchange.Client.Web.Components", "SafeExchange.Client.Web.Components\SafeExchange.Client.Web.Components.csproj", "{EC77FF31-4A57-4394-AE68-AEF76D6AFA94}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SafeExchange.Client.Common", "SafeExchange.Client.Common\SafeExchange.Client.Common.csproj", "{A702C2C7-D33B-4F31-ACE9-BE45E394B1E2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SafeExchange.Client.Common", "SafeExchange.Client.Common\SafeExchange.Client.Common.csproj", "{A702C2C7-D33B-4F31-ACE9-BE45E394B1E2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

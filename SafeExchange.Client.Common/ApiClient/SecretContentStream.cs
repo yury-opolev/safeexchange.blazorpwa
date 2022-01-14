@@ -6,6 +6,9 @@ namespace SafeExchange.Client.Common
 {
     using SafeExchange.Client.Common.Model;
     using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Threading.Tasks;
 
     public class SecretContentStream : Stream
     {
@@ -37,7 +40,7 @@ namespace SafeExchange.Client.Common
             }
 
             this.contentId = secretContent.ContentName;
-            this.chunks = new(secretContent.Chunks);
+            this.chunks = new List<ChunkMetadata>(secretContent.Chunks);
 
             this.length = 0;
             foreach (var chunk in this.chunks)

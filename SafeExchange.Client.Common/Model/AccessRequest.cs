@@ -59,7 +59,7 @@ namespace SafeExchange.Client.Common.Model
             }
         }
 
-        public SubjectPermissionsInput ToCreationDto() => new ()
+        public SubjectPermissionsInput ToCreationDto() => new SubjectPermissionsInput()
         {
             CanRead = this.CanRead,
             CanWrite = this.CanWrite,
@@ -67,13 +67,13 @@ namespace SafeExchange.Client.Common.Model
             CanRevokeAccess = this.CanRevokeAccess
         };
 
-        public AccessRequestUpdateInput ToUpdateDto(bool approve) => new ()
+        public AccessRequestUpdateInput ToUpdateDto(bool approve) => new AccessRequestUpdateInput()
         {
             RequestId = this.Id,
             Approve = approve
         };
 
-        public AccessRequestDeletionInput ToDeletionDto() => new ()
+        public AccessRequestDeletionInput ToDeletionDto() => new AccessRequestDeletionInput()
         {
             RequestId = this.Id
         };

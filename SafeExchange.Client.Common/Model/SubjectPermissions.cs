@@ -52,7 +52,7 @@ namespace SafeExchange.Client.Common.Model
             }
         }
 
-        public SubjectPermissionsInput ToDto() => new ()
+        public SubjectPermissionsInput ToDto() => new SubjectPermissionsInput()
         {
             SubjectName = this.SubjectName,
 

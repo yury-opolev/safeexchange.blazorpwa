@@ -6,6 +6,7 @@ namespace SafeExchange.Client.Common.Model
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
 
     public class ContentMetadata
     {
@@ -84,13 +85,13 @@ namespace SafeExchange.Client.Common.Model
             return BytesToString(length);
         }
 
-        public ContentMetadataCreationInput ToCreationDto() => new ()
+        public ContentMetadataCreationInput ToCreationDto() => new ContentMetadataCreationInput()
         {
             ContentType = this.ContentType,
             FileName = this.FileName
         };
 
-        public ContentMetadataUpdateInput ToUpdateDto() => new ()
+        public ContentMetadataUpdateInput ToUpdateDto() => new ContentMetadataUpdateInput()
         {
             ContentType = this.ContentType,
             FileName = this.FileName

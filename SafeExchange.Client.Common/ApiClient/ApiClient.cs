@@ -4,10 +4,11 @@
 
 namespace SafeExchange.Client.Common
 {
-    using Microsoft.AspNetCore.Components.Forms;
     using SafeExchange.Client.Common.Model;
     using System;
     using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Json;
@@ -163,7 +164,7 @@ namespace SafeExchange.Client.Common
             var content = new ContentMetadata(secretMetadata.Result.Content.First(c => c.IsMain));
             using (var dataStream = new MemoryStream())
             {
-                using (var writer = new StreamWriter(dataStream, Encoding.UTF8, leaveOpen: true))
+                using (var writer = new StreamWriter(dataStream, Encoding.UTF8, 4096, leaveOpen: true))
                 {
                     await writer.WriteAsync(input.MainData);
                     await writer.FlushAsync();
@@ -445,7 +446,7 @@ namespace SafeExchange.Client.Common
 
         #endregion notification subscription
 
-        private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall)
+        private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall) where T : class
         {
             HttpResponseMessage? response = null;
             string content = String.Empty;
@@ -461,7 +462,7 @@ namespace SafeExchange.Client.Common
             }
             catch (Exception ex)
             {
-                if (response is not null && response.StatusCode != HttpStatusCode.OK)
+                if (response != null && response.StatusCode != HttpStatusCode.OK)
                 {
                     return new BaseResponseObject<T>()
                     {
