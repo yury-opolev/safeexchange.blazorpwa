@@ -2,12 +2,16 @@
 /// ClientTokenProvider
 /// </summary>
 
-namespace SafeExchange.Client.Powershell
+namespace SafeExchange.Client.Powershell5
 {
     using Microsoft.Identity.Client;
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Net;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     public class ClientTokenProvider
     {
@@ -20,7 +24,7 @@ namespace SafeExchange.Client.Powershell
             this.tokens = new ConcurrentDictionary<string, ClientToken>();
 
             this.clientApplication = PublicClientApplicationBuilder.Create(clientId)
-                .WithAuthority(authority).WithTenantId(tenantId).WithBroker().Build();
+                .WithAuthority(authority).WithTenantId(tenantId).Build();
         }
 
         public async Task<string> GetTokenAsync(IEnumerable<string> scopes, CancellationToken cancellationToken)
@@ -75,8 +79,7 @@ namespace SafeExchange.Client.Powershell
                 }
                 else
                 {
-                    var options = new SystemWebViewOptions();
-                    return await this.clientApplication.AcquireTokenInteractive(scopes).WithUseEmbeddedWebView(true).ExecuteAsync(cancellationToken);
+                    return await this.clientApplication.AcquireTokenInteractive(scopes).ExecuteAsync(cancellationToken);
                 }
             }
             catch (MsalUiRequiredException)

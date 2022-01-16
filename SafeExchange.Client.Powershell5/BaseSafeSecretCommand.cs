@@ -2,9 +2,11 @@
 /// BaseSafeSecretCommand
 /// </summary>
 
-namespace SafeExchange.Client.Powershell
+namespace SafeExchange.Client.Powershell5
 {
     using SafeExchange.Client.Common;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Management.Automation;
 
     public class BaseSafeSecretCommand : Cmdlet
@@ -42,7 +44,7 @@ namespace SafeExchange.Client.Powershell
                 this.BackendBaseAddress = DefaultBackendBaseAddress;
             }
 
-            if (this.Scopes == null || this.Scopes.Count() == 0)
+            if (this.Scopes == null || !this.Scopes.Any())
             {
                 this.Scopes = DefaultScopes;
             }

@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +18,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy $(PkgMicrosoft_Identity_Client)\lib\netstandard1.3\Microsoft.Identity.Client.dll $(OutDir)" />
+    <Exec Command="xcopy $(PkgMicrosoft_Identity_Client)\lib\net5.0-windows10.0.17763\Microsoft.Identity.Client.dll $(OutDir) /Y" />
   </Target>
 	
 </Project>
