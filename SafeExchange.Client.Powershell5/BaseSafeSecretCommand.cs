@@ -17,6 +17,8 @@ namespace SafeExchange.Client.Powershell5
         
         public static readonly string DefaultAuthority = "https://login.microsoftonline.com/1472703e-99d8-45ee-aeac-7ec3ae9ab104";
 
+        public static readonly string DefaultRedirectUri = "msalb75602e2-2c3b-446b-9c92-77021db634eb://auth";
+
         public static readonly string DefaultBackendBaseAddress = "https://safeexchange-backend.azurewebsites.net/api/";
 
         public static readonly IList<string> DefaultScopes = new List<string>() { "https://spaceoysteroutlook.onmicrosoft.com/user_impersonation" };
@@ -30,13 +32,19 @@ namespace SafeExchange.Client.Powershell5
         [Parameter()]
         public ClientTokenProvider TokenProvider { get; set; }
 
+        [Parameter()]
+        public bool UseIntegratedWindowsAuth { get; set; }
+
         protected ApiClient apiClient;
 
         protected override void BeginProcessing()
         {
             if (this.TokenProvider == null)
             {
-                this.TokenProvider = new ClientTokenProvider(DefaultClientId, DefaultAuthority, DefaultTenantId);
+                this.TokenProvider = new ClientTokenProvider(DefaultClientId, DefaultAuthority, DefaultTenantId, DefaultRedirectUri)
+                {
+                    UseIntegratedWindowsAuth = this.UseIntegratedWindowsAuth
+                };
             }
 
             if (string.IsNullOrEmpty(this.BackendBaseAddress))

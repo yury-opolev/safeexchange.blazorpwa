@@ -15,16 +15,18 @@ namespace SafeExchange.Client.Powershell5
 
     public class ClientTokenProvider
     {
+        public bool UseIntegratedWindowsAuth { get; set; }
+
         private IPublicClientApplication clientApplication;
 
         private ConcurrentDictionary<string, ClientToken> tokens;
 
-        public ClientTokenProvider(string clientId, string authority, string tenantId)
+        public ClientTokenProvider(string clientId, string authority, string tenantId, string redirectUri)
         {
             this.tokens = new ConcurrentDictionary<string, ClientToken>();
 
             this.clientApplication = PublicClientApplicationBuilder.Create(clientId)
-                .WithAuthority(authority).WithTenantId(tenantId).Build();
+                .WithAuthority(authority).WithTenantId(tenantId).WithRedirectUri(redirectUri).Build();
         }
 
         public async Task<string> GetTokenAsync(IEnumerable<string> scopes, CancellationToken cancellationToken)
@@ -79,6 +81,11 @@ namespace SafeExchange.Client.Powershell5
                 }
                 else
                 {
+                    if (this.UseIntegratedWindowsAuth)
+                    {
+                        return await this.clientApplication.AcquireTokenByIntegratedWindowsAuth(scopes).ExecuteAsync(cancellationToken);
+                    }
+
                     return await this.clientApplication.AcquireTokenInteractive(scopes).ExecuteAsync(cancellationToken);
                 }
             }
