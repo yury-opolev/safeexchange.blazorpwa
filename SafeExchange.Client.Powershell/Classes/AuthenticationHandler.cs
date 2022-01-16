@@ -2,7 +2,7 @@
 /// AuthenticationHandler
 /// </summary>
 
-namespace SafeExchange.Client.Powershell.Classes
+namespace SafeExchange.Client.Powershell
 {
     using System;
     using System.Net.Http.Headers;

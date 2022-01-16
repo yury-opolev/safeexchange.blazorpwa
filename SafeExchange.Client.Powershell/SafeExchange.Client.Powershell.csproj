@@ -7,8 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.40.0" />
-    <PackageReference Include="Microsoft.WSMan.Runtime" Version="7.2.1" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.40.0" GeneratePathProperty="true">
+    </PackageReference>
+    <PackageReference Include="System.Management.Automation" Version="7.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SafeExchange.Client.Common\SafeExchange.Client.Common.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy $(PkgMicrosoft_Identity_Client)\lib\netstandard1.3\Microsoft.Identity.Client.dll $(OutDir)" />
+  </Target>
+	
 </Project>

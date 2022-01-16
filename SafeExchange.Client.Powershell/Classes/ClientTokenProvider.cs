@@ -2,7 +2,7 @@
 /// ClientTokenProvider
 /// </summary>
 
-namespace SafeExchange.Client.Powershell.Classes
+namespace SafeExchange.Client.Powershell
 {
     using Microsoft.Identity.Client;
     using System;

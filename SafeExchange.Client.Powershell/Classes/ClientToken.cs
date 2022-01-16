@@ -1,6 +1,8 @@
-﻿
+﻿/// <summary>
+/// ClientToken
+/// </summary>
 
-namespace SafeExchange.Client.Powershell.Classes
+namespace SafeExchange.Client.Powershell
 {
     using System.Collections.Generic;
     using System.Security;
