@@ -21,23 +21,27 @@ namespace SafeExchange.Client.Powershell5
 
         private ConcurrentDictionary<string, ClientToken> tokens;
 
-        public ClientTokenProvider(string clientId, string authority, string tenantId, string redirectUri)
+        private IEnumerable<string> scopes;
+
+        public ClientTokenProvider(string clientId, string authority, string tenantId, string redirectUri, IEnumerable<string> scopes)
         {
+            this.scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+
             this.tokens = new ConcurrentDictionary<string, ClientToken>();
 
             this.clientApplication = PublicClientApplicationBuilder.Create(clientId)
                 .WithAuthority(authority).WithTenantId(tenantId).WithRedirectUri(redirectUri).Build();
         }
 
-        public async Task<string> GetTokenAsync(IEnumerable<string> scopes, CancellationToken cancellationToken)
+        public async Task<string> GetTokenAsync(CancellationToken cancellationToken)
         {
             var utcNow = DateTime.UtcNow;
-            if (this.TryGetCachedToken(scopes, out var accessToken))
+            if (this.TryGetCachedToken(this.scopes, out var accessToken))
             {
                 return accessToken;
             }
 
-            var authResult = await this.AcquireTokenAsync(scopes, cancellationToken);
+            var authResult = await this.AcquireTokenAsync(this.scopes, cancellationToken);
             this.CacheToken(authResult);
             return authResult.AccessToken;
         }

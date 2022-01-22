@@ -8,7 +8,6 @@ namespace SafeExchange.Client.Powershell5
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Management.Automation;
     using System.Reflection;
 
@@ -30,28 +29,52 @@ namespace SafeExchange.Client.Powershell5
         public string BackendBaseAddress { get; set; }
 
         [Parameter()]
-        public IEnumerable<string> Scopes { get; set; }
-
-        [Parameter()]
         public ClientTokenProvider TokenProvider { get; set; }
-
-        [Parameter()]
-        public bool UseIntegratedWindowsAuth { get; set; }
 
         protected ApiClient apiClient;
 
-        private Assembly compilerServicesAssembly;
+        private Dictionary<string, Assembly> redirectedAssemblies;
 
         public BaseSafeSecretCommand() 
             : base()
         {
+            this.AddAssembliesRedirect();
+        }
+
+        protected override void BeginProcessing()
+        {
+            if (this.TokenProvider == null)
+            {
+                this.TokenProvider = new ClientTokenProvider(DefaultClientId, DefaultAuthority, DefaultTenantId, DefaultRedirectUri, DefaultScopes);
+            }
+
+            if (string.IsNullOrEmpty(this.BackendBaseAddress))
+            {
+                this.BackendBaseAddress = DefaultBackendBaseAddress;
+            }
+
+            var authHttpClient = new AuthenticatedHttpClient(DefaultBackendBaseAddress, this.TokenProvider);
+            this.apiClient = new ApiClient(authHttpClient.HttpClient);
+        }
+
+        private void AddAssembliesRedirect()
+        {
             var compilerServiceAssemblyLocation = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "System.Runtime.CompilerServices.Unsafe.dll");
-            this.compilerServicesAssembly = Assembly.LoadFrom(compilerServiceAssemblyLocation);
+            var compilerServicesAssembly = Assembly.LoadFrom(compilerServiceAssemblyLocation);
+
+            this.redirectedAssemblies = new Dictionary<string, Assembly>();
+            this.redirectedAssemblies.Add(
+                "System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a",
+                compilerServicesAssembly);
+
             ResolveEventHandler onAssemblyResolve = (sender, e) =>
             {
-                if (e.Name.Equals("System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"))
+                foreach (var item in this.redirectedAssemblies)
                 {
-                    return this.compilerServicesAssembly;
+                    if (e.Name.Equals(item.Key))
+                    {
+                        return item.Value;
+                    }
                 }
 
                 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -66,30 +89,6 @@ namespace SafeExchange.Client.Powershell5
             };
 
             AppDomain.CurrentDomain.AssemblyResolve += onAssemblyResolve;
-        }
-
-        protected override void BeginProcessing()
-        {
-            if (this.TokenProvider == null)
-            {
-                this.TokenProvider = new ClientTokenProvider(DefaultClientId, DefaultAuthority, DefaultTenantId, DefaultRedirectUri)
-                {
-                    UseIntegratedWindowsAuth = this.UseIntegratedWindowsAuth
-                };
-            }
-
-            if (string.IsNullOrEmpty(this.BackendBaseAddress))
-            {
-                this.BackendBaseAddress = DefaultBackendBaseAddress;
-            }
-
-            if (this.Scopes == null || !this.Scopes.Any())
-            {
-                this.Scopes = DefaultScopes;
-            }
-
-            var authHttpClient = new AuthenticatedHttpClient(DefaultBackendBaseAddress, DefaultScopes, this.TokenProvider);
-            this.apiClient = new ApiClient(authHttpClient.HttpClient);
         }
     }
 }

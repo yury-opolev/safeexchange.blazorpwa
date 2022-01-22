@@ -39,6 +39,7 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.IdentityModel" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -49,11 +50,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseSafeSecretCommand.cs" />
+    <Compile Include="BaseSingleSafeSecretCommand.cs" />
     <Compile Include="Classes\AuthenticatedHttpClient.cs" />
     <Compile Include="Classes\AuthenticationHandler.cs" />
     <Compile Include="Classes\ClientToken.cs" />
     <Compile Include="Classes\ClientTokenProvider.cs" />
-    <Compile Include="ListSafeSecretsCommand.cs" />
+    <Compile Include="Classes\Constants.cs" />
+    <Compile Include="Classes\InputLocalFileModel.cs" />
+    <Compile Include="Classes\SecureStringExtensions.cs" />
+    <Compile Include="Cmdlets\ListSafeSecretsCommand.cs" />
+    <Compile Include="NewClientTokenProviderCommand.cs" />
+    <Compile Include="Cmdlets\NewSafeSecretCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
