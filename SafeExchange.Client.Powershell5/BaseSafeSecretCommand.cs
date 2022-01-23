@@ -13,6 +13,8 @@ namespace SafeExchange.Client.Powershell5
 
     public class BaseSafeSecretCommand : Cmdlet
     {
+        public static readonly string FrontendBaseAddress = "https://www.safeexchange.dk";
+
         public static readonly string DefaultTenantId = "9188040d-6c67-4c5b-b112-36a304b66dad";
         
         public static readonly string DefaultClientId = "b75602e2-2c3b-446b-9c92-77021db634eb";
@@ -89,6 +91,11 @@ namespace SafeExchange.Client.Powershell5
             };
 
             AppDomain.CurrentDomain.AssemblyResolve += onAssemblyResolve;
+        }
+
+        public string CreateSafeSecretLink(string secretName)
+        {
+            return $"{FrontendBaseAddress.TrimEnd('/')}/viewdata/{secretName}";
         }
     }
 }

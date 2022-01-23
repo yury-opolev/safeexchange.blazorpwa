@@ -63,7 +63,7 @@ namespace SafeExchange.Client.Powershell5
                 return;
             }
 
-            WriteObject(response.Result);
+            WriteObject(new { this.Name, Link = this.CreateSafeSecretLink(this.Name) });
         }
 
         private List<AttachmentModel> CreateAttachmentsList(string[] filesToAttach)
