@@ -270,7 +270,8 @@
         {
             try
             {
-                this.Attachments.Add(new(file));
+                var fileModel = new InputBrowserFileModel(file);
+                this.Attachments.Add(new (fileModel));
                 if (this.Attachments.Count >= MaxAttachments)
                 {
                     break;

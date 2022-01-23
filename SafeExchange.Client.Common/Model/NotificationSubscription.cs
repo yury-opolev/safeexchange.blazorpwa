@@ -17,14 +17,14 @@ namespace SafeExchange.Client.Common.Model
 
         public string Auth { get; set; }
 
-        public NotificationSubscriptionCreationInput ToCreationDto() => new()
+        public NotificationSubscriptionCreationInput ToCreationDto() => new NotificationSubscriptionCreationInput()
         {
             Auth = this.Auth,
             P256dh = this.P256dh,
             Url = this.Url
         };
 
-        public NotificationSubscriptionDeletionInput ToDeletionDto() => new()
+        public NotificationSubscriptionDeletionInput ToDeletionDto() => new NotificationSubscriptionDeletionInput()
         {
             Url = this.Url
         };

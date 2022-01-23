@@ -7,6 +7,7 @@ namespace SafeExchange.Client.Common.Model
     using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.Linq;
 
     public class ObjectMetadata
     {
@@ -55,12 +56,12 @@ namespace SafeExchange.Client.Common.Model
 
         public ExpirationMetadata ExpirationMetadata { get; set; }
 
-        public MetadataCreationInput ToCreationDto() => new ()
+        public MetadataCreationInput ToCreationDto() => new MetadataCreationInput()
         {
             ExpirationSettings = this.ExpirationMetadata.ToDto()
         };
 
-        public MetadataUpdateInput ToUpdateDto() => new()
+        public MetadataUpdateInput ToUpdateDto() => new MetadataUpdateInput()
         {
             ExpirationSettings = this.ExpirationMetadata.ToDto()
         };

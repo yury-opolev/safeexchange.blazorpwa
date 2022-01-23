@@ -5,6 +5,7 @@
 namespace SafeExchange.Client.Common.Model
 {
     using System;
+    using System.Collections.Generic;
 
     public class ContentMetadataOutput
     {

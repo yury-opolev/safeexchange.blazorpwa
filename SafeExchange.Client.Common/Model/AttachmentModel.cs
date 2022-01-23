@@ -4,12 +4,11 @@
 
 namespace SafeExchange.Client.Common.Model
 {
-    using Microsoft.AspNetCore.Components.Forms;
     using System;
 
     public class AttachmentModel
     {
-        public AttachmentModel(IBrowserFile sourceFile)
+        public AttachmentModel(InputFileModel sourceFile)
         {
             this.SourceFile = sourceFile;
             this.Status = UploadStatus.NotStarted;
@@ -23,6 +22,6 @@ namespace SafeExchange.Client.Common.Model
 
         public float ProgressPercents { get; set; }
 
-        public IBrowserFile SourceFile { get; set; }
+        public InputFileModel SourceFile { get; set; }
     }
 }

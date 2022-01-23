@@ -7,6 +7,8 @@ namespace SafeExchange.Client.Common
     using System;
     using System.IO;
     using System.Net;
+    using System.Net.Http;
+    using System.Threading.Tasks;
 
     internal class PartialStreamContent : StreamContent
     {

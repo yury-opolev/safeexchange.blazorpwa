@@ -6,7 +6,7 @@ namespace SafeExchange.Client.Common.Model
 {
     using System;
 
-    public class BaseResponseObject<T>
+    public class BaseResponseObject<T> where T : class
     {
         public string Status { get; set; } = string.Empty;
 

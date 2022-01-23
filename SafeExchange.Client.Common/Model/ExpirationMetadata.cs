@@ -53,7 +53,7 @@ namespace SafeExchange.Client.Common.Model
 
         public override bool Equals(object? obj)
         {
-            if (obj is null || obj is not ExpirationMetadata other)
+            if (obj is null || !(obj is ExpirationMetadata other))
             {
                 return false;
             }
@@ -71,7 +71,7 @@ namespace SafeExchange.Client.Common.Model
         public override string? ToString()
             =>  $"ScheduleExpiration: {this.ScheduleExpiration}, ExpireAt: {this.ExpireAt}, ExpireOnIdleTime: {this.ExpireOnIdleTime}, IdleTimeToExpire: {this.IdleTimeToExpire}";
 
-        public ExpirationSettingsInput ToDto() => new ()
+        public ExpirationSettingsInput ToDto() => new ExpirationSettingsInput()
         {
             ScheduleExpiration = this.ScheduleExpiration,
             ExpireAt = this.ExpireAt,

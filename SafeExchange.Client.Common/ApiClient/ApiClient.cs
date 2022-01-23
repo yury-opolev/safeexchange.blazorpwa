@@ -4,10 +4,11 @@
 
 namespace SafeExchange.Client.Common
 {
-    using Microsoft.AspNetCore.Components.Forms;
     using SafeExchange.Client.Common.Model;
     using System;
     using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Json;
@@ -163,7 +164,7 @@ namespace SafeExchange.Client.Common
             var content = new ContentMetadata(secretMetadata.Result.Content.First(c => c.IsMain));
             using (var dataStream = new MemoryStream())
             {
-                using (var writer = new StreamWriter(dataStream, Encoding.UTF8, leaveOpen: true))
+                using (var writer = new StreamWriter(dataStream, Encoding.UTF8, 4096, leaveOpen: true))
                 {
                     await writer.WriteAsync(input.MainData);
                     await writer.FlushAsync();
@@ -280,8 +281,11 @@ namespace SafeExchange.Client.Common
         public async Task<BaseResponseObject<string>> ProcessAccessRequestAsync(string secretId, AccessRequestUpdateInput input)
             => await this.ProcessResponseAsync<string>(async () =>
         {
-            var content = JsonContent.Create(input, mediaType: null);
-            return await client.PatchAsync($"{ApiVersion}/accessrequest/{secretId}", content);
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/accessrequest/{secretId}")
+            {
+                Content = JsonContent.Create(input, mediaType: null)
+            };
+            return await client.SendAsync(httpRequestMessage);
         });
 
         public async Task<BaseResponseObject<string>> CancelAccessRequestAsync(string secretId, AccessRequestDeletionInput input)
@@ -346,8 +350,11 @@ namespace SafeExchange.Client.Common
         public async Task<BaseResponseObject<ObjectMetadataOutput>> UpdateSecretMetadataAsync(string secretId, MetadataUpdateInput data)
             => await this.ProcessResponseAsync<ObjectMetadataOutput>(async () =>
         {
-            var content = JsonContent.Create(data, mediaType: null);
-            return await client.PatchAsync($"{ApiVersion}/secret/{secretId}", content);
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/secret/{secretId}")
+            {
+                Content = JsonContent.Create(data, mediaType: null)
+            };
+            return await client.SendAsync(httpRequestMessage);
         });
 
         public async Task<BaseResponseObject<string>> DeleteSecretDataAsync(string secretId)
@@ -369,8 +376,11 @@ namespace SafeExchange.Client.Common
         public async Task<BaseResponseObject<ContentMetadataOutput>> UpdateContentMetadataAsync(string secretId, string contentId, ContentMetadataUpdateInput input)
             => await this.ProcessResponseAsync<ContentMetadataOutput>(async () =>
         {
-            var content = JsonContent.Create(input, mediaType: null);
-            return await client.PatchAsync($"{ApiVersion}/secret/{secretId}/content/{contentId}", content);
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/secret/{secretId}/content/{contentId}")
+            {
+                Content = JsonContent.Create(input, mediaType: null)
+            };
+            return await client.SendAsync(httpRequestMessage);
         });
 
         public async Task<BaseResponseObject<string>> DeleteContentMetadataAsync(string secretId, string contentId)
@@ -382,7 +392,8 @@ namespace SafeExchange.Client.Common
         public async Task<BaseResponseObject<ContentMetadataOutput>> DropContentDataAsync(string secretId, string contentId)
             => await this.ProcessResponseAsync<ContentMetadataOutput>(async () =>
         {
-            return await client.PatchAsync($"{ApiVersion}/secret/{secretId}/content/{contentId}/drop", null);
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/secret/{secretId}/content/{contentId}/drop");
+            return await client.SendAsync(httpRequestMessage);
         });
 
         #endregion secret content metadata
@@ -445,7 +456,7 @@ namespace SafeExchange.Client.Common
 
         #endregion notification subscription
 
-        private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall)
+        private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall) where T : class
         {
             HttpResponseMessage? response = null;
             string content = String.Empty;
@@ -461,7 +472,7 @@ namespace SafeExchange.Client.Common
             }
             catch (Exception ex)
             {
-                if (response is not null && response.StatusCode != HttpStatusCode.OK)
+                if (response != null && response.StatusCode != HttpStatusCode.OK)
                 {
                     return new BaseResponseObject<T>()
                     {

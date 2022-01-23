@@ -16,7 +16,7 @@ namespace SafeExchange.Client.Common
             canGrantAccess = false;
             canRevokeAccess = false;
 
-            var parts = permissions.Split(",", StringSplitOptions.RemoveEmptyEntries);
+            var parts = permissions.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var part in parts)
             {
                 if (part.Trim().Equals("Read", StringComparison.InvariantCultureIgnoreCase))
