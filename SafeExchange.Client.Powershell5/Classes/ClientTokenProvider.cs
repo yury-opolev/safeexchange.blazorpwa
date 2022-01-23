@@ -64,7 +64,7 @@ namespace SafeExchange.Client.Powershell5
             {
                 var bufferTime = TimeSpan.FromMinutes(1);
                 var notAfter = new DateTimeOffset(DateTime.UtcNow + bufferTime);
-                if (clientToken.ExpiresOn <= notAfter)
+                if (clientToken.ExpiresOn >= notAfter)
                 {
                     token = new NetworkCredential(string.Empty, clientToken.Token).Password;
                     return true;

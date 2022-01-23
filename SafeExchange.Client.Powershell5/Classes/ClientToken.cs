@@ -18,7 +18,9 @@ namespace SafeExchange.Client.Powershell5
 
         public ClientToken(IEnumerable<string> scopes, SecureString token, DateTimeOffset expiresOn)
         {
-
+            this.Scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
+            this.Token = token ?? throw new ArgumentNullException(nameof(token));
+            this.ExpiresOn = expiresOn;
         }
     }
 }
