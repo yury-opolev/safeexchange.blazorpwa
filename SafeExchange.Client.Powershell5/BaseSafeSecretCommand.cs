@@ -13,19 +13,19 @@ namespace SafeExchange.Client.Powershell5
 
     public class BaseSafeSecretCommand : Cmdlet
     {
-        public static readonly string FrontendBaseAddress = "https://www.safeexchange.dk";
+        public static readonly string FrontendBaseAddress = "{FRONTEND BASE ADDRESS}";
 
-        public static readonly string DefaultTenantId = "9188040d-6c67-4c5b-b112-36a304b66dad";
+        public static readonly string DefaultTenantId = "{TENANT ID}";
         
-        public static readonly string DefaultClientId = "b75602e2-2c3b-446b-9c92-77021db634eb";
+        public static readonly string DefaultClientId = "{CLIENT ID}";
         
-        public static readonly string DefaultAuthority = "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad";
+        public static readonly string DefaultAuthority = "{AUTHORITY}";
 
-        public static readonly string DefaultRedirectUri = "msalb75602e2-2c3b-446b-9c92-77021db634eb://auth";
+        public static readonly string DefaultRedirectUri = "{REDIRECT URI}";
 
-        public static readonly string DefaultBackendBaseAddress = "https://safeexchange-backend.azurewebsites.net/api/";
+        public static readonly string DefaultBackendBaseAddress = "{BACKEND BASE ADDRESS}";
 
-        public static readonly IList<string> DefaultScopes = new List<string>() { "https://spaceoysteroutlook.onmicrosoft.com/user_impersonation" };
+        public static readonly IList<string> DefaultScopes = new List<string>() { "{SCOPE}" };
 
         [Parameter()]
         public string BackendBaseAddress { get; set; }
@@ -56,7 +56,7 @@ namespace SafeExchange.Client.Powershell5
             }
 
             var authHttpClient = new AuthenticatedHttpClient(DefaultBackendBaseAddress, this.TokenProvider);
-            this.apiClient = new ApiClient(authHttpClient.HttpClient);
+            this.apiClient = new ApiClient(new HttpClientFactory(authHttpClient.HttpClient));
         }
 
         private void AddAssembliesRedirect()

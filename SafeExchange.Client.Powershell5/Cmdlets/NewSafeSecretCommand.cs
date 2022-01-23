@@ -70,7 +70,7 @@ namespace SafeExchange.Client.Powershell5
         {
             var result = new List<AttachmentModel>();
 
-            foreach (var fileName in filesToAttach)
+            foreach (var fileName in filesToAttach ?? Array.Empty<string>())
             {
                 var attachmentModel = new AttachmentModel(new InputLocalFileModel(fileName));
                 result.Add(attachmentModel);

@@ -56,6 +56,7 @@
     <Compile Include="Classes\ClientToken.cs" />
     <Compile Include="Classes\ClientTokenProvider.cs" />
     <Compile Include="Classes\Constants.cs" />
+    <Compile Include="Classes\HttpClientFactory.cs" />
     <Compile Include="Classes\InputLocalFileModel.cs" />
     <Compile Include="Classes\SecureStringExtensions.cs" />
     <Compile Include="Cmdlets\ListSafeSecretsCommand.cs" />

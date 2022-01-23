@@ -41,16 +41,6 @@ namespace SafeExchange.Client.Common
             };
         }
 
-        public ApiClient(HttpClient httpClient)
-        {
-            this.client = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-
-            this.jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-        }
-
         #region compound operations
 
         public async Task<BaseResponseObject<CompoundModel>> GetCompoundModelAsync(string secretId)
