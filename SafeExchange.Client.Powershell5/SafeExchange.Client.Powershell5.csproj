@@ -59,6 +59,7 @@
     <Compile Include="Classes\InputLocalFileModel.cs" />
     <Compile Include="Classes\SecureStringExtensions.cs" />
     <Compile Include="Cmdlets\ListSafeSecretsCommand.cs" />
+    <Compile Include="Cmdlets\RemoveSafeSecretCommand.cs" />
     <Compile Include="NewClientTokenProviderCommand.cs" />
     <Compile Include="Cmdlets\NewSafeSecretCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
