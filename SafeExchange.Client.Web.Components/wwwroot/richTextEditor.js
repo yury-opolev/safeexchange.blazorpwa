@@ -6,10 +6,28 @@ class PasswordBlot extends EmbedBlot {
         const node = super.create(value);
         node.setAttribute("data-value", value);
 
+        const copyToClipboardButton = document.createElement("button");
+        copyToClipboardButton.className = "btn d-inline-flex btn-sm";
+        copyToClipboardButton.setAttribute("data-bs-toggle", "tooltip");
+        copyToClipboardButton.setAttribute("data-bs-placement", "top");
+        copyToClipboardButton.setAttribute("title", "Copy to Clipboard");
+
+        const buttonImage = document.createElement("img");
+        buttonImage.setAttribute("src", "copy.svg");
+        buttonImage.setAttribute("alt", "Copy to Clipboard");
+        buttonImage.setAttribute("width", "20");
+
+        copyToClipboardButton.appendChild(buttonImage);
+
         const innerSpan = document.createElement("span");
-        innerSpan.className = "border border-secondary border-2 rounded";
-        innerSpan.innerHTML = " ***** ";
-        node.appendChild(innerSpan);
+        innerSpan.innerHTML = " ***** &nbsp;";
+
+        const outerSpan = document.createElement("span");
+        outerSpan.className = "border border-secondary border-2 rounded";
+        outerSpan.appendChild(innerSpan);
+        outerSpan.appendChild(copyToClipboardButton);
+
+        node.appendChild(outerSpan);
 
         return node;
     }
