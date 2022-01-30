@@ -23,7 +23,7 @@ class PasswordBlot extends EmbedBlot {
         innerSpan.innerHTML = " ***** &nbsp;";
 
         const outerSpan = document.createElement("span");
-        outerSpan.className = "border border-secondary border-2 rounded";
+        outerSpan.className = "border border-secondary border-2 rounded ql-password-span";
         outerSpan.appendChild(innerSpan);
         outerSpan.appendChild(copyToClipboardButton);
 

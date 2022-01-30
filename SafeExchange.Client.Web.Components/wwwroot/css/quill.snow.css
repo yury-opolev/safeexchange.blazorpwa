@@ -1170,3 +1170,7 @@
 .ql-container.ql-snow {
     border: 1px solid #ccc;
 }
+
+span.ql-password-span {
+    display: inline-block;
+}
