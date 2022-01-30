@@ -8,6 +8,7 @@ class PasswordBlot extends EmbedBlot {
 
         const copyToClipboardButton = document.createElement("button");
         copyToClipboardButton.className = "btn d-inline-flex btn-sm";
+        copyToClipboardButton.setAttribute("type", "button");
         copyToClipboardButton.setAttribute("data-bs-toggle", "tooltip");
         copyToClipboardButton.setAttribute("data-bs-placement", "top");
         copyToClipboardButton.setAttribute("title", "Copy to Clipboard");

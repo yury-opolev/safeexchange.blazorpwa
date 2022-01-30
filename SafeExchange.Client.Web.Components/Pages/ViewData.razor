@@ -10,6 +10,7 @@
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 @if (this.Notification != null)
 {
@@ -144,6 +145,8 @@
 
     private NotificationData Notification;
 
+    private bool initializeTooltips = false;
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -186,6 +189,23 @@
 
         this.authenticationState = await this.AuthenticationStateTask;
         await this.FetchData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.initializeTooltips)
+        {
+            return;
+        }
+
+        try
+        {
+            await TooltipsInitializerInstance.InitializeTooltipsAsync("Copy to clipboard", "Copied");
+        }
+        finally
+        {
+            this.initializeTooltips = false;
+        }
     }
 
     private async Task FetchData()
@@ -250,6 +270,8 @@
             this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
+
+            this.initializeTooltips = true;
         }
         catch (AccessTokenNotAvailableException exception)
         {
