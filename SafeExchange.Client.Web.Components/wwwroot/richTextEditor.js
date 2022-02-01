@@ -21,7 +21,7 @@ class PasswordBlot extends EmbedBlot {
         copyToClipboardButton.appendChild(buttonImage);
 
         const innerSpan = document.createElement("span");
-        innerSpan.innerHTML = " ***** &nbsp;";
+        innerSpan.innerHTML = " ******* ";
 
         const outerSpan = document.createElement("span");
         outerSpan.className = "border border-secondary border-2 rounded ql-password-span";
@@ -61,16 +61,7 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
         var toolbarOptions = false;
     } else {
         var toolbarOptions = {
-            container: [
-                [{ 'font': [] }],
-                [{ 'size': [] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'align': [] }],
-                [{ 'color': [] }, { 'background': [] }],
-                ['link', 'image'],
-                ['password'],
-                ['clean']
-            ],
+            container: '#quill-toolbar',
             handlers: {
                 'password': function (value) {
                     if (value) {

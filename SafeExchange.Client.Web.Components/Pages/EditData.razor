@@ -59,6 +59,42 @@
 
     <p>
         <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
+            <div id="quill-toolbar">
+              <select class="ql-font">
+                <option selected></option>
+                <option value="serif"></option>
+                <option value="monospace"></option>
+              </select>
+              <select class="ql-size">
+                <option value="small"></option>
+                <option selected></option>
+                <option value="large"></option>
+                <option value="huge"></option>
+              </select>
+              <span class="ql-formats">
+                <button class="ql-bold"></button>
+                <button class="ql-italic"></button>
+                <button class="ql-underline"></button>
+                <button class="ql-strike"></button>
+              </span>
+              <span class="ql-formats">
+                <select class="ql-align"></select>
+              </span>
+              <span class="ql-formats">
+                <select class="ql-color"></select>
+                <select class="ql-background"></select>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-link"></button>
+                <button class="ql-image"></button>
+              </span>
+              <span class="ql-formats">
+                <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-clean"></button>
+              </span>
+            </div>
             <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
         </div>
         <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
