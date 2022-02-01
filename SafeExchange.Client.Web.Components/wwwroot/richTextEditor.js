@@ -42,6 +42,13 @@ PasswordBlot.tagName = 'SPAN';
 PasswordBlot.className = "ql-password-holder";
 
 Quill.register(PasswordBlot, true);
+Quill.register('modules/blotFormatter', QuillBlotFormatter.default);
+
+class CustomImageSpec extends QuillBlotFormatter.ImageSpec {
+    getActions() {
+        return [ QuillBlotFormatter.ResizeAction, QuillBlotFormatter.DeleteAction ];
+    }
+}
 
 function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextElement) {
     var options = {
@@ -95,7 +102,9 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
         keyboard: { bindings: bindings },
         toolbar: toolbarOptions,
         imageDrop: true,
-        imageResize: { modules: ['Resize', 'Toolbar'] }
+        blotFormatter: {
+            specs: [ CustomImageSpec ]
+        }
     };
 
     let quill = new Quill(quillElement, options);
