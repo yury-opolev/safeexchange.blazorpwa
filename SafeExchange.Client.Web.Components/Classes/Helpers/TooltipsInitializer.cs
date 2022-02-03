@@ -4,6 +4,7 @@
 
 namespace SafeExchange.Client.Web.Components
 {
+    using Microsoft.AspNetCore.Components;
     using Microsoft.JSInterop;
     using System;
     using System.Threading.Tasks;
@@ -22,6 +23,12 @@ namespace SafeExchange.Client.Web.Components
         {
             var module = await moduleTask.Value;
             await module.InvokeVoidAsync("addTooltips", initialText, clickText);
+        }
+
+        public async Task InitializeQuillClipboardTooltipsAsync(ElementReference quillElement, string initialText, string clickText)
+        {
+            var module = await moduleTask.Value;
+            await module.InvokeVoidAsync("addQuillClipboardTooltips", quillElement, initialText, clickText);
         }
 
         public async ValueTask DisposeAsync()

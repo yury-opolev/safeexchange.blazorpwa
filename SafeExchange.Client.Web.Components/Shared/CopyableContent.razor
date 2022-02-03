@@ -4,7 +4,7 @@
 <div>
     @ChildContent
     <button type="button" class="btn d-inline-flex btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to Clipboard" @onclick="@(async () => await CopyDataToClipboard())">
-        <img src="copy.svg" alt="Copy to Clipboard" width="20"/>
+        <span class="saex-copy" title="Copy to clipboard"></span>
     </button>
 </div>
 

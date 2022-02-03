@@ -10,6 +10,7 @@
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 @if (this.Notification != null)
 {
@@ -35,7 +36,7 @@
     <EditForm Model="@this.compoundModel">
     <p>
         <div class="ql-container ql-snow">
-            <div id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
+            <div @ref="this.quillElement" id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
             @if (!this.StateContainer.IsInProgress)
             {
                 @((MarkupString)this.compoundModel.MainData)
@@ -144,6 +145,10 @@
 
     private NotificationData Notification;
 
+    private ElementReference quillElement;
+
+    private bool initializeTooltips = false;
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -186,6 +191,23 @@
 
         this.authenticationState = await this.AuthenticationStateTask;
         await this.FetchData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.initializeTooltips)
+        {
+            return;
+        }
+
+        try
+        {
+            await TooltipsInitializerInstance.InitializeQuillClipboardTooltipsAsync(this.quillElement, "Copy to clipboard", "Copied");
+        }
+        finally
+        {
+            this.initializeTooltips = false;
+        }
     }
 
     private async Task FetchData()
@@ -250,6 +272,8 @@
             this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
+
+            this.initializeTooltips = true;
         }
         catch (AccessTokenNotAvailableException exception)
         {

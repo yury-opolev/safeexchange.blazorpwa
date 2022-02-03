@@ -2,6 +2,11 @@
     margin-left: auto;
 }
 
+.toolbar-password-img
+{
+    vertical-align: top;
+}
+
 .drag-drop-zone {
     border: 3px dashed #e68710;
     padding: 3rem;
