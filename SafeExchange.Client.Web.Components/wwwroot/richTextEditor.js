@@ -13,12 +13,10 @@ class PasswordBlot extends EmbedBlot {
         copyToClipboardButton.setAttribute("data-bs-placement", "top");
         copyToClipboardButton.setAttribute("title", "Copy to Clipboard");
 
-        const buttonImage = document.createElement("img");
-        buttonImage.setAttribute("src", "copy.svg");
-        buttonImage.setAttribute("alt", "Copy to Clipboard");
-        buttonImage.setAttribute("width", "20");
+        const buttonIcon = document.createElement("span");
+        buttonIcon.className = "saex-copy";
 
-        copyToClipboardButton.appendChild(buttonImage);
+        copyToClipboardButton.appendChild(buttonIcon);
 
         const innerSpan = document.createElement("span");
         innerSpan.innerHTML = " ******* ";

@@ -24,4 +24,8 @@
     <ProjectReference Include="..\SafeExchange.Client.Common\SafeExchange.Client.Common.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\css\saex-icons\fonts\" />
+  </ItemGroup>
+
 </Project>
