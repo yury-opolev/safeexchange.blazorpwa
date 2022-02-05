@@ -61,7 +61,7 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
         var toolbarOptions = {
             container: '#quill-toolbar',
             handlers: {
-                'password': function (value) {
+                'password': async function (value) {
                     if (value) {
                         var range = this.quill.getSelection();
                         if (range == null || range.length === 0) {
@@ -71,6 +71,7 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
                         this.quill.deleteText(range.index, range.length)
                         this.quill.insertEmbed(range.index, 'password', text, Quill.sources.API);
                         this.quill.setSelection(range.index + 1, Quill.sources.API);
+                        await dotNetRef.invokeMethodAsync("OnCopyableElementInsertedJS");
                     }
                 }
             }

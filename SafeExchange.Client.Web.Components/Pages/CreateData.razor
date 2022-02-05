@@ -12,6 +12,7 @@
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
+@inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
 
 @if (this.Notification != null)
@@ -67,7 +68,7 @@
                 <button class="ql-clean"></button>
               </span>
             </div>
-            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
+            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
         </div>
         <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
     </p>
@@ -248,6 +249,8 @@
 
     private ElementReference attachmentsButtonElement;
 
+    private bool initializeTooltips = false;
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -294,6 +297,23 @@
         this.editContext = new EditContext(this.compoundModel);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.initializeTooltips)
+        {
+            return;
+        }
+
+        try
+        {
+            await TooltipsInitializerInstance.InitializeQuillClipboardTooltipsAsync(this.quillEditor.EditorRef, "Copy to clipboard", "Copied");
+        }
+        finally
+        {
+            this.initializeTooltips = false;
+        }
+    }
+
     private async Task ClickFileInputAsync()
     {
         await this.downloadUploadHelper.InvokeAttachFileAsync(this.inputFile);
@@ -330,6 +350,11 @@
         await this.quillEditor.RefreshContentAsync();
         this.compoundModel.MainData = this.quillEditor.Value;
         this.ValidateContent();
+    }
+
+    private void HandleCopyableElementInserted()
+    {
+        this.initializeTooltips = true;
     }
 
     private void ValidateContent()

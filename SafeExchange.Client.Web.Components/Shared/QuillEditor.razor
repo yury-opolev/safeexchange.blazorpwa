@@ -51,6 +51,9 @@
     public EventCallback OnBlur { get; set; }
 
     [Parameter]
+    public EventCallback OnCopyableElementInserted { get; set; }
+
+    [Parameter]
     public ElementReference NextElementRef { get; set; }
 
     public ElementReference EditorRef { get; protected set; }
@@ -67,6 +70,7 @@
             this.richTextEditor.OnFocus += this.HandleOnFocus;
             this.richTextEditor.OnBlur += this.HandleOnBlur;
             this.richTextEditor.OnTextChange += this.HandleOnTextChange;
+            this.richTextEditor.OnCopyableElementInserted += this.HandleOnCopyableElementInserted;
             this.initialized = true;
         }
     }
@@ -81,6 +85,7 @@
         this.richTextEditor.OnFocus -= this.HandleOnFocus;
         this.richTextEditor.OnBlur -= this.HandleOnBlur;
         this.richTextEditor.OnTextChange -= this.HandleOnTextChange;
+        this.richTextEditor.OnCopyableElementInserted -= this.HandleOnCopyableElementInserted;
     }
 
     public async Task RefreshContentAsync()
@@ -142,6 +147,11 @@
     private void HandleOnTextChange(object sender, EventArgs e)
     {
         this.IsDirty = true;
+    }
+
+    private void HandleOnCopyableElementInserted(object sender, EventArgs e)
+    {
+        _ = this.OnCopyableElementInserted.InvokeAsync();
     }
 
     private async Task SetVisibleContentAsync()

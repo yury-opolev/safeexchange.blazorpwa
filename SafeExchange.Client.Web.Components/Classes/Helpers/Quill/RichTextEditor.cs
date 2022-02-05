@@ -18,6 +18,8 @@ namespace SafeExchange.Client.Web.Components
 
         public event EventHandler OnTextChange;
 
+        public event EventHandler OnCopyableElementInserted;
+
         private readonly Lazy<Task<IJSObjectReference>> moduleTask;
 
         private DotNetObjectReference<RichTextEditor> objRef;
@@ -96,6 +98,12 @@ namespace SafeExchange.Client.Web.Components
         public void OnTextChangeJS()
         {
             this.OnTextChange?.Invoke(this, EventArgs.Empty);
+        }
+
+        [JSInvokable]
+        public void OnCopyableElementInsertedJS()
+        {
+            this.OnCopyableElementInserted?.Invoke(this, EventArgs.Empty);
         }
 
         public async ValueTask DisposeAsync()
