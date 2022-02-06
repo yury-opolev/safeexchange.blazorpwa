@@ -555,6 +555,8 @@
 
             await this.quillEditor.SetTextAsync(string.Empty);
             await this.quillEditor.SetHtmlAsync(this.compoundModel.MainData);
+
+            this.initializeTooltips = true;
         }
         catch (AccessTokenNotAvailableException exception)
         {
