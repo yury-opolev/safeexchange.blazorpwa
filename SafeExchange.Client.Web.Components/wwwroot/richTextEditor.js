@@ -68,9 +68,11 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
                             return;
                         }
                         var text = this.quill.getText(range);
-                        this.quill.deleteText(range.index, range.length)
-                        this.quill.insertEmbed(range.index, 'password', text, Quill.sources.API);
-                        this.quill.setSelection(range.index + 1, Quill.sources.API);
+                        var position = range.index;
+                        this.quill.deleteText(position, range.length)
+                        this.quill.insertEmbed(position, 'password', text, Quill.sources.USER);
+                        this.quill.insertText(position + 1, ' ', Quill.sources.USER);
+                        this.quill.setSelection(position + 2, Quill.sources.API);
                         await dotNetRef.invokeMethodAsync("OnCopyableElementInsertedJS");
                     }
                 }
