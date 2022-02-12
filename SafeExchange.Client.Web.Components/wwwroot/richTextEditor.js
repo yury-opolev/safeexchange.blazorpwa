@@ -71,8 +71,7 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
                         var position = range.index;
                         this.quill.deleteText(position, range.length)
                         this.quill.insertEmbed(position, 'password', text, Quill.sources.USER);
-                        this.quill.insertText(position + 1, ' ', Quill.sources.USER);
-                        this.quill.setSelection(position + 2, Quill.sources.API);
+                        this.quill.setSelection(position + 1, Quill.sources.API);
                         await dotNetRef.invokeMethodAsync("OnCopyableElementInsertedJS");
                     }
                 }
