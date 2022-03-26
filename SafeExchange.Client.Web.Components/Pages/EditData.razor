@@ -401,7 +401,7 @@
         await this.FetchSecretAsync(this.ObjectName);
     }
 
-        protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!this.initializeTooltips)
         {
@@ -550,6 +550,12 @@
             this.ExistingAttachments = new(compoundModelResult.Result.Metadata.Content.Where(c => !c.IsMain));
 
             this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
+
+            // TODO: would need to have custom control for expiration time to handle seconds. Until then just dropping seconds here.
+            var expireAt = this.compoundModel.Metadata.ExpirationMetadata.ExpireAt;
+            expireAt = new DateTime(expireAt.Year, expireAt.Month, expireAt.Day, expireAt.Hour, expireAt.Minute, 0, expireAt.Kind);
+            this.compoundModel.Metadata.ExpirationMetadata.ExpireAt = expireAt;
+
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
 
