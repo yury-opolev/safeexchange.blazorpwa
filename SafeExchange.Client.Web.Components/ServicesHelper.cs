@@ -42,11 +42,7 @@ namespace SafeExchange.Client.Web.Components
             {
                 builder.Configuration.Bind("AzureAdB2C", options.ProviderOptions.Authentication);
                 builder.Configuration.Bind("AccessTokenScopes", options.ProviderOptions.DefaultAccessTokenScopes);
-
-                if ((options.ProviderOptions.AdditionalScopesToConsent?.Count ?? 0) > 0)
-                {
-                    builder.Configuration.Bind("AdditionalScopesToConsent", options.ProviderOptions.AdditionalScopesToConsent);
-                }
+                builder.Configuration.Bind("AdditionalScopesToConsent", options.ProviderOptions.AdditionalScopesToConsent);
             });
         }
     }
