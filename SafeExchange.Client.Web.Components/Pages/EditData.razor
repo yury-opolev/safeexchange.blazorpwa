@@ -531,11 +531,17 @@
             var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
             if (!"ok".Equals(compoundModelResult.Status))
             {
+                var messageAppendix = string.Empty;
+                if ("consent_required".Equals(compoundModelResult.SubStatus))
+                {
+                    messageAppendix = "; User must give consent in AAD to fetch groups in order to use groups authorization.";
+                }
+
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = compoundModelResult.Status,
-                    Message = compoundModelResult.Error,
+                    Message = $"{compoundModelResult.Error}{messageAppendix}",
                     ButtonText = "unauthorized".Equals(compoundModelResult.Status) ? "Request Access" : string.Empty,
                     ButtonUri = this.CreateAccessRequestUri("Read")
                 };

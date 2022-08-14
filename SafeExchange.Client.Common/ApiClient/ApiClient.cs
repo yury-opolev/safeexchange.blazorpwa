@@ -51,6 +51,7 @@ namespace SafeExchange.Client.Common
                 return new BaseResponseObject<CompoundModel>()
                 {
                     Status = accessListData.Status,
+                    SubStatus = accessListData.SubStatus,
                     Error = accessListData.Error
                 };
             }
@@ -61,6 +62,7 @@ namespace SafeExchange.Client.Common
                 return new BaseResponseObject<CompoundModel>()
                 {
                     Status = secretMetadata.Status,
+                    SubStatus = secretMetadata.SubStatus,
                     Error = secretMetadata.Error
                 };
             }
@@ -92,6 +94,7 @@ namespace SafeExchange.Client.Common
                         return new BaseResponseObject<CompoundModel>()
                         {
                             Status = dataStream.Status,
+                            SubStatus = dataStream.SubStatus,
                             Error = dataStream.Error
                         };
                     }
