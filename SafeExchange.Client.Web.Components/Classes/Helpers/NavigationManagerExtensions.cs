@@ -5,8 +5,8 @@
 namespace SafeExchange.Client.Web.Components
 {
     using Microsoft.AspNetCore.Components;
-    using Microsoft.AspNetCore.WebUtilities;
-    using System;
+    using System.Linq;
+    using System.Web;
 
     public static class NavigationManagerExtensions
     {
@@ -14,7 +14,8 @@ namespace SafeExchange.Client.Web.Components
         {
             var uri = navManager.ToAbsoluteUri(navManager.Uri);
 
-            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue(key, out var valueFromQueryString))
+            var valueFromQueryString = HttpUtility.ParseQueryString(uri.Query).GetValues(key)?.FirstOrDefault();
+            if (valueFromQueryString != null)
             {
                 if (typeof(T) == typeof(int) && int.TryParse(valueFromQueryString, out var valueAsInt))
                 {
