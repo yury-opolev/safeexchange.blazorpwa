@@ -189,7 +189,11 @@
             <div class="row align-items-center">
                 <div class="col-2">
                     <div class="form-floating">
-                        <InputSelect id="@($"usertype-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectType" placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                        <InputSelect id="@($"usertype-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress"
+                            ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
+                            Value="@compoundModel.Permissions[tempIndex].SubjectType"
+                            ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
+                            placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
                             @foreach (var value in Enum.GetValues(typeof(SubjectType)))
                             {
                                 <option>@value</option>
@@ -343,6 +347,12 @@
         {
             this.initializeTooltips = false;
         }
+    }
+
+    private void OnPermissionTypeChanged(SubjectPermissions permissions, SubjectType value)
+    {
+        permissions.SubjectType = value;
+        permissions.SubjectName = string.Empty;
     }
 
     private async Task ClickFileInputAsync()
