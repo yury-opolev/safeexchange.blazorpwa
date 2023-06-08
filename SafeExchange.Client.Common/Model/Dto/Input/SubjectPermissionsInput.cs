@@ -8,6 +8,9 @@ namespace SafeExchange.Client.Common.Model
 
     public class SubjectPermissionsInput
     {
+
+        public SubjectTypeInput SubjectType { get; set; }
+
         public string SubjectName { get; set; }
 
         public bool CanRead { get; set; }

@@ -39,6 +39,10 @@ namespace SafeExchange.Client.Web.Components
 
         public List<AccessRequest> OutgoingAccessRequests { get; set; }
 
+        public bool IsFetchingApplications { get; set; }
+
+        public List<Application> RegisteredApplications { get; set; }
+
         public void SetNextNotification(NotificationData notification)
         {
             this.Notification = notification;
@@ -91,6 +95,33 @@ namespace SafeExchange.Client.Web.Components
             finally
             {
                 this.IsFetchingAccessRequests = false;
+                NotifyStateChanged();
+            }
+        }
+
+        public async Task<ResponseStatus> TryFetchRegisteredApplications(ApiClient apiClient)
+        {
+            this.IsFetchingApplications = true;
+            this.RegisteredApplications = new List<Application>();
+
+            try
+            {
+                var applicationsResponse = await apiClient.GetRegisteredApplicationsAsync();
+                if (applicationsResponse.Status == "ok")
+                {
+                    var applications = applicationsResponse.Result.Select(a => new Application(a)).ToList();
+                    this.RegisteredApplications.AddRange(applications);
+                }
+                else
+                {
+                    // no-op
+                }
+
+                return applicationsResponse.ToResponseStatus();
+            }
+            finally
+            {
+                this.IsFetchingApplications = false;
                 NotifyStateChanged();
             }
         }

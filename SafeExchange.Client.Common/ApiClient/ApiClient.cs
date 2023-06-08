@@ -269,7 +269,7 @@ namespace SafeExchange.Client.Common
 
         #region access requests
 
-            public async Task<BaseResponseObject<List<AccessRequestOutput>>> GetAccessRequestsAsync()
+        public async Task<BaseResponseObject<List<AccessRequestOutput>>> GetAccessRequestsAsync()
             => await this.ProcessResponseAsync<List<AccessRequestOutput>>(async () =>
         {
             return await client.GetAsync($"{ApiVersion}/accessrequest-list");
@@ -458,6 +458,16 @@ namespace SafeExchange.Client.Common
         });
 
         #endregion notification subscription
+
+        #region applications
+
+        public async Task<BaseResponseObject<List<ApplicationOverviewOutput>>> GetRegisteredApplicationsAsync()
+            => await this.ProcessResponseAsync<List<ApplicationOverviewOutput>>(async () =>
+        {
+            return await client.GetAsync($"{ApiVersion}/applications-list");
+        });
+
+        #endregion applications
 
         private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall) where T : class
         {

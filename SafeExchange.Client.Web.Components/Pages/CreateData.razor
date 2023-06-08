@@ -187,13 +187,43 @@
         var tempIndex = i;
         <p>
             <div class="row align-items-center">
-                <div class="col">
+                <div class="col-2">
                     <div class="form-floating">
-                        <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
-                        <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                        <InputSelect id="@($"usertype-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectType" placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                            @foreach (var value in Enum.GetValues(typeof(SubjectType)))
+                            {
+                                <option>@value</option>
+                            }
+                        </InputSelect>
+                        <label for="@($"usertype-input-{i}")" class="form-label">Type</label>
                     </div>
-                    <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                    <ValidationMessage id="@($"ut-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectType)" />
                 </div>
+                @switch (compoundModel.Permissions[tempIndex].SubjectType)
+                {
+                    case (SubjectType.User):
+                        <div class="col">
+                            <div class="form-floating">
+                                <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
+                                <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                            </div>
+                            <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                        </div>
+                        break;
+
+                    case (SubjectType.Application):
+                        <div class="col">
+                            <div class="form-floating">
+                                <InputSelect id="@($"application-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
+                                    <option>A</option>
+                                    <option>B</option>
+                                </InputSelect>
+                                <label for="@($"application-input-{i}")" class="form-label">Application</label>
+                            </div>
+                            <ValidationMessage id="@($"app-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                        </div>
+                        break;
+                }
                 <div class="col">
                     <div class="form-floating">
                         <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
@@ -288,13 +318,14 @@
         //...
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         this.StateContainer.IsInProgress = false;
         this.StateContainer.SetCurrentPageHeader($"Add secret");
         this.StateContainer.TakeNotification();
 
         this.editContext = new EditContext(this.compoundModel);
+        await this.StateContainer.TryFetchRegisteredApplications(this.apiClient);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
