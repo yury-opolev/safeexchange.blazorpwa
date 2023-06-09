@@ -219,10 +219,28 @@
                         <div class="col">
                             <div class="form-floating">
                                 <InputSelect id="@($"application-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
-                                    <option>A</option>
-                                    <option>B</option>
+                                @if (!this.StateContainer.IsFetchingApplications)
+                                {
+                                    if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
+                                    {
+                                        foreach (var application in this.StateContainer.RegisteredApplications.Where(a => a.Enabled))
+                                        {
+                                            <option value="@application.DisplayName">@application.DisplayName</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="">- No Applications -</option>
+                                    }
+                                }
                                 </InputSelect>
-                                <label for="@($"application-input-{i}")" class="form-label">Application</label>
+                                <label for="@($"application-input-{i}")" class="form-label">
+                                    @if (this.StateContainer.IsFetchingApplications)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    }
+                                    Application
+                                </label>
                             </div>
                             <ValidationMessage id="@($"app-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
                         </div>

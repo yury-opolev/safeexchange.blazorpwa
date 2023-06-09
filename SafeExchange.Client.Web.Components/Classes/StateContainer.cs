@@ -101,14 +101,19 @@ namespace SafeExchange.Client.Web.Components
 
         public async Task<ResponseStatus> TryFetchRegisteredApplications(ApiClient apiClient)
         {
+            if (this.RegisteredApplications != null)
+            {
+                return new ResponseStatus() { Status = "ok" }; // already fetched
+            }
+
             this.IsFetchingApplications = true;
-            this.RegisteredApplications = new List<Application>();
 
             try
             {
                 var applicationsResponse = await apiClient.GetRegisteredApplicationsAsync();
                 if (applicationsResponse.Status == "ok")
                 {
+                    this.RegisteredApplications = new List<Application>();
                     var applications = applicationsResponse.Result.Select(a => new Application(a)).ToList();
                     this.RegisteredApplications.AddRange(applications);
                 }
