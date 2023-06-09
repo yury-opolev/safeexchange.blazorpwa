@@ -742,7 +742,10 @@
             var addedPermissionItems = new List<SubjectPermissions>();
             for (int index = this.FixedAccessItemCount; index < this.compoundModel.Permissions.Count; index++)
             {
-                addedPermissionItems.Add(this.compoundModel.Permissions[index]);
+                if (!string.IsNullOrEmpty(this.compoundModel.Permissions[index].SubjectName))
+                {
+                    addedPermissionItems.Add(this.compoundModel.Permissions[index]);
+                }
             }
 
             if (addedPermissionItems.Count > 0)
