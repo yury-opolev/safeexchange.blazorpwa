@@ -38,18 +38,22 @@ function supportsFileSystemAccess()
     }
 }
 
-async function startFileWriteAsync() {
-    const fileHandle = await window.showSaveFilePicker();
+async function openFileStreamAsync(suggestedName) {
+    const fileHandle = await window.showSaveFilePicker({
+        suggestedName,
+    });
+
     const writableStream = await fileHandle.createWritable();
     return writableStream;
 }
 
-async function writeToFileStreamAsync(writableStream, contents) {
-    await writableStream.write(contents);
+async function writeToFileStreamAsync(writableStream, contentStreamReference) {
+    const arrayBuffer = await contentStreamReference.arrayBuffer();
+    await writableStream.write(arrayBuffer);
 }
 
-async function closeFileAsync(writableStream) {
+async function closeFileStreamAsync(writableStream) {
     await writableStream.close();
 }
 
-export { triggerAttachFile, downloadFileFromStream, supportsFileSystemAccess };
+export { triggerAttachFile, downloadFileFromStream, supportsFileSystemAccess, openFileStreamAsync, closeFileStreamAsync, writeToFileStreamAsync };

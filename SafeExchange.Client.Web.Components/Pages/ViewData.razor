@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.JSInterop;
 @using SafeExchange.Client.Common
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
@@ -335,17 +336,50 @@
 
     private async Task DownloadToFileStreamAsync(ContentMetadata attachment)
     {
-        Console.WriteLine($"{nameof(DownloadToFileStreamAsync)}");
+        IJSObjectReference? writableStream = default;
+        try
+        {
+            writableStream = await this.downloadUploadHelper.StartFileDownloadAsync(attachment.FileName);
+            foreach (var chunk in attachment.Chunks)
+            {
+                var chunkStreamResponse = await this.apiClient.GetSecretDataStreamAsync(this.compoundModel.Metadata.ObjectName, attachment.ContentName, chunk.ChunkName);
+                if (!"ok".Equals(chunkStreamResponse.Status))
+                {
+                    this.Notification = new NotificationData()
+                        {
+                            Type = NotificationType.Warning,
+                            Status = chunkStreamResponse.Status,
+                            Message = $"Cannot download attachment: {(chunkStreamResponse.Error ?? "Unknown exception.")}."
+                        };
+                    return;
+                }
 
-        await Task.CompletedTask;
+                if (chunkStreamResponse.Result is null)
+                {
+                    this.Notification = new NotificationData()
+                        {
+                            Type = NotificationType.Warning,
+                            Status = chunkStreamResponse.Status,
+                            Message = $"Received empty data reponse ('{chunk.ChunkName}'."
+                        };
+                    return;
+                }
+
+                await this.downloadUploadHelper.WriteToFileAsync(writableStream, chunkStreamResponse.Result);
+            }
+        }
+        finally
+        {
+            if (writableStream != default)
+            {
+                await this.downloadUploadHelper.FinishFileDownloadAsync(writableStream);
+            }
+        }
     }
 
     private async Task DownloadAsBlobUrlAsync(ContentMetadata attachment)
     {
-        Console.WriteLine($"{nameof(DownloadAsBlobUrlAsync)}");
-
         var dataStreamResponse = await this.apiClient.GetContentDataStreamAsync(this.compoundModel.Metadata.ObjectName, attachment.ContentName);
-
         if (dataStreamResponse.Status != "ok")
         {
             this.Notification = new NotificationData()

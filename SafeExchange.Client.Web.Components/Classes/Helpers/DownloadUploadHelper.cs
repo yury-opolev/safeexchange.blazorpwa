@@ -4,7 +4,6 @@
 
 namespace SafeExchange.Client.Web.Components
 {
-    using Microsoft.AspNetCore.Components;
     using Microsoft.AspNetCore.Components.Forms;
     using Microsoft.JSInterop;
     using System;
@@ -38,6 +37,25 @@ namespace SafeExchange.Client.Web.Components
         {
             var module = await moduleTask.Value;
             return await module.InvokeAsync<bool>("supportsFileSystemAccess");
+        }
+
+        public async Task<IJSObjectReference> StartFileDownloadAsync(string fileName)
+        {
+            var module = await moduleTask.Value;
+            return await module.InvokeAsync<IJSObjectReference>("openFileStreamAsync", fileName);
+        }
+
+        public async Task FinishFileDownloadAsync(IJSObjectReference writableStream)
+        {
+            var module = await moduleTask.Value;
+            await module.InvokeVoidAsync("closeFileStreamAsync", writableStream);
+        }
+
+        public async Task WriteToFileAsync(IJSObjectReference writableStream, Stream source)
+        {
+            var module = await moduleTask.Value;
+            using var streamRef = new DotNetStreamReference(source);
+            await module.InvokeVoidAsync("writeToFileStreamAsync", writableStream, streamRef);
         }
 
         public async ValueTask DisposeAsync()
