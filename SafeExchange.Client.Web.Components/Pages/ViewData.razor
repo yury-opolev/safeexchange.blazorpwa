@@ -336,6 +336,8 @@
 
     private async Task DownloadToFileStreamAsync(ContentMetadata attachment)
     {
+        Console.WriteLine($"Started {nameof(DownloadToFileStreamAsync)}.");
+
         IJSObjectReference? writableStream = default;
         try
         {
@@ -351,6 +353,7 @@
                             Status = chunkStreamResponse.Status,
                             Message = $"Cannot download attachment: {(chunkStreamResponse.Error ?? "Unknown exception.")}."
                         };
+
                     return;
                 }
 
@@ -362,6 +365,7 @@
                             Status = chunkStreamResponse.Status,
                             Message = $"Received empty data reponse ('{chunk.ChunkName}'."
                         };
+
                     return;
                 }
 
@@ -379,6 +383,8 @@
 
     private async Task DownloadAsBlobUrlAsync(ContentMetadata attachment)
     {
+        Console.WriteLine($"Started {nameof(DownloadAsBlobUrlAsync)}.");
+
         var dataStreamResponse = await this.apiClient.GetContentDataStreamAsync(this.compoundModel.Metadata.ObjectName, attachment.ContentName);
         if (dataStreamResponse.Status != "ok")
         {
@@ -388,6 +394,18 @@
                 Status = dataStreamResponse.Status,
                 Message = $"Cannot download attachment: {(dataStreamResponse.Error ?? "Unknown exception.")}."
             };
+
+            return;
+        }
+
+        if (dataStreamResponse.Result is null)
+        {
+            this.Notification = new NotificationData()
+                {
+                    Type = NotificationType.Warning,
+                    Status = dataStreamResponse.Status,
+                    Message = $"Received empty data reponse."
+                };
 
             return;
         }
