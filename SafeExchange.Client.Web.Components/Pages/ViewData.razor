@@ -61,22 +61,36 @@
                         @for (int ai = 0; ai < this.Attachments.Count; ai++)
                         {
                             var attachment = this.Attachments[ai];
+                            var downloadItem = this.Downloads[ai];
                             <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
                                 <div>
                                     <span id="@($"attachment-{ai}")">@attachment.FileName</span>
                                     <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
                                 </div>
                                 <div>
-                                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
-                                        @if (attachment.Equals(this.ContentToDownload))
-                                        {
+                                    @switch (downloadItem.Status)
+                                    {
+                                        case (DownloadStatus.NotStarted):
+                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                            break;
+
+                                        case (DownloadStatus.InProgress):
                                             <span class="spinner-border spinner-border-sm" role="status"></span>
-                                            <span>&nbsp;Download</span>
-                                        }
-                                        else
-                                        {
-                                            <i class="oi oi-cloud-download"></i><span>&nbsp;Download</span>
-                                        }
+                                            <span>@($"{downloadItem.ProgressPercents:00}")%&nbsp;&nbsp;</span>
+                                            break;
+
+                                        case (DownloadStatus.Success):
+                                            <i class="oi oi-check text-success"></i>
+                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                            break;
+
+                                        case (DownloadStatus.Error):
+                                            <i class="oi oi-warning text-warning"></i>
+                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                            break;
+                                    }
+                                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
+                                        <i class="oi oi-cloud-download"></i><span>&nbsp;Download</span>
                                     </button>
                                 </div>
                             </li>
@@ -193,7 +207,7 @@
 
     private List<ContentMetadata> Attachments { get; set; } = new();
 
-    private ContentMetadata? ContentToDownload = null;
+    private List<DownloadModel> Downloads { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -288,6 +302,11 @@
             this.DismissNotification();
 
             this.Attachments = new(compoundModelResult.Result.Metadata.Content.Where(c => !c.IsMain));
+            this.Downloads.Clear();
+            foreach (var attachment in this.Attachments)
+            {
+                this.Downloads.Add(new DownloadModel(attachment));
+            }
 
             this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
@@ -317,24 +336,29 @@
 
     private async Task DownloadAttachmentAsync(ContentMetadata attachment)
     {
-        this.ContentToDownload = attachment;
+        var downloadItem = this.Downloads.First(d => d.Attachment.Equals(attachment));
         try
         {
             if (await this.downloadUploadHelper.SupportsFileSystemAccessAsync())
             {
-                await DownloadToFileStreamAsync(attachment);
+                await DownloadToFileStreamAsync(attachment, downloadItem);
                 return;
             }
 
-            await DownloadAsBlobUrlAsync(attachment);
+            await DownloadAsBlobUrlAsync(attachment, downloadItem);
         }
         finally
         {
-            this.ContentToDownload = null;
+            if (downloadItem.Status == DownloadStatus.InProgress)
+            {
+                downloadItem.Status = DownloadStatus.Success;
+            }
+
+            this.StateHasChanged();
         }
     }
 
-    private async Task DownloadToFileStreamAsync(ContentMetadata attachment)
+    private async Task DownloadToFileStreamAsync(ContentMetadata attachment, DownloadModel downloadItem)
     {
         Console.WriteLine($"Started {nameof(DownloadToFileStreamAsync)}.");
 
@@ -342,6 +366,21 @@
         try
         {
             writableStream = await this.downloadUploadHelper.StartFileDownloadAsync(attachment.FileName);
+            if (writableStream == null)
+            {
+                return; // user aborted file download
+            }
+
+            downloadItem.Status = DownloadStatus.InProgress;
+            downloadItem.ProgressPercents = 0.0f;
+            this.StateHasChanged();
+
+            var totalLength = 0L;
+            foreach (var chunk in attachment.Chunks)
+            {
+                totalLength += chunk.Length;
+            }
+
             foreach (var chunk in attachment.Chunks)
             {
                 var chunkStreamResponse = await this.apiClient.GetSecretDataStreamAsync(this.compoundModel.Metadata.ObjectName, attachment.ContentName, chunk.ChunkName);
@@ -354,6 +393,7 @@
                             Message = $"Cannot download attachment: {(chunkStreamResponse.Error ?? "Unknown exception.")}."
                         };
 
+                    downloadItem.Status = DownloadStatus.Error;
                     return;
                 }
 
@@ -366,11 +406,24 @@
                             Message = $"Received empty data reponse ('{chunk.ChunkName}'."
                         };
 
+                    downloadItem.Status = DownloadStatus.Error;
                     return;
                 }
 
                 await this.downloadUploadHelper.WriteToFileAsync(writableStream, chunkStreamResponse.Result);
+
+                downloadItem.ProgressPercents += 100.0f * ((float)chunk.Length / (totalLength == 0 ? 1 : totalLength));
+                this.StateHasChanged();
             }
+        }
+        catch (Exception exception)
+        {
+            this.Notification = new NotificationData()
+            {
+                Type = NotificationType.Warning,
+                Status = string.Empty,
+                Message = exception.Message
+            };
         }
         finally
         {
@@ -381,9 +434,13 @@
         }
     }
 
-    private async Task DownloadAsBlobUrlAsync(ContentMetadata attachment)
+    private async Task DownloadAsBlobUrlAsync(ContentMetadata attachment, DownloadModel downloadItem)
     {
         Console.WriteLine($"Started {nameof(DownloadAsBlobUrlAsync)}.");
+
+        downloadItem.Status = DownloadStatus.InProgress;
+        downloadItem.ProgressPercents = 0.0f;
+        this.StateHasChanged();
 
         var dataStreamResponse = await this.apiClient.GetContentDataStreamAsync(this.compoundModel.Metadata.ObjectName, attachment.ContentName);
         if (dataStreamResponse.Status != "ok")

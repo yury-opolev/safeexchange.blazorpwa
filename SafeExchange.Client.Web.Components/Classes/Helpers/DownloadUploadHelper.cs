@@ -42,7 +42,14 @@ namespace SafeExchange.Client.Web.Components
         public async Task<IJSObjectReference> StartFileDownloadAsync(string fileName)
         {
             var module = await moduleTask.Value;
-            return await module.InvokeAsync<IJSObjectReference>("openFileStreamAsync", fileName);
+            try
+            {
+                return await module.InvokeAsync<IJSObjectReference>("openFileStreamAsync", fileName);
+            }
+            catch (JSException)
+            {
+                return null; // user aborted file download
+            }
         }
 
         public async Task FinishFileDownloadAsync(IJSObjectReference writableStream)
