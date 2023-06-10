@@ -66,7 +66,17 @@
                                     <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
                                 </div>
                                 <div>
-                                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DownloadAttachmentAsync(attachment))"><i class="oi oi-cloud-download"></i><span>&nbsp;Download</span></button>
+                                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
+                                        @if (attachment.Equals(this.ContentToDownload))
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            <span>&nbsp;Download</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="oi oi-cloud-download"></i><span>&nbsp;Download</span>
+                                        }
+                                    </button>
                                 </div>
                             </li>
                         }
@@ -181,6 +191,8 @@
     };
 
     private List<ContentMetadata> Attachments { get; set; } = new();
+
+    private ContentMetadata? ContentToDownload = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -304,13 +316,21 @@
 
     private async Task DownloadAttachmentAsync(ContentMetadata attachment)
     {
-        if (await this.downloadUploadHelper.SupportsFileSystemAccessAsync())
+        this.ContentToDownload = attachment;
+        try
         {
-            await DownloadToFileStreamAsync(attachment);
-            return;
-        }
+            if (await this.downloadUploadHelper.SupportsFileSystemAccessAsync())
+            {
+                await DownloadToFileStreamAsync(attachment);
+                return;
+            }
 
-        await DownloadAsBlobUrlAsync(attachment);
+            await DownloadAsBlobUrlAsync(attachment);
+        }
+        finally
+        {
+            this.ContentToDownload = null;
+        }
     }
 
     private async Task DownloadToFileStreamAsync(ContentMetadata attachment)
