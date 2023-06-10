@@ -11,6 +11,7 @@
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
+@inject DownloadUploadHelper downloadUploadHelper
 
 @if (this.Notification != null)
 {
@@ -65,7 +66,7 @@
                                     <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
                                 </div>
                                 <div>
-                                    <a target="_blank" rel="noopener noreferrer" href="@(this.apiClient.GetContentDataStreamUri(this.compoundModel.Metadata.ObjectName, attachment.ContentName))" class="btn btn-outline-primary" ><i class="oi oi-cloud-download"></i>&nbsp;&nbsp;Download</a>
+                                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DownloadAttachmentAsync(attachment))"><i class="oi oi-cloud-download"></i><span>&nbsp;Download</span></button>
                                 </div>
                             </li>
                         }
@@ -299,6 +300,45 @@
     private string CreateAccessRequestUri(string permissions)
     {
         return $"addrequest?subject={this.ObjectName}&permission={permissions}";
+    }
+
+    private async Task DownloadAttachmentAsync(ContentMetadata attachment)
+    {
+        if (await this.downloadUploadHelper.SupportsFileSystemAccessAsync())
+        {
+            await DownloadToFileStreamAsync(attachment);
+            return;
+        }
+
+        await DownloadAsBlobUrlAsync(attachment);
+    }
+
+    private async Task DownloadToFileStreamAsync(ContentMetadata attachment)
+    {
+        Console.WriteLine($"{nameof(DownloadToFileStreamAsync)}");
+
+        await Task.CompletedTask;
+    }
+
+    private async Task DownloadAsBlobUrlAsync(ContentMetadata attachment)
+    {
+        Console.WriteLine($"{nameof(DownloadAsBlobUrlAsync)}");
+
+        var dataStreamResponse = await this.apiClient.GetContentDataStreamAsync(this.compoundModel.Metadata.ObjectName, attachment.ContentName);
+
+        if (dataStreamResponse.Status != "ok")
+        {
+            this.Notification = new NotificationData()
+            {
+                Type = NotificationType.Warning,
+                Status = dataStreamResponse.Status,
+                Message = $"Cannot download attachment: {(dataStreamResponse.Error ?? "Unknown exception.")}."
+            };
+
+            return;
+        }
+
+        await this.downloadUploadHelper.DownloadFileFromStreamAsync(dataStreamResponse.Result, attachment.FileName, attachment.ContentType);
     }
 }
 

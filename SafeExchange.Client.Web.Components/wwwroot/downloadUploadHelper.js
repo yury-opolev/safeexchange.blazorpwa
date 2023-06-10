@@ -25,4 +25,31 @@ function triggerFileDownload(fileName, url) {
     anchorElement.remove();
 }
 
-export { triggerAttachFile, downloadFileFromStream };
+function supportsFileSystemAccess()
+{
+    if (!('showSaveFilePicker' in window)) {
+        return false;
+    }
+
+    try {
+        return window.self === window.top;
+    } catch {
+        return false;
+    }
+}
+
+async function startFileWriteAsync() {
+    const fileHandle = await window.showSaveFilePicker();
+    const writableStream = await fileHandle.createWritable();
+    return writableStream;
+}
+
+async function writeToFileStreamAsync(writableStream, contents) {
+    await writableStream.write(contents);
+}
+
+async function closeFileAsync(writableStream) {
+    await writableStream.close();
+}
+
+export { triggerAttachFile, downloadFileFromStream, supportsFileSystemAccess };

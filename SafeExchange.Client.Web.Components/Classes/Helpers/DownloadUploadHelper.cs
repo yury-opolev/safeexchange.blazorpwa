@@ -34,6 +34,12 @@ namespace SafeExchange.Client.Web.Components
             await module.InvokeVoidAsync("downloadFileFromStream", fileName, contentType, streamRef);
         }
 
+        public async Task<bool> SupportsFileSystemAccessAsync()
+        {
+            var module = await moduleTask.Value;
+            return await module.InvokeAsync<bool>("supportsFileSystemAccess");
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (moduleTask.IsValueCreated)
