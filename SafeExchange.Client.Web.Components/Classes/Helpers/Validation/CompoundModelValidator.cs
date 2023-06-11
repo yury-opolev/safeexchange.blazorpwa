@@ -126,6 +126,11 @@ namespace SafeExchange.Client.Web.Components
         {
             this.messageStore.Clear(() => accessItem.SubjectName);
 
+            if (accessItem.SubjectType.Equals(SubjectType.Application))
+            {
+                return;
+            }
+
             var regex = new Regex(@"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
             if (accessItem.SubjectName.Length > 320 || !regex.IsMatch(accessItem.SubjectName))
             {

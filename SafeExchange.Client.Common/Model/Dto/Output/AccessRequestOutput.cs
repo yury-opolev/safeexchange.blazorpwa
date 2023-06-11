@@ -10,6 +10,8 @@ namespace SafeExchange.Client.Common.Model
     {
         public string Id { get; set; }
 
+        public SubjectTypeOutput SubjectType { get; set; }
+
         public string SubjectName { get; set; }
 
         public string ObjectName { get; set; }

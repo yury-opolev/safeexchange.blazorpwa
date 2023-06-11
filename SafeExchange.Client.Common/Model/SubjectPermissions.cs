@@ -4,7 +4,6 @@
 
 namespace SafeExchange.Client.Common.Model
 {
-    using System;
     using System.Text.Json.Serialization;
 
     public class SubjectPermissions
@@ -15,6 +14,7 @@ namespace SafeExchange.Client.Common.Model
         public SubjectPermissions(SubjectPermissionsOutput source)
         {
             this.ObjectName = source.ObjectName;
+            this.SubjectType = source.SubjectType.ToSubjectType();
             this.SubjectName = source.SubjectName;
 
             this.CanRead = source.CanRead;
@@ -24,6 +24,8 @@ namespace SafeExchange.Client.Common.Model
         }
 
         public string ObjectName { get; set; }
+
+        public SubjectType SubjectType { get; set; }
 
         public string SubjectName { get; set; }
 
@@ -54,6 +56,7 @@ namespace SafeExchange.Client.Common.Model
 
         public SubjectPermissionsInput ToDto() => new SubjectPermissionsInput()
         {
+            SubjectType = this.SubjectType.ToDto(),
             SubjectName = this.SubjectName,
 
             CanRead = this.CanRead,
