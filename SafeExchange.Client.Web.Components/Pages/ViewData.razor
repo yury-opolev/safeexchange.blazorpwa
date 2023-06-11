@@ -89,7 +89,7 @@
                                             <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                             break;
                                     }
-                                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
+                                    <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
                                         <i class="oi oi-cloud-download"></i><span>&nbsp;Download</span>
                                     </button>
                                 </div>
