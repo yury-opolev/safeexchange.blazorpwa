@@ -3,7 +3,6 @@
 @using SafeExchange.Client.Web.Components.Helpers
 
 @inject NavigationManager Navigation
-@inject SignOutSessionStateManager SignOutManager
 
 <AuthorizeView>
     <Authorized>
@@ -31,9 +30,8 @@
 
 @code{
 
-    private async Task BeginSignOut(MouseEventArgs args)
+    private void BeginSignOut(MouseEventArgs args)
     {
-        await SignOutManager.SetSignOutState();
         Navigation.NavigateTo("authentication/logout");
     }
 }
