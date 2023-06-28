@@ -292,7 +292,7 @@
                     Type = NotificationType.Warning,
                     Status = compoundModelResult.Status,
                     Message = $"{compoundModelResult.Error}{messageAppendix}",
-                    ButtonText = "unauthorized".Equals(compoundModelResult.Status) ? "Request Access" : string.Empty,
+                    ButtonText = "forbidden".Equals(compoundModelResult.Status) ? "Request Access" : string.Empty,
                     ButtonUri = this.CreateAccessRequestUri("Read")
                 };
 

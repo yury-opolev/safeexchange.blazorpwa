@@ -832,7 +832,7 @@
         Type = NotificationType.Warning,
         Status = status.Status,
         Message = status.Error,
-        ButtonText = "unauthorized".Equals(status.Status) ? "Request Access" : string.Empty,
+        ButtonText = "forbidden".Equals(status.Status) ? "Request Access" : string.Empty,
         ButtonUri = this.CreateAccessRequestUri("Read,Write")
     };
 
