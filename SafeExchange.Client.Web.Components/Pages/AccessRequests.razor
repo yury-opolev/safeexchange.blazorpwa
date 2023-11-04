@@ -1,11 +1,14 @@
-﻿@using SafeExchange.Client.Common
+﻿@using Microsoft.Extensions.Logging;
+@using SafeExchange.Client.Common
 @using SafeExchange.Client.Common.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using SafeExchange.Client.Web.Components.Classes;
 @using SafeExchange.Client.Web.Components.Helpers
 @using SafeExchange.Client.Web.Components.Model
 
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
+@inject ILogger<AccessRequests> logger
 
 <!-- Modal -->
 <div class="modal fade" id="cancellationDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
@@ -67,9 +70,18 @@
 
                 @if (this.IncomingAccessRequests.Count == 0)
                 {
-                    <p class="my-4">
-                        - No incoming access requests -
-                    </p>
+                    @if (this.StateContainer.IsFetchingAccessRequests)
+                    {
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">In progress...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="my-4">
+                            - No incoming access requests -
+                        </p>
+                    }
                 }
             </div>
             <div class="tab-pane fade" id="outgoing" role="tabpanel" aria-labelledby="outgoing-tab">
@@ -91,11 +103,19 @@
 
                 @if (this.OutgoingAccessRequests.Count == 0)
                 {
-                    <p class="my-4">
-                        - No outgoing access requests -
-                    </p>
+                    @if (this.StateContainer.IsFetchingAccessRequests)
+                    {
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">In progress...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="my-4">
+                            - No outgoing access requests -
+                        </p>
+                    }
                 }
-
             </div>
         </div>
     </div>
@@ -110,9 +130,9 @@
 
     private NotificationData Notification;
 
-    private IList<AccessRequest> IncomingAccessRequests;
+    private IList<AccessRequest> IncomingAccessRequests = new List<AccessRequest>();
 
-    private IList<AccessRequest> OutgoingAccessRequests;
+    private IList<AccessRequest> OutgoingAccessRequests = new List<AccessRequest>();
 
     private AccessRequest RequestToCancel;
 
@@ -128,32 +148,46 @@
 
     private async Task FetchAccessRequestsAsync()
     {
+        this.logger.LogDebug($"{nameof(FetchAccessRequestsAsync)} started.");
+
         this.StateContainer.IsInProgress = true;
+        this.logger.LogDebug($"Subscribing to state container {nameof(this.StateContainer.OnAccessRequestsFetched)}.");
+        this.StateContainer.OnAccessRequestsFetched += this.OnAccessRequestsFetched;
+
+        var currentUserUpn = TokenHandler.GetName(authenticationState.User);
+        await this.StateContainer.TryFetchAccessRequestsAsync(this.apiClient, currentUserUpn);
+
+        this.logger.LogDebug($"{nameof(FetchAccessRequestsAsync)} finished.");
+    }
+
+    private void OnAccessRequestsFetched(object? sender, DataFetchedEventArgs e)
+    {
+        this.logger.LogDebug($"{nameof(OnAccessRequestsFetched)} finished.");
+
         try
         {
-            var currentUserUpn = TokenHandler.GetName(authenticationState.User);
-            var reply = await this.StateContainer.TryFetchAccessRequestsAsync(this.apiClient, currentUserUpn);
-            if (!"ok".Equals(reply.Status))
+            if (!"ok".Equals(e.ResponseStatus.Status))
             {
                 this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = reply.Status,
-                    Message = reply.Error
-                };
+                    {
+                        Type = NotificationType.Warning,
+                        Status = e.ResponseStatus.Status,
+                        Message = e.ResponseStatus.Error ?? string.Empty
+                    };
                 return;
             }
 
             this.IncomingAccessRequests = new List<AccessRequest>(this.StateContainer.IncomingAccessRequests);
             this.OutgoingAccessRequests = new List<AccessRequest>(this.StateContainer.OutgoingAccessRequests);
         }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
-        }
         finally
         {
+            this.logger.LogDebug($"Unsubscribing from state container {nameof(this.StateContainer.OnAccessRequestsFetched)}.");
+            this.StateContainer.OnAccessRequestsFetched -= this.OnAccessRequestsFetched;
             this.StateContainer.IsInProgress = false;
+
+            this.StateHasChanged();
+            this.logger.LogDebug($"{nameof(OnAccessRequestsFetched)} finished.");
         }
     }
 
