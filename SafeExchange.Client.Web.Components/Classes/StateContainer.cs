@@ -4,8 +4,11 @@
 
 namespace SafeExchange.Client.Web.Components
 {
+    using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+    using Microsoft.Extensions.Logging;
     using SafeExchange.Client.Common;
     using SafeExchange.Client.Common.Model;
+    using SafeExchange.Client.Web.Components.Classes;
     using SafeExchange.Client.Web.Components.Model;
     using System;
     using System.Collections.Generic;
@@ -35,6 +38,10 @@ namespace SafeExchange.Client.Web.Components
 
         public bool IsFetchingAccessRequests { get; set; }
 
+        private object fetchingAccessRequestsLock = new();
+
+        public event EventHandler<DataFetchedEventArgs> OnAccessRequestsFetched;
+
         public List<AccessRequest> IncomingAccessRequests { get; set; }
 
         public List<AccessRequest> OutgoingAccessRequests { get; set; }
@@ -42,6 +49,13 @@ namespace SafeExchange.Client.Web.Components
         public bool IsFetchingApplications { get; set; }
 
         public List<Application> RegisteredApplications { get; set; }
+
+        private ILogger logger;
+
+        public StateContainer(ILogger<StateContainer> logger)
+        {
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
         public void SetNextNotification(NotificationData notification)
         {
@@ -61,9 +75,27 @@ namespace SafeExchange.Client.Web.Components
             NotifyStateChanged();
         }
 
-        public async Task<ResponseStatus> TryFetchAccessRequestsAsync(ApiClient apiClient, string currentUserUpn)
+        public async Task TryFetchAccessRequestsAsync(ApiClient apiClient, string currentUserUpn)
         {
-            this.IsFetchingAccessRequests = true;
+            if (this.IsFetchingAccessRequests)
+            {
+                this.logger.LogDebug($"{nameof(TryFetchAccessRequestsAsync)} returned - already fetching.");
+                return;
+            }
+
+            lock (this.fetchingAccessRequestsLock)
+            {
+                if (this.IsFetchingAccessRequests)
+                {
+                    this.logger.LogDebug($"{nameof(TryFetchAccessRequestsAsync)} returned in the lock - already fetching.");
+                    return;
+                }
+
+                this.IsFetchingAccessRequests = true;
+            }
+
+            this.logger.LogDebug($"{nameof(TryFetchAccessRequestsAsync)} started.");
+
             this.IncomingAccessRequests = new List<AccessRequest>();
             this.OutgoingAccessRequests = new List<AccessRequest>();
 
@@ -90,12 +122,19 @@ namespace SafeExchange.Client.Web.Components
                     // no-op
                 }
 
-                return requests.ToResponseStatus();
+                this.OnAccessRequestsFetched?.Invoke(this, new DataFetchedEventArgs() { ResponseStatus = requests.ToResponseStatus() });
+                return;
+            }
+            catch (AccessTokenNotAvailableException exception)
+            {
+                exception.Redirect();
             }
             finally
             {
                 this.IsFetchingAccessRequests = false;
                 NotifyStateChanged();
+
+                this.logger.LogDebug($"{nameof(TryFetchAccessRequestsAsync)} finished.");
             }
         }
 
