@@ -312,7 +312,7 @@
             ExpirationMetadata = new ExpirationMetadata()
             {
                 ScheduleExpiration = false,
-                ExpireAt = DateTime.MinValue,
+                ExpireAt = DateTime.Now,
                 ExpireOnIdleTime = false,
                 IdleTimeToExpire = TimeSpan.Zero
             }
@@ -465,6 +465,7 @@
 
         try
         {
+            this.SpecifyExpirationDateTimeKind();
             await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             var result = await apiClient.CreateFromCompoundModelAsync(this.compoundModel, this.Attachments);
             if (!"ok".Equals(result.Status))
@@ -510,5 +511,14 @@
     private string GetViewUri(string objectName)
     {
         return $"{NavManager.BaseUri.TrimEnd('/')}/viewdata/{objectName}";
+    }
+
+    private void SpecifyExpirationDateTimeKind()
+    {
+        if (this.compoundModel.Metadata.ExpirationMetadata.ExpireAt.Kind == DateTimeKind.Unspecified)
+        {
+            this.compoundModel.Metadata.ExpirationMetadata.ExpireAt =
+                DateTime.SpecifyKind(this.compoundModel.Metadata.ExpirationMetadata.ExpireAt, DateTimeKind.Local);
+        }
     }
 }

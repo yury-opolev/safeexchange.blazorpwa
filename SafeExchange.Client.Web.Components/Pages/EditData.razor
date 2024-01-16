@@ -619,7 +619,7 @@
             // TODO: would need to have custom control for expiration time to handle seconds. Until then just dropping seconds here.
             var expireAt = this.compoundModel.Metadata.ExpirationMetadata.ExpireAt;
             expireAt = new DateTime(expireAt.Year, expireAt.Month, expireAt.Day, expireAt.Hour, expireAt.Minute, 0, expireAt.Kind);
-            this.compoundModel.Metadata.ExpirationMetadata.ExpireAt = expireAt;
+            this.compoundModel.Metadata.ExpirationMetadata.ExpireAt = expireAt.ToLocalTime();
 
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
@@ -669,6 +669,7 @@
         this.StateHasChanged();
         try
         {
+            this.SpecifyExpirationDateTimeKind();
             await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             if (!this.compoundModel.Metadata.ExpirationMetadata.Equals(this.originalMetadata.ExpirationMetadata))
             {
@@ -849,5 +850,14 @@
     private string GetViewUri(string objectName)
     {
         return $"{NavManager.BaseUri.TrimEnd('/')}/viewdata/{objectName}";
+    }
+
+    private void SpecifyExpirationDateTimeKind()
+    {
+        if (this.compoundModel.Metadata.ExpirationMetadata.ExpireAt.Kind == DateTimeKind.Unspecified)
+        {
+            this.compoundModel.Metadata.ExpirationMetadata.ExpireAt =
+                DateTime.SpecifyKind(this.compoundModel.Metadata.ExpirationMetadata.ExpireAt, DateTimeKind.Local);
+        }
     }
 }

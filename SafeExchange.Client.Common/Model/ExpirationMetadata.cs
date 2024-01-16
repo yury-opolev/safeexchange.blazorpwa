@@ -20,8 +20,12 @@ namespace SafeExchange.Client.Common.Model
 
         public ExpirationMetadata(ExpirationSettingsOutput source)
         {
+            var expireAt = source.ExpireAt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(source.ExpireAt, DateTimeKind.Utc)
+                : source.ExpireAt;
+
             this.ScheduleExpiration = source.ScheduleExpiration;
-            this.ExpireAt = source.ExpireAt;
+            this.ExpireAt = expireAt.ToLocalTime();
             this.ExpireOnIdleTime = source.ExpireOnIdleTime;
             this.IdleTimeToExpire = source.IdleTimeToExpire;
         }
@@ -71,12 +75,19 @@ namespace SafeExchange.Client.Common.Model
         public override string? ToString()
             =>  $"ScheduleExpiration: {this.ScheduleExpiration}, ExpireAt: {this.ExpireAt}, ExpireOnIdleTime: {this.ExpireOnIdleTime}, IdleTimeToExpire: {this.IdleTimeToExpire}";
 
-        public ExpirationSettingsInput ToDto() => new ExpirationSettingsInput()
+        public ExpirationSettingsInput ToDto()
         {
-            ScheduleExpiration = this.ScheduleExpiration,
-            ExpireAt = this.ExpireAt,
-            ExpireOnIdleTime = this.ExpireOnIdleTime,
-            IdleTimeToExpire = this.IdleTimeToExpire
-        };
+            var expireAt = this.ExpireAt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(this.ExpireAt, DateTimeKind.Local)
+                : this.ExpireAt;
+
+            return new ExpirationSettingsInput()
+            {
+                ScheduleExpiration = this.ScheduleExpiration,
+                ExpireAt = expireAt.ToUniversalTime(),
+                ExpireOnIdleTime = this.ExpireOnIdleTime,
+                IdleTimeToExpire = this.IdleTimeToExpire
+            };
+        }
     }
 }
