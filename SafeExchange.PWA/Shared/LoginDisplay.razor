@@ -1,8 +1,10 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Options
 @using SafeExchange.Client.Web.Components.Helpers
 
 @inject NavigationManager Navigation
+@inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 
 <AuthorizeView>
     <Authorized>
@@ -22,16 +24,20 @@
         </div>
     </Authorized>
     <NotAuthorized>
-        <a class="nav-link" href="authentication/login">
+        <a class="nav-link" href="" @onclick="@BeginSignIn" @onclick:preventDefault>
             <img src="sign-in.svg" alt="Sign In" width="32">
         </a>
     </NotAuthorized>
 </AuthorizeView>
 
 @code{
+    private void BeginSignIn(MouseEventArgs args)
+    {
+        Navigation.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath);
+    }
 
     private void BeginSignOut(MouseEventArgs args)
     {
-        Navigation.NavigateToLogout("authentication/logout");
+        Navigation.NavigateToLogout(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
     }
 }
