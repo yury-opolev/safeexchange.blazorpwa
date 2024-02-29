@@ -20,6 +20,8 @@ namespace SafeExchange.Client.Web.Components.Model
 
         public string ButtonUri { get; set; }
 
+        public bool ConsentRequired { get; set; }
+
         public string GetAlertClass()
         {
             switch (this.Type)

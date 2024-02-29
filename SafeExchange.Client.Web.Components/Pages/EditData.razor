@@ -1,4 +1,5 @@
-﻿@using SafeExchange.Client.Common
+﻿@using Microsoft.Extensions.Options
+@using SafeExchange.Client.Common
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using System.Text.RegularExpressions;
 @using System.Text
@@ -14,6 +15,7 @@
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
+@inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 
 <div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -43,7 +45,7 @@
         {
             <hr>
             <p>
-                <button class="btn btn-warning" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="() => this.NavManager.NavigateTo(this.Notification.ButtonUri)">
+                <button class="btn btn-warning" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="() => this.HandleNotificationButtonClick()">
                     <span>@this.Notification.ButtonText</span>
                 </button>
             </p>
@@ -590,19 +592,24 @@
             var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
             if (!"ok".Equals(compoundModelResult.Status))
             {
-                var messageAppendix = string.Empty;
+                var consentRequired = false;
+                var message = compoundModelResult.Error ?? string.Empty;
+                var buttonText = "forbidden".Equals(compoundModelResult.Status) ? "Request Access" : string.Empty;
                 if ("consent_required".Equals(compoundModelResult.SubStatus))
                 {
-                    messageAppendix = "; User must give consent in AAD to fetch groups in order to use groups authorization.";
+                    consentRequired = true;
+                    message = "User must give consent in AAD to fetch groups in order to use groups authorization.";
+                    buttonText = "Consent";
                 }
 
                 this.Notification = new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = compoundModelResult.Status,
-                    Message = $"{compoundModelResult.Error}{messageAppendix}",
-                    ButtonText = "unauthorized".Equals(compoundModelResult.Status) ? "Request Access" : string.Empty,
-                    ButtonUri = this.CreateAccessRequestUri("Read")
+                    Message = message,
+                    ButtonText = buttonText,
+                    ButtonUri = this.CreateAccessRequestUri("Read"),
+                    ConsentRequired = consentRequired
                 };
 
                 return;
@@ -859,5 +866,18 @@
             this.compoundModel.Metadata.ExpirationMetadata.ExpireAt =
                 DateTime.SpecifyKind(this.compoundModel.Metadata.ExpirationMetadata.ExpireAt, DateTimeKind.Local);
         }
+    }
+
+    private void HandleNotificationButtonClick()
+    {
+        if (this.Notification.ConsentRequired)
+        {
+            var requestOptions = new InteractiveRequestOptions { Interaction = InteractionType.SignIn, ReturnUrl = this.NavManager.Uri };
+            requestOptions.TryAddAdditionalParameter("prompt", "consent");
+            this.NavManager.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath, requestOptions);
+            return;
+        }
+
+        this.NavManager.NavigateTo(this.Notification.ButtonUri);
     }
 }
