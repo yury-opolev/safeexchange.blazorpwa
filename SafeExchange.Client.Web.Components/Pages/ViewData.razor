@@ -483,12 +483,13 @@
     {
         if (this.Notification.ConsentRequired)
         {
-            var scopesToConsent = Configuration.GetValue<IEnumerable<string>>("AdditionalScopesToConsent");
+            var scopesToConsent = new List<string>();
+            this.Configuration.Bind("AdditionalScopesToConsent", scopesToConsent);
             var requestOptions = new InteractiveRequestOptions
             {
                 Interaction = InteractionType.GetToken,
                 ReturnUrl = this.NavManager.Uri,
-                Scopes = scopesToConsent ?? Array.Empty<string>()
+                Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
             };
 
             requestOptions.TryAddAdditionalParameter("prompt", "consent");
