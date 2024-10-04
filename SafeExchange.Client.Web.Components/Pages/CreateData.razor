@@ -289,6 +289,10 @@
 </EditForm>
 
 @code {
+
+    [Parameter]
+    public int DefaultIdleExpirationDays { get; set; } = 0;
+
     public const int MaxAttachments = 5;
 
     private NotificationData Notification;
@@ -345,6 +349,12 @@
         this.StateContainer.IsInProgress = false;
         this.StateContainer.SetCurrentPageHeader($"Add secret");
         this.StateContainer.TakeNotification();
+
+        if (this.DefaultIdleExpirationDays > 0)
+        {
+            this.compoundModel.Metadata.ExpirationMetadata.ExpireOnIdleTime = true;
+            this.compoundModel.Metadata.ExpirationMetadata.IdleTimeToExpire = TimeSpan.FromDays(this.DefaultIdleExpirationDays);
+        }
 
         this.editContext = new EditContext(this.compoundModel);
         await this.StateContainer.TryFetchRegisteredApplications(this.apiClient);
