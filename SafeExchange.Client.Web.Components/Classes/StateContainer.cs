@@ -50,6 +50,10 @@ namespace SafeExchange.Client.Web.Components
 
         public List<Application> RegisteredApplications { get; set; }
 
+        public bool IsFetchingGroups { get; set; }
+
+        public List<Group> RegisteredGroups { get; set; }
+
         private ILogger logger;
 
         public StateContainer(ILogger<StateContainer> logger)
@@ -152,9 +156,8 @@ namespace SafeExchange.Client.Web.Components
                 var applicationsResponse = await apiClient.GetRegisteredApplicationsAsync();
                 if (applicationsResponse.Status == "ok")
                 {
-                    this.RegisteredApplications = new List<Application>();
                     var applications = applicationsResponse.Result.Select(a => new Application(a)).ToList();
-                    this.RegisteredApplications.AddRange(applications);
+                    this.RegisteredApplications = applications ?? [];
                 }
                 else
                 {
@@ -166,6 +169,37 @@ namespace SafeExchange.Client.Web.Components
             finally
             {
                 this.IsFetchingApplications = false;
+                NotifyStateChanged();
+            }
+        }
+
+        public async Task<ResponseStatus> TryFetchRegisteredGroups(ApiClient apiClient)
+        {
+            if (this.RegisteredGroups != null)
+            {
+                return new ResponseStatus() { Status = "ok" }; // already fetched
+            }
+
+            this.IsFetchingGroups = true;
+
+            try
+            {
+                var groupsResponse = await apiClient.GetRegisteredGroupsAsync();
+                if (groupsResponse.Status == "ok")
+                {
+                    var groups = groupsResponse.Result.Select(g => new Group(g)).ToList();
+                    this.RegisteredGroups = groups ?? [];
+                }
+                else
+                {
+                    // no-op
+                }
+
+                return groupsResponse.ToResponseStatus();
+            }
+            finally
+            {
+                this.IsFetchingGroups = false;
                 NotifyStateChanged();
             }
         }

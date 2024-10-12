@@ -469,6 +469,16 @@ namespace SafeExchange.Client.Common
 
         #endregion applications
 
+        #region groups
+
+        public async Task<BaseResponseObject<List<GroupOverviewOutput>>> GetRegisteredGroupsAsync()
+            => await this.ProcessResponseAsync<List<GroupOverviewOutput>>(async () =>
+            {
+                return await client.GetAsync($"{ApiVersion}/groups-list");
+            });
+
+        #endregion groups
+
         private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall) where T : class
         {
             HttpResponseMessage? response = null;
