@@ -15,6 +15,9 @@ namespace SafeExchange.Client.Common.Model
                 case SubjectTypeOutput.User:
                     return SubjectType.User;
 
+                case SubjectTypeOutput.Group:
+                    return SubjectType.Group;
+
                 case SubjectTypeOutput.Application:
                     return SubjectType.Application;
 
@@ -29,6 +32,9 @@ namespace SafeExchange.Client.Common.Model
             {
                 case SubjectType.User:
                     return SubjectTypeInput.User;
+
+                case SubjectType.Group:
+                    return SubjectTypeInput.Group;
 
                 case SubjectType.Application:
                     return SubjectTypeInput.Application;

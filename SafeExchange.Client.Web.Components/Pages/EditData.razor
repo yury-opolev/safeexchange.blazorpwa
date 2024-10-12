@@ -274,6 +274,37 @@
                                 <label for="@($"username-input-{i}")" class="form-label">Username</label>
                             </div>
                             <ValidationMessage id="@($"un-validation-{i}")" For="@(() => this.compoundModel.Permissions[tempIndex].SubjectName)" />
+                            </div>
+                            break;
+
+                    case (SubjectType.Group):
+                        <div class="col">
+                            <div class="form-floating">
+                                <InputSelect id="@($"group-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
+                                    @if (!this.StateContainer.IsFetchingGroups)
+                                    {
+                                        if ((this.StateContainer.RegisteredGroups?.Count ?? 0) > 0)
+                                        {
+                                            foreach (var group in this.StateContainer.RegisteredGroups)
+                                            {
+                                                <option value="@group.GroupMail">@group.DisplayName</option>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <option value="">- No Groups -</option>
+                                        }
+                                    }
+                                </InputSelect>
+                                <label for="@($"group-input-{i}")" class="form-label">
+                                    @if (this.StateContainer.IsFetchingGroups)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    }
+                                    Group
+                                </label>
+                            </div>
+                            <ValidationMessage id="@($"grp-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
                         </div>
                         break;
 
@@ -456,6 +487,7 @@
         this.editContext = new EditContext(this.compoundModel);
         await this.FetchSecretAsync(this.ObjectName);
         await this.StateContainer.TryFetchRegisteredApplications(this.apiClient);
+        await this.StateContainer.TryFetchRegisteredGroups(this.apiClient);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
