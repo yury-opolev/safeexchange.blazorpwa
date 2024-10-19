@@ -1,4 +1,5 @@
-﻿@using SafeExchange.Client.Common
+﻿@using Microsoft.JSInterop
+@using SafeExchange.Client.Common
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
@@ -9,11 +10,31 @@
 
 @implements IDisposable
 
+@inject IJSRuntime JS
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
+@inject ItemPickDialogHelper itemPickDialogHelper
+
+<div class="modal fade" id="userPickDialog" @ref="this.userPickDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <p class="modal-title" id="modalLabel"><strong>Find user</strong></p>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Blah
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" @onclick="@((e) => this.FinishUserPick("some@user.test"))">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (this.Notification != null)
 {
@@ -189,7 +210,7 @@
             <div class="row align-items-center">
                 <div class="col-2">
                     <div class="form-floating">
-                        <InputSelect id="@($"usertype-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress"
+                        <InputSelect id="@($"usertype-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress"
                             ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
                             Value="@compoundModel.Permissions[tempIndex].SubjectType"
                             ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
@@ -207,9 +228,16 @@
                 {
                     case (SubjectType.User):
                         <div class="col">
-                            <div class="form-floating">
-                                <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
-                                <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                            <div class="input-group">
+                                <div class="form-floating">
+                                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
+                                    <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                                </div>
+                                <span class="narrow-floating-group input-group-text">
+                                    <button class="btn" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
+                                        <span class="oi oi-magnifying-glass"></span>
+                                    </button>
+                                </span>
                             </div>
                             <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
                         </div>
@@ -218,7 +246,7 @@
                     case (SubjectType.Group):
                         <div class="col">
                             <div class="form-floating">
-                                <InputSelect id="@($"group-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
+                                <InputSelect id="@($"group-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
                                     @if (!this.StateContainer.IsFetchingGroups)
                                     {
                                         if ((this.StateContainer.RegisteredGroups?.Count ?? 0) > 0)
@@ -249,7 +277,7 @@
                     case (SubjectType.Application):
                         <div class="col">
                             <div class="form-floating">
-                                <InputSelect id="@($"application-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
+                                <InputSelect id="@($"application-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
                                 @if (!this.StateContainer.IsFetchingApplications)
                                 {
                                     if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
@@ -279,7 +307,7 @@
                 }
                 <div class="col">
                     <div class="form-floating">
-                        <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                        <InputSelect id="@($"permissions-select-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
                             <option>Read</option>
                             <option>Read,Write</option>
                             <option>Read,Write,GrantAccess</option>
@@ -338,6 +366,10 @@
 
     private bool initializeTooltips = false;
 
+    private ElementReference userPickDialog;
+
+    private int currentPermissionItemIndex;
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -372,7 +404,7 @@
 
     public void Dispose()
     {
-        //...
+        // ...
     }
 
     protected override async Task OnInitializedAsync()
@@ -395,6 +427,11 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!this.initializeTooltips)
+        {
+            return;
+        }
+
+        if (!firstRender)
         {
             return;
         }
@@ -562,5 +599,17 @@
             this.compoundModel.Metadata.ExpirationMetadata.ExpireAt =
                 DateTime.SpecifyKind(this.compoundModel.Metadata.ExpirationMetadata.ExpireAt, DateTimeKind.Local);
         }
+    }
+
+    private async Task StartUserPickAsync(int permissionItemIndex)
+    {
+        this.currentPermissionItemIndex = permissionItemIndex;
+        await this.itemPickDialogHelper.ShowModalAsync(this.userPickDialog);
+    }
+
+    private void FinishUserPick(string subjectName)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = subjectName;
+        this.currentPermissionItemIndex = 0;
     }
 }

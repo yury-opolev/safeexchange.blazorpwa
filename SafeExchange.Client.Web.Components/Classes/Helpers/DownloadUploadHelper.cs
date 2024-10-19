@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// ...
+/// DownloadUploadHelper
 /// </summary>
 
 namespace SafeExchange.Client.Web.Components
