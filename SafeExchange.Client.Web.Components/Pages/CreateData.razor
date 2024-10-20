@@ -6,7 +6,7 @@
 @using System.Text.RegularExpressions;
 @using System.Text
 @using System.IO
-@using System.Threading
+@using System.Timers
 
 @implements IDisposable
 
@@ -26,7 +26,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Blah
+                <input class="form-control" disabled="@this.StateContainer.IsInProgress" placeholder="Search users..." @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -370,6 +370,11 @@
 
     private int currentPermissionItemIndex;
 
+    private Timer searchTimer = new Timer(TimeSpan.FromSeconds(1)) { AutoReset = false };
+
+    private string searchString = string.Empty;
+    private string latestSearchString = string.Empty;
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -404,11 +409,13 @@
 
     public void Dispose()
     {
-        // ...
+        this.searchTimer?.Dispose();
     }
 
     protected override async Task OnInitializedAsync()
     {
+        this.searchTimer.Elapsed += OnTimerElapsed;
+
         this.StateContainer.IsInProgress = false;
         this.StateContainer.SetCurrentPageHeader($"Add secret");
         this.StateContainer.TakeNotification();
@@ -545,7 +552,11 @@
         try
         {
             this.SpecifyExpirationDateTimeKind();
-            await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+
+            using var timer = new Timer(TimeSpan.FromSeconds(1)) { AutoReset = false };
+            timer.Elapsed += (_, _) => InvokeAsync(() => StateHasChanged());
+            timer.Start();
+
             var result = await apiClient.CreateFromCompoundModelAsync(this.compoundModel, this.Attachments);
             if (!"ok".Equals(result.Status))
             {
@@ -604,6 +615,7 @@
     private async Task StartUserPickAsync(int permissionItemIndex)
     {
         this.currentPermissionItemIndex = permissionItemIndex;
+        this.latestSearchString = string.Empty;
         await this.itemPickDialogHelper.ShowModalAsync(this.userPickDialog);
     }
 
@@ -611,5 +623,44 @@
     {
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = subjectName;
         this.currentPermissionItemIndex = 0;
+    }
+
+    private void ResetSearchTimer()
+    {
+        this.searchTimer.Stop();
+        this.searchTimer.Start();
+    }
+
+    private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (!this.QualifiesAsNewSearch(this.searchString))
+        {
+            return;
+        }
+
+        await this.SearchUsersAsync(this.latestSearchString);
+    }
+
+    private bool QualifiesAsNewSearch(string searchString)
+    {
+        searchString = searchString.Trim().ToLower();
+        if (string.Equals(searchString, this.latestSearchString))
+        {
+            return false;
+        }
+
+        if (searchString.Length <= 2)
+        {
+            return false;
+        }
+
+        this.latestSearchString = searchString;
+        return true;
+    }
+
+    private async Task SearchUsersAsync(string searchString)
+    {
+        // TODO: search users on server
+        await Task.CompletedTask;
     }
 }
