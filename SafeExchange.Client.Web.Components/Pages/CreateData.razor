@@ -27,6 +27,16 @@
             </div>
             <div class="modal-body">
                 <input class="form-control" disabled="@this.StateContainer.IsInProgress" placeholder="Search users..." @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                <div>
+                    @if (this.searchIsInProgress)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <span>...</span>
+                    }
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -372,6 +382,7 @@
 
     private Timer searchTimer = new Timer(TimeSpan.FromSeconds(1)) { AutoReset = false };
 
+    private bool searchIsInProgress = false;
     private string searchString = string.Empty;
     private string latestSearchString = string.Empty;
 
@@ -660,7 +671,18 @@
 
     private async Task SearchUsersAsync(string searchString)
     {
-        // TODO: search users on server
-        await Task.CompletedTask;
+        this.searchIsInProgress = true;
+        this.StateHasChanged();
+
+        try
+        {
+            // TODO: search users on server
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+        finally
+        {
+            this.searchIsInProgress = false;
+            this.StateHasChanged();
+        }
     }
 }
