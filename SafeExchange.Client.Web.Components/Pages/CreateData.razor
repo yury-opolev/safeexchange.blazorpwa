@@ -34,7 +34,9 @@
                     }
                     else
                     {
-                        <span>...</span>
+                        <div class="card">
+                            @* TODO *@
+                        </div>
                     }
                 </div>
             </div>
@@ -386,6 +388,8 @@
     private string searchString = string.Empty;
     private string latestSearchString = string.Empty;
 
+    private List<GraphUserOutput> usersFound = [];
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -676,8 +680,25 @@
 
         try
         {
-            // TODO: search users on server
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            this.usersFound = [];
+            var result = await this.apiClient.SearchUsersAsync(new SearchInput() { SearchString = searchString });
+            if (!"ok".Equals(result.Status))
+            {
+                this.Notification = new NotificationData()
+                    {
+                        Type = NotificationType.Warning,
+                        Status = result.Status,
+                        Message = result.Error
+                    };
+
+                return;
+            }
+
+            this.usersFound = result.Result;
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
         }
         finally
         {
