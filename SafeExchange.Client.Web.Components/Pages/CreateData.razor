@@ -573,11 +573,6 @@
         }
     }
 
-    public void FinishUserPick(GraphUserOutput pickedUser)
-    {
-        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
-    }
-
     public void ShowNotification(NotificationData notification)
     {
         this.Notification = notification;
@@ -610,4 +605,9 @@
 
     private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
         => await this.apiClient.SearchUsersAsync(searchInput);
+
+    public void FinishUserPick(GraphUserOutput pickedUser)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
+    }
 }
