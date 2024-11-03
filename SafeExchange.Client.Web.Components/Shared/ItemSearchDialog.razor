@@ -1,5 +1,7 @@
 ﻿@using System.Timers
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.Options
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
 
@@ -7,7 +9,10 @@
 
 @typeparam TItem
 
+@inject NavigationManager NavManager
 @inject ItemPickDialogHelper itemPickDialogHelper
+@inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
+@inject IConfiguration Configuration
 
 <div class="modal fade" @ref="this.modalDialog" id="itemPickDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -22,7 +27,18 @@
                 @if (this.Notification != null)
                 {
                     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
-                        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+                        <p>
+                            <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+                        </p>
+                        @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+                        {
+                            <hr>
+                            <p>
+                                <button class="btn btn-warning" type="button" disabled="@this.searchIsInProgress" @onclick="() => this.HandleNotificationButtonClick()">
+                                    <span>@this.Notification.ButtonText</span>
+                                </button>
+                            </p>
+                        }
                         <button type="button" class="btn-close" @onclick="(e) => { this.Notification = null; }" aria-label="Close"></button>
                     </div>
                 }
@@ -182,20 +198,33 @@
         {
             this.itemsFound = [];
             var serchInput = new SearchInput() { SearchString = searchString };
-            var result = await this.SearchItemsAsyncCallback?.Invoke(serchInput) ?? new BaseResponseObject<List<TItem>>() { Result = [] };
-            if (!"ok".Equals(result.Status) && !"no_content".Equals(result.Status))
+            var itemsResult = await this.SearchItemsAsyncCallback?.Invoke(serchInput) ?? new BaseResponseObject<List<TItem>>() { Result = [] };
+            if (!"ok".Equals(itemsResult.Status) && !"no_content".Equals(itemsResult.Status))
             {
+                var consentRequired = false;
+                var message = itemsResult.Error ?? string.Empty;
+                var buttonText = "forbidden".Equals(itemsResult.Status) ? "Consent" : string.Empty;
+                if ("consent_required".Equals(itemsResult.SubStatus))
+                {
+                    consentRequired = true;
+                    message = "User must give consent in Entra to read all users basic profiles in order to search users.";
+                    buttonText = "Consent";
+                }
+
                 this.Notification = new NotificationData()
                     {
                         Type = NotificationType.Warning,
-                        Status = result.Status,
-                        Message = result.Error
+                        Status = itemsResult.Status,
+                        Message = message,
+                        ButtonText = buttonText,
+                        ButtonUri = "/",
+                        ConsentRequired = consentRequired
                     };
 
                 return;
             }
 
-            this.itemsFound = result.Result;
+            this.itemsFound = itemsResult.Result;
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -225,5 +254,26 @@
     {
         this.searchTimer.Stop();
         this.searchTimer.Start();
+    }
+
+    private void HandleNotificationButtonClick()
+    {
+        if (this.Notification.ConsentRequired)
+        {
+            var scopesToConsent = new List<string>();
+            this.Configuration.Bind("AdditionalScopesToConsent", scopesToConsent);
+            var requestOptions = new InteractiveRequestOptions
+                {
+                    Interaction = InteractionType.GetToken,
+                    ReturnUrl = this.NavManager.Uri,
+                    Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
+                };
+
+            requestOptions.TryAddAdditionalParameter("prompt", "consent");
+            this.NavManager.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath, requestOptions);
+            return;
+        }
+
+        this.NavManager.NavigateTo(this.Notification.ButtonUri);
     }
 }
