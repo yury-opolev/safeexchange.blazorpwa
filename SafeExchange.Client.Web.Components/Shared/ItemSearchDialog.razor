@@ -210,7 +210,7 @@
 
     private void SwitchSelectedItem(int userIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == userIndex ? -1 : userIndex;
 
-    private async Task FinishUserPick()
+    private void FinishUserPick()
     {
         if (this.selectedFoundItemIndex >= 0)
         {
