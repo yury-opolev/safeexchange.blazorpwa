@@ -15,7 +15,7 @@
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
 
-<ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnNotificationCallback="this.ShowNotification" OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
+<ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
     <ItemTemplate Context="user">
         <div class="px-2">
             <div class="text-truncate">

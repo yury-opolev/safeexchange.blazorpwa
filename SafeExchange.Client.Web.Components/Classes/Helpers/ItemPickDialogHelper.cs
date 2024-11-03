@@ -25,12 +25,6 @@ namespace SafeExchange.Client.Web.Components
             await module.InvokeVoidAsync("showModal", dialogRef);
         }
 
-        public async Task HideModalAsync(ElementReference dialogRef)
-        {
-            var module = await moduleTask.Value;
-            await module.InvokeVoidAsync("hideModal", dialogRef);
-        }
-
         public async ValueTask DisposeAsync()
         {
             if (moduleTask.IsValueCreated)

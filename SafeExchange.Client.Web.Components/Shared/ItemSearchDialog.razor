@@ -18,6 +18,15 @@
             </div>
 
             <div class="modal-body d-flex flex-column" style="height: 320px;">
+
+                @if (this.Notification != null)
+                {
+                    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+                        <strong>@(this.Notification.Status ?? string.Empty)</strong> @(this.Notification.Message ?? string.Empty)
+                        <button type="button" class="btn-close" @onclick="(e) => { this.Notification = null; }" aria-label="Close"></button>
+                    </div>
+                }
+
                 <p>
                     <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
                 </p>
@@ -87,13 +96,12 @@
     public Action<TItem> OnItemPickedCallback { get; set; }
 
     [Parameter]
-    public Action<NotificationData> OnNotificationCallback { get; set; }
-
-    [Parameter]
     public Func<SearchInput, Task<BaseResponseObject<List<TItem>>>> SearchItemsAsyncCallback { get; set; }
 
     [Parameter]
     public Action OnClosedCallback { get; set; }
+
+    private NotificationData Notification;
 
     private ElementReference modalDialog;
 
@@ -175,18 +183,15 @@
             this.itemsFound = [];
             var serchInput = new SearchInput() { SearchString = searchString };
             var result = await this.SearchItemsAsyncCallback?.Invoke(serchInput) ?? new BaseResponseObject<List<TItem>>() { Result = [] };
-            if (!"ok".Equals(result.Status))
+            if (!"ok".Equals(result.Status) && !"no_content".Equals(result.Status))
             {
-                var notification = new NotificationData()
+                this.Notification = new NotificationData()
                     {
                         Type = NotificationType.Warning,
                         Status = result.Status,
                         Message = result.Error
                     };
 
-                this.OnNotificationCallback?.Invoke(notification);
-                await this.itemPickDialogHelper.HideModalAsync(this.modalDialog);
-                this.OnStopItemSearch();
                 return;
             }
 
