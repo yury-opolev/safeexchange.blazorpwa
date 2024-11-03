@@ -113,3 +113,9 @@ a, .btn-link {
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
     }
+
+.narrow-floating-group.input-group-text {
+    padding-left: 6px;
+    padding-right: 6px;
+}
+

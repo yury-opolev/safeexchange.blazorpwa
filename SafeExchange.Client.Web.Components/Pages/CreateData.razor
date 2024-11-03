@@ -1,19 +1,32 @@
-﻿@using SafeExchange.Client.Common
+﻿@using Microsoft.JSInterop
+@using SafeExchange.Client.Common
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.IO
 @using System.Text.RegularExpressions;
 @using System.Text
-@using System.IO
-@using System.Threading
+@using System.Timers
 
-@implements IDisposable
-
+@inject IJSRuntime JS
 @inject NavigationManager NavManager
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
+
+<ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="user">
+        <div class="px-2">
+            <div class="text-truncate">
+                @user.DisplayName
+            </div>
+            <div class="text-secondary text-truncate">
+                @user.UserPrincipalName
+            </div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
 
 @if (this.Notification != null)
 {
@@ -189,7 +202,7 @@
             <div class="row align-items-center">
                 <div class="col-2">
                     <div class="form-floating">
-                        <InputSelect id="@($"usertype-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress"
+                        <InputSelect id="@($"usertype-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress"
                             ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
                             Value="@compoundModel.Permissions[tempIndex].SubjectType"
                             ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
@@ -207,9 +220,16 @@
                 {
                     case (SubjectType.User):
                         <div class="col">
-                            <div class="form-floating">
-                                <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
-                                <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                            <div class="input-group">
+                                <div class="form-floating">
+                                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
+                                    <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                                </div>
+                                <span class="narrow-floating-group input-group-text">
+                                    <button class="btn" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
+                                        <span class="oi oi-magnifying-glass"></span>
+                                    </button>
+                                </span>
                             </div>
                             <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
                         </div>
@@ -218,7 +238,7 @@
                     case (SubjectType.Group):
                         <div class="col">
                             <div class="form-floating">
-                                <InputSelect id="@($"group-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
+                                <InputSelect id="@($"group-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
                                     @if (!this.StateContainer.IsFetchingGroups)
                                     {
                                         if ((this.StateContainer.RegisteredGroups?.Count ?? 0) > 0)
@@ -249,7 +269,7 @@
                     case (SubjectType.Application):
                         <div class="col">
                             <div class="form-floating">
-                                <InputSelect id="@($"application-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
+                                <InputSelect id="@($"application-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
                                 @if (!this.StateContainer.IsFetchingApplications)
                                 {
                                     if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
@@ -279,7 +299,7 @@
                 }
                 <div class="col">
                     <div class="form-floating">
-                        <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                        <InputSelect id="@($"permissions-select-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
                             <option>Read</option>
                             <option>Read,Write</option>
                             <option>Read,Write,GrantAccess</option>
@@ -338,6 +358,10 @@
 
     private bool initializeTooltips = false;
 
+    private ItemSearchDialog<GraphUserOutput> userPickDialog;
+
+    private int currentPermissionItemIndex;
+
     private CompoundModel compoundModel = new CompoundModel()
     {
         Metadata = new ObjectMetadata()
@@ -370,11 +394,6 @@
 
     private List<AttachmentModel> Attachments { get; set; } = new();
 
-    public void Dispose()
-    {
-        //...
-    }
-
     protected override async Task OnInitializedAsync()
     {
         this.StateContainer.IsInProgress = false;
@@ -395,6 +414,11 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!this.initializeTooltips)
+        {
+            return;
+        }
+
+        if (!firstRender)
         {
             return;
         }
@@ -508,16 +532,20 @@
         try
         {
             this.SpecifyExpirationDateTimeKind();
-            await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+
+            using var timer = new Timer(TimeSpan.FromSeconds(1)) { AutoReset = false };
+            timer.Elapsed += (_, _) => InvokeAsync(() => StateHasChanged());
+            timer.Start();
+
             var result = await apiClient.CreateFromCompoundModelAsync(this.compoundModel, this.Attachments);
             if (!"ok".Equals(result.Status))
             {
-                this.Notification = new NotificationData()
+                this.ShowNotification(new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = result.Status,
                     Message = result.Error
-                };
+                });
 
                 return;
             }
@@ -545,6 +573,11 @@
         }
     }
 
+    public void ShowNotification(NotificationData notification)
+    {
+        this.Notification = notification;
+    }
+
     public void DismissNotification()
     {
         this.Notification = null;
@@ -562,5 +595,19 @@
             this.compoundModel.Metadata.ExpirationMetadata.ExpireAt =
                 DateTime.SpecifyKind(this.compoundModel.Metadata.ExpirationMetadata.ExpireAt, DateTimeKind.Local);
         }
+    }
+
+    private async Task StartUserPickAsync(int permissionItemIndex)
+    {
+        this.currentPermissionItemIndex = permissionItemIndex;
+        await this.userPickDialog.StartItemSearchAsync();
+    }
+
+    private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
+        => await this.apiClient.SearchUsersAsync(searchInput);
+
+    public void FinishUserPick(GraphUserOutput pickedUser)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
     }
 }

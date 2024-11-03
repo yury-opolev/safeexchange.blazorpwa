@@ -19,6 +19,19 @@
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
 
+<ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="user">
+        <div class="px-2">
+            <div class="text-truncate">
+                @user.DisplayName
+            </div>
+            <div class="text-secondary text-truncate">
+                @user.UserPrincipalName
+            </div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
+
 <div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -269,13 +282,29 @@
                 {
                     case (SubjectType.User):
                         <div class="col">
-                            <div class="form-floating">
-                                <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
-                                <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                            <div class="input-group">
+                                <div class="form-floating">
+                                    <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
+                                    <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                                </div>
+                                <span class="narrow-floating-group input-group-text">
+                                    @if (tempIndex < this.FixedAccessItemCount)
+                                    {
+                                        <button class="btn btn-link" type="button" disabled aria-label="Find user">
+                                            <span class="oi oi-magnifying-glass"></span>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
+                                            <span class="oi oi-magnifying-glass"></span>
+                                        </button>
+                                    }
+                                </span>
                             </div>
-                            <ValidationMessage id="@($"un-validation-{i}")" For="@(() => this.compoundModel.Permissions[tempIndex].SubjectName)" />
-                            </div>
-                            break;
+                            <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                        </div>
+                        break;
 
                     case (SubjectType.Group):
                         <div class="col">
@@ -430,6 +459,10 @@
     private NotificationData Notification;
 
     private EditContext editContext;
+
+    private ItemSearchDialog<GraphUserOutput> userPickDialog;
+
+    private int currentPermissionItemIndex;
 
     private bool initializeTooltips = false;
 
@@ -632,7 +665,7 @@
                 if ("consent_required".Equals(compoundModelResult.SubStatus))
                 {
                     consentRequired = true;
-                    message = "User must give consent in AAD to fetch groups in order to use groups authorization.";
+                    message = "User must give consent in Entra to fetch groups in order to use groups authorization.";
                     buttonText = "Consent";
                 }
 
@@ -921,5 +954,19 @@
         }
 
         this.NavManager.NavigateTo(this.Notification.ButtonUri);
+    }
+
+    private async Task StartUserPickAsync(int permissionItemIndex)
+    {
+        this.currentPermissionItemIndex = permissionItemIndex;
+        await this.userPickDialog.StartItemSearchAsync();
+    }
+
+    private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
+        => await this.apiClient.SearchUsersAsync(searchInput);
+
+    public void FinishUserPick(GraphUserOutput pickedUser)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
     }
 }

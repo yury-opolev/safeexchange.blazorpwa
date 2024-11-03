@@ -1,0 +1,279 @@
+﻿@using System.Timers
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.Options
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Model
+
+@implements IDisposable
+
+@typeparam TItem
+
+@inject NavigationManager NavManager
+@inject ItemPickDialogHelper itemPickDialogHelper
+@inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
+@inject IConfiguration Configuration
+
+<div class="modal fade" @ref="this.modalDialog" id="itemPickDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <p class="modal-title" id="modalLabel"><strong>@this.DialogTitle</strong></p>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="this.OnStopItemSearch"></button>
+            </div>
+
+            <div class="modal-body d-flex flex-column" style="height: 320px;">
+
+                @if (this.Notification != null)
+                {
+                    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+                        <p>
+                            <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+                        </p>
+                        @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+                        {
+                            <hr>
+                            <p>
+                                <button class="btn btn-warning" type="button" disabled="@this.searchIsInProgress" @onclick="() => this.HandleNotificationButtonClick()">
+                                    <span>@this.Notification.ButtonText</span>
+                                </button>
+                            </p>
+                        }
+                        <button type="button" class="btn-close" @onclick="(e) => { this.Notification = null; }" aria-label="Close"></button>
+                    </div>
+                }
+
+                <p>
+                    <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                </p>
+                <div class="overflow-auto">
+                    @if (this.searchIsInProgress)
+                    {
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <div class="px-2">
+                                    <div>
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    }
+                    else
+                    {
+                        @if (this.itemsFound.Count > 0)
+                        {
+                            <ul class="list-group list-group-flush">
+                                @for (int i = 0; i < this.itemsFound.Count; i++)
+                                {
+                                    var foundItemIndex = i;
+                                    var foundItem = this.itemsFound[i];
+                                    <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                        @ItemTemplate(foundItem)
+                                    </button>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <div class="px-2">
+                                        <div>
+                                            - No users -
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" @onclick="this.OnStopItemSearch">Cancel</button>
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" disabled="@(this.selectedFoundItemIndex < 0)" @onclick="this.FinishUserPick">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string DialogTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Placeholder { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+
+    [Parameter]
+    public Action<TItem> OnItemPickedCallback { get; set; }
+
+    [Parameter]
+    public Func<SearchInput, Task<BaseResponseObject<List<TItem>>>> SearchItemsAsyncCallback { get; set; }
+
+    [Parameter]
+    public Action OnClosedCallback { get; set; }
+
+    private NotificationData Notification;
+
+    private ElementReference modalDialog;
+
+    private Timer searchTimer = new Timer(TimeSpan.FromSeconds(1)) { AutoReset = false };
+
+    private bool searchIsInProgress = false;
+    private string searchString = string.Empty;
+    private string latestSearchString = string.Empty;
+
+    private int selectedFoundItemIndex = -1;
+    private List<TItem> itemsFound = [];
+
+    public void Dispose()
+    {
+        this.searchTimer?.Dispose();
+    }
+
+    public async Task StartItemSearchAsync()
+    {
+        this.searchString = string.Empty;
+        this.latestSearchString = string.Empty;
+        this.itemsFound = [];
+        this.selectedFoundItemIndex = -1;
+
+        await this.itemPickDialogHelper.ShowModalAsync(this.modalDialog);
+    }
+
+    protected override void OnInitialized()
+    {
+        this.searchTimer.Elapsed += OnTimerElapsed;
+    }
+
+    public void OnStopItemSearch()
+    {
+        this.OnClosedCallback?.Invoke();
+    }
+
+    private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (!this.QualifiesAsNewSearch(this.searchString))
+        {
+            return;
+        }
+
+        this.selectedFoundItemIndex = -1;
+        this.itemsFound = [];
+
+        if (!this.IsSufficientSearchString(this.searchString))
+        {
+            this.latestSearchString = string.Empty;
+            this.StateHasChanged();
+            return;
+        }
+
+        await this.SearchItemsAsync(this.latestSearchString);
+    }
+
+    private bool QualifiesAsNewSearch(string searchString)
+    {
+        searchString = searchString.Trim().ToLower();
+        if (string.Equals(searchString, this.latestSearchString))
+        {
+            return false;
+        }
+
+        this.latestSearchString = searchString;
+        return true;
+    }
+
+    private bool IsSufficientSearchString(string searchString) => searchString.Length > 2;
+
+    private async Task SearchItemsAsync(string searchString)
+    {
+        this.searchIsInProgress = true;
+        this.StateHasChanged();
+
+        try
+        {
+            this.itemsFound = [];
+            var serchInput = new SearchInput() { SearchString = searchString };
+            var itemsResult = await this.SearchItemsAsyncCallback?.Invoke(serchInput) ?? new BaseResponseObject<List<TItem>>() { Result = [] };
+            if (!"ok".Equals(itemsResult.Status) && !"no_content".Equals(itemsResult.Status))
+            {
+                var consentRequired = false;
+                var message = itemsResult.Error ?? string.Empty;
+                var buttonText = "forbidden".Equals(itemsResult.Status) ? "Consent" : string.Empty;
+                if ("consent_required".Equals(itemsResult.SubStatus))
+                {
+                    consentRequired = true;
+                    message = "User must give consent in Entra to read all users basic profiles in order to search users.";
+                    buttonText = "Consent";
+                }
+
+                this.Notification = new NotificationData()
+                    {
+                        Type = NotificationType.Warning,
+                        Status = itemsResult.Status,
+                        Message = message,
+                        ButtonText = buttonText,
+                        ButtonUri = "/",
+                        ConsentRequired = consentRequired
+                    };
+
+                return;
+            }
+
+            this.itemsFound = itemsResult.Result;
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.searchIsInProgress = false;
+            this.StateHasChanged();
+        }
+    }
+
+    private void SwitchSelectedItem(int userIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == userIndex ? -1 : userIndex;
+
+    private void FinishUserPick()
+    {
+        if (this.selectedFoundItemIndex >= 0)
+        {
+            var item = this.itemsFound[this.selectedFoundItemIndex];
+            this.OnItemPickedCallback?.Invoke(item);
+        }
+
+        this.OnStopItemSearch();
+    }
+
+    private void ResetSearchTimer()
+    {
+        this.searchTimer.Stop();
+        this.searchTimer.Start();
+    }
+
+    private void HandleNotificationButtonClick()
+    {
+        if (this.Notification.ConsentRequired)
+        {
+            var scopesToConsent = new List<string>();
+            this.Configuration.Bind("AdditionalScopesToConsent", scopesToConsent);
+            var requestOptions = new InteractiveRequestOptions
+                {
+                    Interaction = InteractionType.GetToken,
+                    ReturnUrl = this.NavManager.Uri,
+                    Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
+                };
+
+            requestOptions.TryAddAdditionalParameter("prompt", "consent");
+            this.NavManager.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath, requestOptions);
+            return;
+        }
+
+        this.NavManager.NavigateTo(this.Notification.ButtonUri);
+    }
+}

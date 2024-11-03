@@ -479,6 +479,16 @@ namespace SafeExchange.Client.Common
 
         #endregion groups
 
+        #region search
+
+        public async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput input)
+            => await this.ProcessResponseAsync<List<GraphUserOutput>>(async () =>
+            {
+                return await client.PostAsJsonAsync($"{ApiVersion}/user-search", input);
+            });
+
+        #endregion
+
         private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall) where T : class
         {
             HttpResponseMessage? response = null;
