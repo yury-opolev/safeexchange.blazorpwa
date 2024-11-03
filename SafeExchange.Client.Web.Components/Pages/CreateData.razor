@@ -3,12 +3,10 @@
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.IO
 @using System.Text.RegularExpressions;
 @using System.Text
-@using System.IO
 @using System.Timers
-
-@implements IDisposable
 
 @inject IJSRuntime JS
 @inject NavigationManager NavManager
@@ -16,76 +14,19 @@
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
-@inject ItemPickDialogHelper itemPickDialogHelper
 
-<div class="modal fade" id="userPickDialog" @ref="this.userPickDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <p class="modal-title" id="modalLabel"><strong>Find user</strong></p>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnNotificationCallback="this.ShowNotification" OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="user">
+        <div class="px-2">
+            <div class="text-truncate">
+                @user.DisplayName
             </div>
-            <div class="modal-body d-flex flex-column" style="height: 260px;">
-                <p>
-                    <input class="form-control" disabled="@this.StateContainer.IsInProgress" placeholder="Search users..." @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
-                </p>
-                <div class="overflow-auto">
-                    @if (this.searchIsInProgress)
-                    {
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <div class="px-2">
-                                    <div>
-                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
-                    }
-                    else
-                    {
-                        @if (this.usersFound.Count > 0)
-                        {
-                            <ul class="list-group list-group-flush">
-                                @for (int i = 0; i < this.usersFound.Count; i++)
-                                {
-                                    var foundUserIndex = i;
-                                    var foundUser = this.usersFound[i];
-                                    <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundUserIndex == foundUserIndex ? "active" : "")" aria-current="@(this.selectedFoundUserIndex == foundUserIndex ? "true" : null)" @onclick="() => this.SwitchSelectedUser(foundUserIndex)">
-                                        <div class="px-2">
-                                            <div class="text-truncate">
-                                                @foundUser.DisplayName
-                                            </div>
-                                            <div class="text-secondary text-truncate">
-                                                @foundUser.UserPrincipalName
-                                            </div>
-                                        </div>
-                                    </button>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item">
-                                    <div class="px-2">
-                                        <div>
-                                            - No users -
-                                        </div>
-                                    </div>
-                                </li>
-                            </ul>
-                        }
-                    }
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" data-bs-dismiss="modal" disabled="@(this.selectedFoundUserIndex < 0)" @onclick="@((e) => this.FinishUserPick())">OK</button>
+            <div class="text-secondary text-truncate">
+                @user.UserPrincipalName
             </div>
         </div>
-    </div>
-</div>
+    </ItemTemplate>
+</ItemSearchDialog>
 
 @if (this.Notification != null)
 {
@@ -417,18 +358,9 @@
 
     private bool initializeTooltips = false;
 
-    private ElementReference userPickDialog;
+    private ItemSearchDialog<GraphUserOutput> userPickDialog;
 
     private int currentPermissionItemIndex;
-
-    private Timer searchTimer = new Timer(TimeSpan.FromSeconds(1)) { AutoReset = false };
-
-    private bool searchIsInProgress = false;
-    private string searchString = string.Empty;
-    private string latestSearchString = string.Empty;
-
-    private int selectedFoundUserIndex = -1;
-    private List<GraphUserOutput> usersFound = [];
 
     private CompoundModel compoundModel = new CompoundModel()
     {
@@ -462,15 +394,8 @@
 
     private List<AttachmentModel> Attachments { get; set; } = new();
 
-    public void Dispose()
-    {
-        this.searchTimer?.Dispose();
-    }
-
     protected override async Task OnInitializedAsync()
     {
-        this.searchTimer.Elapsed += OnTimerElapsed;
-
         this.StateContainer.IsInProgress = false;
         this.StateContainer.SetCurrentPageHeader($"Add secret");
         this.StateContainer.TakeNotification();
@@ -615,12 +540,12 @@
             var result = await apiClient.CreateFromCompoundModelAsync(this.compoundModel, this.Attachments);
             if (!"ok".Equals(result.Status))
             {
-                this.Notification = new NotificationData()
+                this.ShowNotification(new NotificationData()
                 {
                     Type = NotificationType.Warning,
                     Status = result.Status,
                     Message = result.Error
-                };
+                });
 
                 return;
             }
@@ -648,6 +573,16 @@
         }
     }
 
+    public void FinishUserPick(GraphUserOutput pickedUser)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
+    }
+
+    public void ShowNotification(NotificationData notification)
+    {
+        this.Notification = notification;
+    }
+
     public void DismissNotification()
     {
         this.Notification = null;
@@ -670,97 +605,9 @@
     private async Task StartUserPickAsync(int permissionItemIndex)
     {
         this.currentPermissionItemIndex = permissionItemIndex;
-        this.searchString = string.Empty;
-        this.latestSearchString = string.Empty;
-        this.usersFound = [];
-        this.selectedFoundUserIndex = -1;
-
-        await this.itemPickDialogHelper.ShowModalAsync(this.userPickDialog);
+        await this.userPickDialog.StartItemSearchAsync();
     }
 
-    private void FinishUserPick()
-    {
-        if (this.selectedFoundUserIndex >= 0)
-        {
-            this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = this.usersFound[this.selectedFoundUserIndex].UserPrincipalName;
-        }
-
-        this.currentPermissionItemIndex = 0;
-    }
-
-    private void ResetSearchTimer()
-    {
-        this.searchTimer.Stop();
-        this.searchTimer.Start();
-    }
-
-    private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
-    {
-        if (!this.QualifiesAsNewSearch(this.searchString))
-        {
-            return;
-        }
-
-        this.selectedFoundUserIndex = -1;
-        this.usersFound = [];
-
-        if (!this.IsSufficientSearchString(this.searchString))
-        {
-            this.latestSearchString = string.Empty;
-            this.StateHasChanged();
-            return;
-        }
-
-        await this.SearchUsersAsync(this.latestSearchString);
-    }
-
-    private bool QualifiesAsNewSearch(string searchString)
-    {
-        searchString = searchString.Trim().ToLower();
-        if (string.Equals(searchString, this.latestSearchString))
-        {
-            return false;
-        }
-
-        this.latestSearchString = searchString;
-        return true;
-    }
-
-    private bool IsSufficientSearchString(string searchString) => searchString.Length > 2;
-
-    private async Task SearchUsersAsync(string searchString)
-    {
-        this.searchIsInProgress = true;
-        this.StateHasChanged();
-
-        try
-        {
-            this.usersFound = [];
-            var result = await this.apiClient.SearchUsersAsync(new SearchInput() { SearchString = searchString });
-            if (!"ok".Equals(result.Status))
-            {
-                this.Notification = new NotificationData()
-                    {
-                        Type = NotificationType.Warning,
-                        Status = result.Status,
-                        Message = result.Error
-                    };
-
-                return;
-            }
-
-            this.usersFound = result.Result;
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
-        }
-        finally
-        {
-            this.searchIsInProgress = false;
-            this.StateHasChanged();
-        }
-    }
-
-    private void SwitchSelectedUser(int userIndex) => this.selectedFoundUserIndex = this.selectedFoundUserIndex == userIndex ? -1 : userIndex;
+    private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
+        => await this.apiClient.SearchUsersAsync(searchInput);
 }

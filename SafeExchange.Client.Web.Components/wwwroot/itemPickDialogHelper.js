@@ -4,4 +4,9 @@ function showModal(element) {
     modal.show();
 }
 
-export { showModal };
+function hideModal(element) {
+    var modal = new bootstrap.Modal(element);
+    modal.hide();
+}
+
+export { showModal, hideModal };
