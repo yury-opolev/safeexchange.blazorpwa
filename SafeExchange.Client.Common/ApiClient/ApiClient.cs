@@ -479,6 +479,34 @@ namespace SafeExchange.Client.Common
 
         #endregion groups
 
+        #region pinned groups
+
+        public async Task<BaseResponseObject<List<PinnedGroupOutput>>> ListPinnedGroupsAsync()
+            => await this.ProcessResponseAsync<List<PinnedGroupOutput>>(async () =>
+            {
+                return await client.GetAsync($"{ApiVersion}/pinnedgroups-list");
+            });
+
+        public async Task<BaseResponseObject<PinnedGroupOutput>> GetPinnedGroupAsync(string pinnedGroupId)
+            => await this.ProcessResponseAsync<PinnedGroupOutput>(async () =>
+            {
+                return await client.GetAsync($"{ApiVersion}/pinnedgroups/{pinnedGroupId}");
+            });
+
+        public async Task<BaseResponseObject<PinnedGroupOutput>> PutPinnedGroupAsync(string pinnedGroupId, PinnedGroupInput input)
+            => await this.ProcessResponseAsync<PinnedGroupOutput>(async () =>
+            {
+                return await client.PutAsJsonAsync($"{ApiVersion}/pinnedgroups/{pinnedGroupId}", input);
+            });
+
+        public async Task<BaseResponseObject<string>> DeletePinnedGroupAsync(string pinnedGroupId)
+            => await this.ProcessResponseAsync<string>(async () =>
+            {
+                return await client.DeleteAsync($"{ApiVersion}/pinnedgroups/{pinnedGroupId}");
+            });
+
+        #endregion pinned groups
+
         #region search
 
         public async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput input)
