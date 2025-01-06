@@ -54,6 +54,10 @@ namespace SafeExchange.Client.Web.Components
 
         public List<Group> RegisteredGroups { get; set; }
 
+        public bool IsFetchingPinnedGroups { get; set; }
+
+        public List<PinnedGroup> PinnedGroups { get; set; }
+
         private ILogger logger;
 
         public StateContainer(ILogger<StateContainer> logger)
@@ -200,6 +204,37 @@ namespace SafeExchange.Client.Web.Components
             finally
             {
                 this.IsFetchingGroups = false;
+                NotifyStateChanged();
+            }
+        }
+
+        public async Task<ResponseStatus> TryFetchPinnedGroups(ApiClient apiClient)
+        {
+            if (this.PinnedGroups != null)
+            {
+                return new ResponseStatus() { Status = "ok" }; // already fetched
+            }
+
+            this.IsFetchingPinnedGroups = true;
+
+            try
+            {
+                var pinnedGroupsResponse = await apiClient.ListPinnedGroupsAsync();
+                if (pinnedGroupsResponse.Status == "ok")
+                {
+                    var pinnedGroups = pinnedGroupsResponse.Result.Select(g => new PinnedGroup(g)).ToList();
+                    this.PinnedGroups = pinnedGroups ?? [];
+                }
+                else
+                {
+                    // no-op
+                }
+
+                return pinnedGroupsResponse.ToResponseStatus();
+            }
+            finally
+            {
+                this.IsFetchingPinnedGroups = false;
                 NotifyStateChanged();
             }
         }
