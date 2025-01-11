@@ -187,7 +187,7 @@ namespace SafeExchange.Client.Common
 
             await this.UploadAttachmentsAsync(input.Metadata.ObjectName, attachments);
 
-            var permissions = input.Permissions.Where(p => !string.IsNullOrWhiteSpace(p.SubjectName)).ToList();
+            var permissions = input.Permissions.Where(p => !string.IsNullOrWhiteSpace(p.SubjectId)).ToList();
             if (permissions.Count > 0)
             {
                 var accessReply = await this.GrantAccessAsync(

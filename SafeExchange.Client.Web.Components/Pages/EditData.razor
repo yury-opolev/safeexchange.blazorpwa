@@ -486,6 +486,7 @@
             {
                 ObjectName = string.Empty,
                 SubjectName = string.Empty,
+                SubjectId = string.Empty,
 
                 CanRead = true,
                 CanWrite = false,
@@ -544,6 +545,7 @@
     {
         permissions.SubjectType = value;
         permissions.SubjectName = string.Empty;
+        permissions.SubjectId = string.Empty;
     }
 
     private async Task ClickFileInputAsync()
@@ -601,6 +603,7 @@
         {
             ObjectName = string.Empty,
             SubjectName = string.Empty,
+            SubjectId = string.Empty,
 
             CanRead = true,
             CanWrite = false,
@@ -817,7 +820,7 @@
             var addedPermissionItems = new List<SubjectPermissions>();
             for (int index = this.FixedAccessItemCount; index < this.compoundModel.Permissions.Count; index++)
             {
-                if (!string.IsNullOrEmpty(this.compoundModel.Permissions[index].SubjectName))
+                if (!string.IsNullOrEmpty(this.compoundModel.Permissions[index].SubjectId))
                 {
                     addedPermissionItems.Add(this.compoundModel.Permissions[index]);
                 }
@@ -967,6 +970,7 @@
 
     public void FinishUserPick(GraphUserOutput pickedUser)
     {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedUser.UserPrincipalName;
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
     }
 }

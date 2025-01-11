@@ -28,6 +28,19 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="group">
+        <div class="px-2">
+            <div class="text-truncate">
+                @group.DisplayName
+            </div>
+            <div class="text-secondary text-truncate">
+                @(group.Mail ?? "- no mail -")
+            </div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
+
 @if (this.Notification != null)
 {
     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
@@ -360,6 +373,8 @@
 
     private ItemSearchDialog<GraphUserOutput> userPickDialog;
 
+    private ItemSearchDialog<GraphGroupOutput> groupPickDialog;
+
     private int currentPermissionItemIndex;
 
     private CompoundModel compoundModel = new CompoundModel()
@@ -382,6 +397,7 @@
             {
                 ObjectName = string.Empty,
                 SubjectName = string.Empty,
+                SubjectId = string.Empty,
 
                 CanRead = true,
                 CanWrite = false,
@@ -437,6 +453,7 @@
     {
         permissions.SubjectType = value;
         permissions.SubjectName = string.Empty;
+        permissions.SubjectId = string.Empty;
     }
 
     private async Task ClickFileInputAsync()
@@ -494,6 +511,7 @@
         {
             ObjectName = string.Empty,
             SubjectName = string.Empty,
+            SubjectId = string.Empty,
 
             CanRead = true,
             CanWrite = false,
@@ -608,6 +626,13 @@
 
     public void FinishUserPick(GraphUserOutput pickedUser)
     {
-        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedUser.UserPrincipalName;
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.DisplayName;
+    }
+
+    public void FinishGroupPick(GraphGroupOutput pickedGroup)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedGroup.Id;
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedGroup.DisplayName;
     }
 }

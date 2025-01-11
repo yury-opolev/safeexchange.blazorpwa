@@ -108,12 +108,12 @@ namespace SafeExchange.Client.Web.Components
             var accessList = model.Permissions ?? Array.Empty<SubjectPermissions>().ToList();
             foreach (var accessItem in model.Permissions)
             {
-                if (!CurrentEditContext.IsModified(() => accessItem.SubjectName) && !force)
+                if (!CurrentEditContext.IsModified(() => accessItem.SubjectId) && !force)
                 {
                     continue;
                 }
 
-                if (string.IsNullOrEmpty(accessItem.SubjectName))
+                if (string.IsNullOrEmpty(accessItem.SubjectId))
                 {
                     continue;
                 }
@@ -125,6 +125,7 @@ namespace SafeExchange.Client.Web.Components
         private void ValidatePermissionsItem(SubjectPermissions accessItem)
         {
             this.messageStore.Clear(() => accessItem.SubjectName);
+            this.messageStore.Clear(() => accessItem.SubjectId);
 
             if (accessItem.SubjectType.Equals(SubjectType.Application))
             {
