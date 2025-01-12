@@ -139,7 +139,7 @@
     private int selectedFoundItemIndex = -1;
     private List<TItem> itemsFound = [];
 
-    private bool hasPinnedItems => this.ListPinnedItemsAsyncCallback != default;
+    private bool hasPinnedItems => (this.ListPinnedItemsAsyncCallback != default) && (this.ChangePinnedItemAsyncCallback != default);
 
     public void Dispose()
     {

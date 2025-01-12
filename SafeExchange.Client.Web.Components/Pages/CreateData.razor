@@ -59,40 +59,40 @@
     <p>
         <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
             <div id="quill-toolbar">
-              <select class="ql-font">
-                <option selected></option>
-                <option value="serif"></option>
-                <option value="monospace"></option>
-              </select>
-              <select class="ql-size">
-                <option value="small"></option>
-                <option selected></option>
-                <option value="large"></option>
-                <option value="huge"></option>
-              </select>
-              <span class="ql-formats">
-                <button class="ql-bold"></button>
-                <button class="ql-italic"></button>
-                <button class="ql-underline"></button>
-                <button class="ql-strike"></button>
-              </span>
-              <span class="ql-formats">
-                <select class="ql-align"></select>
-              </span>
-              <span class="ql-formats">
-                <select class="ql-color"></select>
-                <select class="ql-background"></select>
-              </span>
-              <span class="ql-formats">
-                <button class="ql-link"></button>
-                <button class="ql-image"></button>
-              </span>
-              <span class="ql-formats">
-                <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
-              </span>
-              <span class="ql-formats">
-                <button class="ql-clean"></button>
-              </span>
+                <select class="ql-font">
+                    <option selected></option>
+                    <option value="serif"></option>
+                    <option value="monospace"></option>
+                </select>
+                <select class="ql-size">
+                    <option value="small"></option>
+                    <option selected></option>
+                    <option value="large"></option>
+                    <option value="huge"></option>
+                </select>
+                <span class="ql-formats">
+                    <button class="ql-bold"></button>
+                    <button class="ql-italic"></button>
+                    <button class="ql-underline"></button>
+                    <button class="ql-strike"></button>
+                </span>
+                <span class="ql-formats">
+                    <select class="ql-align"></select>
+                </span>
+                <span class="ql-formats">
+                    <select class="ql-color"></select>
+                    <select class="ql-background"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-link"></button>
+                    <button class="ql-image"></button>
+                </span>
+                <span class="ql-formats">
+                    <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-clean"></button>
+                </span>
             </div>
             <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
         </div>
@@ -100,108 +100,108 @@
     </p>
 
     <p>
-    <div class="collapsible-content">
-        <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
-            &nbsp; Attachments
-        </button>
-        <div class="collapse" id="collapseAttachments">
-            <div class="card card-body">
+        <div class="collapsible-content">
+            <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+                &nbsp; Attachments
+            </button>
+            <div class="collapse" id="collapseAttachments">
+                <div class="card card-body">
 
-                @if ((this.Attachments?.Count ?? 0) > 0)
-                {
-                    <ul class="list-group list-group-flush">
-                        @for (int i = 0; i < this.Attachments.Count; i++)
-                        {
-                            var attachmentIndex = i;
-                            var attachment = this.Attachments[i];
-                            <li class="attachment-row list-group-item d-flex justify-content-start align-items-center flex-wrap">
-                                <div class="px-2">
-                                    @switch (attachment.Status)
-                                    {
-                                        case (UploadStatus.NotStarted):
-                                            <i class="oi oi-file text-secondary"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
+                    @if ((this.Attachments?.Count ?? 0) > 0)
+                    {
+                        <ul class="list-group list-group-flush">
+                            @for (int i = 0; i < this.Attachments.Count; i++)
+                            {
+                                var attachmentIndex = i;
+                                var attachment = this.Attachments[i];
+                                <li class="attachment-row list-group-item d-flex justify-content-start align-items-center flex-wrap">
+                                    <div class="px-2">
+                                        @switch (attachment.Status)
+                                        {
+                                            case (UploadStatus.NotStarted):
+                                                <i class="oi oi-file text-secondary"></i>
+                                                <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                break;
 
-                                        case (UploadStatus.InProgress):
-                                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                                            <span>@($"{attachment.ProgressPercents:00}")%&nbsp;</span>
-                                            break;
+                                            case (UploadStatus.InProgress):
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                <span>@($"{attachment.ProgressPercents:00}")%&nbsp;</span>
+                                                break;
 
-                                        case (UploadStatus.Success):
-                                            <i class="oi oi-check text-success"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
+                                            case (UploadStatus.Success):
+                                                <i class="oi oi-check text-success"></i>
+                                                <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                break;
 
-                                        case (UploadStatus.Error):
-                                            <i class="oi oi-warning text-warning"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-                                    }
-                                </div>
-                                <div>
-                                    <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
-                                    <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
-                                </div>
-                                <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                    <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
-                                </div>
-                            </li>
-                        }
-                    </ul>                        
-                }
+                                            case (UploadStatus.Error):
+                                                <i class="oi oi-warning text-warning"></i>
+                                                <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                break;
+                                        }
+                                    </div>
+                                    <div>
+                                        <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
+                                        <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
+                                    </div>
+                                    <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
+                                        <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
 
-                <div class="mt-3" >
-                    <button id="attachButton" class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(async () => await this.ClickFileInputAsync())">Attach file(s)</button>
-                    <InputFile id="attachedFileList1" @ref="this.inputFile" style="display:none" OnChange="@this.AddFiles" multiple disabled="@(this.StateContainer.IsInProgress)" />
+                    <div class="mt-3" >
+                        <button id="attachButton" class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(async () => await this.ClickFileInputAsync())">Attach file(s)</button>
+                        <InputFile id="attachedFileList1" @ref="this.inputFile" style="display:none" OnChange="@this.AddFiles" multiple disabled="@(this.StateContainer.IsInProgress)" />
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     </p>
 
     <p>
-    <div class="row align-items-center">
-        <div class="col-sm-4">
-            <div class="form-check form-switch">
-                <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ScheduleExpiration" />
-                <label class="form-check-label" for="scheduleDestroySwitch">Schedule Expiration</label>
+        <div class="row align-items-center">
+            <div class="col-sm-4">
+                <div class="form-check form-switch">
+                    <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ScheduleExpiration" />
+                    <label class="form-check-label" for="scheduleDestroySwitch">Schedule Expiration</label>
+                </div>
+            </div>
+            <div class="col-sm">
+                <label for="destroy-datetime-input" class="visually-hidden">Expire At:</label>
+                <div class="input-group">
+                    <div class="input-group-text">Expire At</div>
+                    <InputDate id="destroy-datetime-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireAt" Type=InputDateType.DateTimeLocal DisplayName="ExpireAt" />
+                </div>
             </div>
         </div>
-        <div class="col-sm">
-            <label for="destroy-datetime-input" class="visually-hidden">Expire At:</label>
-            <div class="input-group">
-                <div class="input-group-text">Expire At</div>
-                <InputDate id="destroy-datetime-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireAt" Type=InputDateType.DateTimeLocal DisplayName="ExpireAt" />
-            </div>
-        </div>
-    </div>
     </p>
 
     <p>
-    <div class="row align-items-center">
-        <div class="col-sm-4">
-            <div class="form-check form-switch">
-                <InputCheckbox class="form-check-input" type="checkbox" id="destroyOnIdleSwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireOnIdleTime" />
-                <label class="form-check-label" for="destroyOnIdleSwitch">Expire after idle time</label>
+        <div class="row align-items-center">
+            <div class="col-sm-4">
+                <div class="form-check form-switch">
+                    <InputCheckbox class="form-check-input" type="checkbox" id="destroyOnIdleSwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireOnIdleTime" />
+                    <label class="form-check-label" for="destroyOnIdleSwitch">Expire after idle time</label>
+                </div>
+            </div>
+            <div class="col-sm">
+                <label for="idle-days-input" class="visually-hidden">Idle days:</label>
+                <div class="input-group">
+                    <div class="input-group-text">Idle Days</div>
+                    <InputNumber id="idle-days-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire" DisplayName="DaysToExpire" />
+                </div>
+                <ValidationMessage id="idle-days-validation" For="@(() => this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire)" />
+            </div>
+            <div class="col-sm">
+                <label for="idle-timespan-input" class="visually-hidden">Idle time:</label>
+                <div class="input-group">
+                    <div class="input-group-text">Idle Time</div>
+                    <InputDate id="idle-timespan-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.TimeToExpire" Type=InputDateType.Time DisplayName="TimeToExpire" />
+                </div>
             </div>
         </div>
-        <div class="col-sm">
-            <label for="idle-days-input" class="visually-hidden">Idle days:</label>
-            <div class="input-group">
-                <div class="input-group-text">Idle Days</div>
-                <InputNumber id="idle-days-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire" DisplayName="DaysToExpire" />
-            </div>
-            <ValidationMessage id="idle-days-validation" For="@(() => this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire)" />
-        </div>
-        <div class="col-sm">
-            <label for="idle-timespan-input" class="visually-hidden">Idle time:</label>
-            <div class="input-group">
-                <div class="input-group-text">Idle Time</div>
-                <InputDate id="idle-timespan-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.TimeToExpire" Type=InputDateType.Time DisplayName="TimeToExpire" />
-            </div>
-        </div>
-    </div>
     </p>
 
     <p>
@@ -216,10 +216,10 @@
                 <div class="col-2">
                     <div class="form-floating">
                         <InputSelect id="@($"usertype-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress"
-                            ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
-                            Value="@compoundModel.Permissions[tempIndex].SubjectType"
-                            ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
-                            placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                        ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
+                        Value="@compoundModel.Permissions[tempIndex].SubjectType"
+                        ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
+                        placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
                             @foreach (var value in Enum.GetValues(typeof(SubjectType)))
                             {
                                 <option>@value</option>
@@ -235,7 +235,7 @@
                         <div class="col">
                             <div class="input-group">
                                 <div class="form-floating">
-                                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
+                                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value:get="compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(compoundModel.Permissions[tempIndex], value); }" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
                                     <label for="@($"username-input-{i}")" class="form-label">Username</label>
                                 </div>
                                 <span class="narrow-floating-group input-group-text">
@@ -283,20 +283,20 @@
                         <div class="col">
                             <div class="form-floating">
                                 <InputSelect id="@($"application-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
-                                @if (!this.StateContainer.IsFetchingApplications)
-                                {
-                                    if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
+                                    @if (!this.StateContainer.IsFetchingApplications)
                                     {
-                                        foreach (var application in this.StateContainer.RegisteredApplications.Where(a => a.Enabled))
+                                        if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
                                         {
-                                            <option value="@application.DisplayName">@application.DisplayName</option>
+                                            foreach (var application in this.StateContainer.RegisteredApplications.Where(a => a.Enabled))
+                                            {
+                                                <option value="@application.DisplayName">@application.DisplayName</option>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <option value="">- No Applications -</option>
                                         }
                                     }
-                                    else
-                                    {
-                                        <option value="">- No Applications -</option>
-                                    }
-                                }
                                 </InputSelect>
                                 <label for="@($"application-input-{i}")" class="form-label">
                                     @if (this.StateContainer.IsFetchingApplications)
@@ -638,5 +638,11 @@
     {
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedGroup.Id;
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedGroup.DisplayName;
+    }
+
+    private void OnSetUserName(SubjectPermissions permissions, string value)
+    {
+        permissions.SubjectName = value;
+        permissions.SubjectId = value;
     }
 }
