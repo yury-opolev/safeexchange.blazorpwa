@@ -630,6 +630,10 @@
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.DisplayName;
     }
 
+
+    private async Task<BaseResponseObject<List<GraphGroupOutput>>> SearchGroupsAsync(SearchInput searchInput)
+        => await this.apiClient.SearchGroupsAsync(searchInput);
+
     public void FinishGroupPick(GraphGroupOutput pickedGroup)
     {
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedGroup.Id;

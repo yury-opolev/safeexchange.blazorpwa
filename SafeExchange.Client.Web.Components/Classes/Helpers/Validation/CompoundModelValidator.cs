@@ -132,6 +132,11 @@ namespace SafeExchange.Client.Web.Components
                 return;
             }
 
+            if (accessItem.SubjectType.Equals(SubjectType.Group))
+            {
+                return;
+            }
+
             var regex = new Regex(@"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
             if (accessItem.SubjectName.Length > 320 || !regex.IsMatch(accessItem.SubjectName))
             {

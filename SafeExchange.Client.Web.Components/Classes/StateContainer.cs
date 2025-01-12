@@ -115,7 +115,7 @@ namespace SafeExchange.Client.Web.Components
                     var accessRequests = requests.Result.Select(ar => new AccessRequest(ar)).ToList();
                     foreach (var accessRequest in accessRequests)
                     {
-                        if (accessRequest.Requestor.Equals(currentUserUpn))
+                        if (accessRequest.RequestorName.Equals(currentUserUpn))
                         {
                             this.OutgoingAccessRequests.Add(accessRequest);
                         }

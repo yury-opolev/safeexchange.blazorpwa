@@ -7,7 +7,7 @@
 
 @implements IDisposable
 
-@typeparam TItem
+@typeparam TItem where TItem : class
 
 @inject NavigationManager NavManager
 @inject ItemPickDialogHelper itemPickDialogHelper
@@ -80,7 +80,7 @@
                                 <li class="list-group-item">
                                     <div class="px-2">
                                         <div>
-                                            - No users -
+                                            - No data -
                                         </div>
                                     </div>
                                 </li>
@@ -106,6 +106,9 @@
     public string Placeholder { get; set; } = string.Empty;
 
     [Parameter]
+    public RenderFragment<TItem> PinnedItemTemplate { get; set; } = default!;
+
+    [Parameter]
     public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
 
     [Parameter]
@@ -113,6 +116,12 @@
 
     [Parameter]
     public Func<SearchInput, Task<BaseResponseObject<List<TItem>>>> SearchItemsAsyncCallback { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool, Task<BaseResponseObject<TItem>>> ChangePinnedItemAsyncCallback { get; set; }
+
+    [Parameter]
+    public Func<Task<BaseResponseObject<List<TItem>>>> ListPinnedItemsAsyncCallback { get; set; }
 
     [Parameter]
     public Action OnClosedCallback { get; set; }
@@ -129,6 +138,8 @@
 
     private int selectedFoundItemIndex = -1;
     private List<TItem> itemsFound = [];
+
+    private bool hasPinnedItems => this.ListPinnedItemsAsyncCallback != default;
 
     public void Dispose()
     {
