@@ -94,7 +94,7 @@
                     <button class="ql-clean"></button>
                 </span>
             </div>
-            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
+            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
         </div>
         <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
     </p>
@@ -151,7 +151,7 @@
                         </ul>
                     }
 
-                    <div class="mt-3" >
+                    <div class="mt-3">
                         <button id="attachButton" class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(async () => await this.ClickFileInputAsync())">Attach file(s)</button>
                         <InputFile id="attachedFileList1" @ref="this.inputFile" style="display:none" OnChange="@this.AddFiles" multiple disabled="@(this.StateContainer.IsInProgress)" />
                     </div>
@@ -216,10 +216,10 @@
                 <div class="col-2">
                     <div class="form-floating">
                         <InputSelect id="@($"usertype-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress"
-                        ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
-                        Value="@compoundModel.Permissions[tempIndex].SubjectType"
-                        ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
-                        placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                                     ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
+                                     Value="@compoundModel.Permissions[tempIndex].SubjectType"
+                                     ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
+                                     placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
                             @foreach (var value in Enum.GetValues(typeof(SubjectType)))
                             {
                                 <option>@value</option>
@@ -235,7 +235,7 @@
                         <div class="col">
                             <div class="input-group">
                                 <div class="form-floating">
-                                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value:get="compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(compoundModel.Permissions[tempIndex], value); }" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
+                                    <InputText id="@($"username-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value:get="this.compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(this.compoundModel.Permissions[tempIndex], value); }" placeholder="Username" aria-describedby="@($"un-validation-{i}")" />
                                     <label for="@($"username-input-{i}")" class="form-label">Username</label>
                                 </div>
                                 <span class="narrow-floating-group input-group-text">
@@ -244,38 +244,24 @@
                                     </button>
                                 </span>
                             </div>
-                            <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                            <ValidationMessage id="@($"un-validation-{i}")" For="@(() => this.compoundModel.Permissions[tempIndex].SubjectName)" />
                         </div>
                         break;
 
                     case (SubjectType.Group):
                         <div class="col">
-                            <div class="form-floating">
-                                <InputSelect id="@($"group-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
-                                    @if (!this.StateContainer.IsFetchingGroups)
-                                    {
-                                        if ((this.StateContainer.RegisteredGroups?.Count ?? 0) > 0)
-                                        {
-                                            foreach (var group in this.StateContainer.RegisteredGroups)
-                                            {
-                                                <option value="@group.GroupMail">@group.DisplayName</option>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <option value="">- No Groups -</option>
-                                        }
-                                    }
-                                </InputSelect>
-                                <label for="@($"group-input-{i}")" class="form-label">
-                                    @if (this.StateContainer.IsFetchingGroups)
-                                    {
-                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                    }
-                                    Group
-                                </label>
+                            <div class="input-group">
+                                <div class="form-floating">
+                                    <InputText id="@($"group-input-{i}")" class="form-control" readonly disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")" />
+                                    <label for="@($"group-input-{i}")" class="form-label">Group</label>
+                                </div>
+                                <span class="narrow-floating-group input-group-text">
+                                    <button class="btn" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.StartGroupPickAsync(tempIndex))" aria-label="Find user">
+                                        <span class="oi oi-magnifying-glass"></span>
+                                    </button>
+                                </span>
                             </div>
-                            <ValidationMessage id="@($"grp-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                            <ValidationMessage id="@($"grp-validation-{i}")" For="@(() => this.compoundModel.Permissions[tempIndex].SubjectName)" />
                         </div>
                         break;
 
@@ -378,20 +364,20 @@
     private int currentPermissionItemIndex;
 
     private CompoundModel compoundModel = new CompoundModel()
-    {
-        Metadata = new ObjectMetadata()
         {
-            ObjectName = string.Empty,
-            Content = new List<ContentMetadata>(),
-            ExpirationMetadata = new ExpirationMetadata()
+            Metadata = new ObjectMetadata()
             {
-                ScheduleExpiration = false,
-                ExpireAt = DateTime.Now,
-                ExpireOnIdleTime = false,
-                IdleTimeToExpire = TimeSpan.Zero
-            }
-        },
-        Permissions = new List<SubjectPermissions>()
+                ObjectName = string.Empty,
+                Content = new List<ContentMetadata>(),
+                ExpirationMetadata = new ExpirationMetadata()
+                {
+                    ScheduleExpiration = false,
+                    ExpireAt = DateTime.Now,
+                    ExpireOnIdleTime = false,
+                    IdleTimeToExpire = TimeSpan.Zero
+                }
+            },
+            Permissions = new List<SubjectPermissions>()
         {
             new SubjectPermissions()
             {
@@ -405,8 +391,8 @@
                 CanRevokeAccess = false
             }
         },
-        MainData = string.Empty
-    };
+            MainData = string.Empty
+        };
 
     private List<AttachmentModel> Attachments { get; set; } = new();
 
@@ -469,7 +455,7 @@
             try
             {
                 var fileModel = new InputBrowserFileModel(file);
-                this.Attachments.Add(new (fileModel));
+                this.Attachments.Add(new(fileModel));
                 if (this.Attachments.Count >= MaxAttachments)
                 {
                     break;
@@ -508,16 +494,16 @@
     private void AddPermissionItem()
     {
         this.compoundModel.Permissions.Add(new SubjectPermissions()
-        {
-            ObjectName = string.Empty,
-            SubjectName = string.Empty,
-            SubjectId = string.Empty,
+            {
+                ObjectName = string.Empty,
+                SubjectName = string.Empty,
+                SubjectId = string.Empty,
 
-            CanRead = true,
-            CanWrite = false,
-            CanGrantAccess = false,
-            CanRevokeAccess = false,
-        });
+                CanRead = true,
+                CanWrite = false,
+                CanGrantAccess = false,
+                CanRevokeAccess = false,
+            });
     }
 
     private void RemovePermissionItem(int index)
@@ -559,22 +545,22 @@
             if (!"ok".Equals(result.Status))
             {
                 this.ShowNotification(new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = result.Status,
-                    Message = result.Error
-                });
+                    {
+                        Type = NotificationType.Warning,
+                        Status = result.Status,
+                        Message = result.Error
+                    });
 
                 return;
             }
 
             var notification = new NotificationData()
-            {
-                Type = NotificationType.Success,
-                Status = "Success",
-                Message = $"Secret '{this.compoundModel.Metadata.ObjectName}' created successfully",
-                CopyableUri = this.GetViewUri(this.compoundModel.Metadata.ObjectName)
-            };
+                {
+                    Type = NotificationType.Success,
+                    Status = "Success",
+                    Message = $"Secret '{this.compoundModel.Metadata.ObjectName}' created successfully",
+                    CopyableUri = this.GetViewUri(this.compoundModel.Metadata.ObjectName)
+                };
 
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
@@ -621,15 +607,20 @@
         await this.userPickDialog.StartItemSearchAsync();
     }
 
+    private async Task StartGroupPickAsync(int permissionItemIndex)
+    {
+        this.currentPermissionItemIndex = permissionItemIndex;
+        await this.groupPickDialog.StartItemSearchAsync();
+    }
+
     private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
         => await this.apiClient.SearchUsersAsync(searchInput);
 
     public void FinishUserPick(GraphUserOutput pickedUser)
     {
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedUser.UserPrincipalName;
-        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.DisplayName;
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
     }
-
 
     private async Task<BaseResponseObject<List<GraphGroupOutput>>> SearchGroupsAsync(SearchInput searchInput)
         => await this.apiClient.SearchGroupsAsync(searchInput);
