@@ -32,7 +32,7 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
-<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()">
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems ListPinnedItemsAsyncCallback="this.ListPinnedGroupsAsync">
     <ItemTemplate Context="group">
         <div class="px-2">
             <div class="text-truncate">
@@ -992,6 +992,24 @@
 
     private async Task<BaseResponseObject<List<GraphGroupOutput>>> SearchGroupsAsync(SearchInput searchInput)
         => await this.apiClient.SearchGroupsAsync(searchInput);
+
+    private async Task<BaseResponseObject<List<GraphGroupOutput>>> ListPinnedGroupsAsync()
+    {
+        await this.StateContainer.TryFetchPinnedGroups(this.apiClient);
+        var groups = this.StateContainer.PinnedGroups?.Select(x => new GraphGroupOutput()
+            {
+                Id = x.GroupId,
+                DisplayName = x.GroupDisplayName,
+                Mail = x.GroupMail
+            }).ToList() ?? Array.Empty<GraphGroupOutput>().ToList();
+
+        return new BaseResponseObject<List<GraphGroupOutput>>()
+            {
+                Status = "ok",
+                SubStatus = string.Empty,
+                Result = groups
+            };
+    }
 
     public void FinishGroupPick(GraphGroupOutput pickedGroup)
     {
