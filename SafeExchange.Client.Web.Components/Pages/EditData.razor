@@ -32,6 +32,19 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="group">
+        <div class="px-2">
+            <div class="text-truncate">
+                @group.DisplayName
+            </div>
+            <div class="text-secondary text-truncate">
+                @(group.Mail ?? "- no mail -")
+            </div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
+
 <div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -72,371 +85,366 @@
 
 @if (this.compoundModel != null)
 {
-<EditForm EditContext="@editContext" OnSubmit="@OnSubmitAsync">
-    <CompoundModelValidator />
+    <EditForm EditContext="@editContext" OnSubmit="@OnSubmitAsync">
+        <CompoundModelValidator />
 
-    <p>
-        <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
-            <div id="quill-toolbar">
-              <select class="ql-font">
-                <option selected></option>
-                <option value="serif"></option>
-                <option value="monospace"></option>
-              </select>
-              <select class="ql-size">
-                <option value="small"></option>
-                <option selected></option>
-                <option value="large"></option>
-                <option value="huge"></option>
-              </select>
-              <span class="ql-formats">
-                <button class="ql-bold"></button>
-                <button class="ql-italic"></button>
-                <button class="ql-underline"></button>
-                <button class="ql-strike"></button>
-              </span>
-              <span class="ql-formats">
-                <select class="ql-align"></select>
-              </span>
-              <span class="ql-formats">
-                <select class="ql-color"></select>
-                <select class="ql-background"></select>
-              </span>
-              <span class="ql-formats">
-                <button class="ql-link"></button>
-                <button class="ql-image"></button>
-              </span>
-              <span class="ql-formats">
-                <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
-              </span>
-              <span class="ql-formats">
-                <button class="ql-clean"></button>
-              </span>
-            </div>
-            <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement" ></QuillEditor>
-        </div>
-        <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
-    </p>
-
-    <p>
-    <div class="collapsible-content">
-        <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
-            &nbsp; Attachments
-        </button>
-        <div class="collapse" id="collapseAttachments">
-            <div class="card card-body">
-
-                
-                @if ((this.ExistingAttachments?.Count ?? 0) > 0)
-                {
-                    <ul class="list-group list-group-flush">
-                        @for (int ai = 0; ai < this.ExistingAttachments.Count; ai++)
-                        {
-                            var attachment = this.ExistingAttachments[ai];
-                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap attachment-row">
-                                <div>
-                                    <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control bg-light")" >
-                                        @attachment.FileName
-                                        <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
-                                    </span>
-                                </div>
-                                <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                @if (this.IsAttachmentDeleted(attachment))
-                                {
-                                    <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-action-undo"></span></button>
-                                }
-                                else
-                                {
-                                    <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-x"></span></button>
-                                }
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-
-                @if ((this.Attachments?.Count ?? 0) > 0)
-                {
-                    <ul class="list-group list-group-flush">
-                        @for (int i = 0; i < this.Attachments.Count; i++)
-                        {
-                            var attachmentIndex = i;
-                            var attachment = this.Attachments[i];
-                            <li class="attachment-row list-group-item d-flex justify-content-start align-items-center flex-wrap">
-                                <div class="px-2">
-                                    @switch (attachment.Status)
-                                    {
-                                        case (UploadStatus.NotStarted):
-                                            <i class="oi oi-file text-secondary"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-
-                                        case (UploadStatus.InProgress):
-                                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                                            <span>@($"{attachment.ProgressPercents:00}")%&nbsp;</span>
-                                            break;
-
-                                        case (UploadStatus.Success):
-                                            <i class="oi oi-check text-success"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-
-                                        case (UploadStatus.Error):
-                                            <i class="oi oi-warning text-warning"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-                                    }
-                                </div>
-                                <div>
-                                    <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
-                                    <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
-                                </div>
-                                <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                    <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
-                                </div>
-                            </li>
-                        }
-                    </ul>                        
-                }
-
-                <div class="mt-3" >
-                    <button id="attachButton" class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(async () => await this.ClickFileInputAsync())">Attach file(s)</button>
-                    <InputFile id="attachedFileList1" @ref="this.inputFile" style="display:none" OnChange="@this.AddFiles" multiple disabled="@this.StateContainer.IsInProgress" />
-                </div>
-
-            </div>
-        </div>
-    </div>
-    </p>
-
-    <p>
-    <div class="row align-items-center">
-        <div class="col-sm-4">
-            <div class="form-check form-switch">
-                <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ScheduleExpiration" />
-                <label class="form-check-label" for="scheduleDestroySwitch">Schedule Expiration</label>
-            </div>
-        </div>
-        <div class="col-sm">
-            <label for="destroy-datetime-input" class="visually-hidden">Expire At:</label>
-            <div class="input-group">
-                <div class="input-group-text">Expire At</div>
-                <InputDate id="destroy-datetime-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireAt" Type=InputDateType.DateTimeLocal DisplayName="ExpireAt" />
-            </div>
-        </div>
-    </div>
-    </p>
-
-    <p>
-    <div class="row align-items-center">
-        <div class="col-sm-4">
-            <div class="form-check form-switch">
-                <InputCheckbox class="form-check-input" type="checkbox" id="destroyOnIdleSwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireOnIdleTime" />
-                <label class="form-check-label" for="destroyOnIdleSwitch">Expire after idle time</label>
-            </div>
-        </div>
-        <div class="col-sm">
-            <label for="idle-days-input" class="visually-hidden">Idle days:</label>
-            <div class="input-group">
-                <div class="input-group-text">Idle Days</div>
-                <InputNumber id="idle-days-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire" DisplayName="DaysToExpire" />
-            </div>
-            <ValidationMessage id="idle-days-validation" For="@(() => this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire)" />
-        </div>
-        <div class="col-sm">
-            <label for="idle-timespan-input" class="visually-hidden">Idle time:</label>
-            <div class="input-group">
-                <div class="input-group-text">Idle Time</div>
-                <InputDate id="idle-timespan-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.TimeToExpire" Type=InputDateType.Time DisplayName="TimeToExpire" />
-            </div>
-        </div>
-    </div>
-    </p>
-
-    <p>
-        <strong>Access list:</strong>
-    </p>
-
-    @for (int i = 0; i < this.compoundModel.Permissions.Count; i++)
-    {
-        var tempIndex = i;
         <p>
-            <div class="row align-items-center">
-                <div class="col-2">
-                    <div class="form-floating">
-                        <InputSelect id="@($"usertype-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)"
-                            ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
-                            Value="@compoundModel.Permissions[tempIndex].SubjectType"
-                            ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
-                            placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
-                            @foreach (var value in Enum.GetValues(typeof(SubjectType)))
-                            {
-                                <option>@value</option>
-                            }
-                        </InputSelect>
-                        <label for="@($"usertype-input-{i}")" class="form-label">Type</label>
-                    </div>
-                    <ValidationMessage id="@($"ut-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectType)" />
+            <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
+                <div id="quill-toolbar">
+                    <select class="ql-font">
+                        <option selected></option>
+                        <option value="serif"></option>
+                        <option value="monospace"></option>
+                    </select>
+                    <select class="ql-size">
+                        <option value="small"></option>
+                        <option selected></option>
+                        <option value="large"></option>
+                        <option value="huge"></option>
+                    </select>
+                    <span class="ql-formats">
+                        <button class="ql-bold"></button>
+                        <button class="ql-italic"></button>
+                        <button class="ql-underline"></button>
+                        <button class="ql-strike"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <select class="ql-align"></select>
+                    </span>
+                    <span class="ql-formats">
+                        <select class="ql-color"></select>
+                        <select class="ql-background"></select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-link"></button>
+                        <button class="ql-image"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-clean"></button>
+                    </span>
                 </div>
-                @switch (compoundModel.Permissions[tempIndex].SubjectType)
-                {
-                    case (SubjectType.User):
-                        <div class="col">
-                            <div class="input-group">
-                                <div class="form-floating">
-                                    <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
-                                    <label for="@($"username-input-{i}")" class="form-label">Username</label>
-                                </div>
-                                <span class="narrow-floating-group input-group-text">
-                                    @if (tempIndex < this.FixedAccessItemCount)
-                                    {
-                                        <button class="btn btn-link" type="button" disabled aria-label="Find user">
-                                            <span class="oi oi-magnifying-glass"></span>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
-                                            <span class="oi oi-magnifying-glass"></span>
-                                        </button>
-                                    }
-                                </span>
-                            </div>
-                            <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
-                        </div>
-                        break;
+                <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
+            </div>
+            <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
+        </p>
 
-                    case (SubjectType.Group):
-                        <div class="col">
-                            <div class="form-floating">
-                                <InputSelect id="@($"group-input-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")">
-                                    @if (!this.StateContainer.IsFetchingGroups)
-                                    {
-                                        if ((this.StateContainer.RegisteredGroups?.Count ?? 0) > 0)
-                                        {
-                                            foreach (var group in this.StateContainer.RegisteredGroups)
-                                            {
-                                                <option value="@group.GroupMail">@group.DisplayName</option>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <option value="">- No Groups -</option>
-                                        }
-                                    }
-                                </InputSelect>
-                                <label for="@($"group-input-{i}")" class="form-label">
-                                    @if (this.StateContainer.IsFetchingGroups)
-                                    {
-                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                    }
-                                    Group
-                                </label>
-                            </div>
-                            <ValidationMessage id="@($"grp-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
-                        </div>
-                        break;
+        <p>
+            <div class="collapsible-content">
+                <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+                    &nbsp; Attachments
+                </button>
+                <div class="collapse" id="collapseAttachments">
+                    <div class="card card-body">
 
-                    case (SubjectType.Application):
-                        <div class="col">
-                            <div class="form-floating">
-                                <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
-                                @if (!this.StateContainer.IsFetchingApplications)
+
+                        @if ((this.ExistingAttachments?.Count ?? 0) > 0)
+                        {
+                            <ul class="list-group list-group-flush">
+                                @for (int ai = 0; ai < this.ExistingAttachments.Count; ai++)
                                 {
-                                    if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
-                                    {
-                                        foreach (var application in this.StateContainer.RegisteredApplications.Where(a => a.Enabled))
-                                        {
-                                            <option value="@application.DisplayName">@application.DisplayName</option>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <option value="">- No Applications -</option>
-                                    }
+                                    var attachment = this.ExistingAttachments[ai];
+                                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap attachment-row">
+                                        <div>
+                                            <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control bg-light")">
+                                                @attachment.FileName
+                                                <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                                            </span>
+                                        </div>
+                                        <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
+                                            @if (this.IsAttachmentDeleted(attachment))
+                                            {
+                                                <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-action-undo"></span></button>
+                                            }
+                                            else
+                                            {
+                                                <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-x"></span></button>
+                                            }
+                                        </div>
+                                    </li>
                                 }
-                                </InputSelect>
-                                <label for="@($"application-input-{i}")" class="form-label">
-                                    @if (this.StateContainer.IsFetchingApplications)
-                                    {
-                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                    }
-                                    Application
-                                </label>
-                            </div>
-                            <ValidationMessage id="@($"app-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                            </ul>
+                        }
+
+                        @if ((this.Attachments?.Count ?? 0) > 0)
+                        {
+                            <ul class="list-group list-group-flush">
+                                @for (int i = 0; i < this.Attachments.Count; i++)
+                                {
+                                    var attachmentIndex = i;
+                                    var attachment = this.Attachments[i];
+                                    <li class="attachment-row list-group-item d-flex justify-content-start align-items-center flex-wrap">
+                                        <div class="px-2">
+                                            @switch (attachment.Status)
+                                            {
+                                                case (UploadStatus.NotStarted):
+                                                    <i class="oi oi-file text-secondary"></i>
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                    break;
+
+                                                case (UploadStatus.InProgress):
+                                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                    <span>@($"{attachment.ProgressPercents:00}")%&nbsp;</span>
+                                                    break;
+
+                                                case (UploadStatus.Success):
+                                                    <i class="oi oi-check text-success"></i>
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                    break;
+
+                                                case (UploadStatus.Error):
+                                                    <i class="oi oi-warning text-warning"></i>
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                    break;
+                                            }
+                                        </div>
+                                        <div>
+                                            <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
+                                            <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
+                                        </div>
+                                        <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
+                                            <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        <div class="mt-3">
+                            <button id="attachButton" class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(async () => await this.ClickFileInputAsync())">Attach file(s)</button>
+                            <InputFile id="attachedFileList1" @ref="this.inputFile" style="display:none" OnChange="@this.AddFiles" multiple disabled="@this.StateContainer.IsInProgress" />
                         </div>
-                        break;
-                }
-                <div class="col">
-                    @if (tempIndex < this.FixedAccessItemCount)
-                    {
-                        <div class="form-floating">
-                            <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
-                            <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="form-floating">
-                            <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
-                                <option>Read</option>
-                                <option>Read,Write</option>
-                                <option>Read,Write,GrantAccess</option>
-                                <option>Read,Write,GrantAccess,RevokeAccess</option>
-                            </InputSelect>
-                            <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
-                        </div>
-                    }
-                </div>
-                <div class="col-2">
-                    @if (this.IsDeleted(tempIndex))
-                    {
-                        <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
-                    }
-                    else
-                    {
-                        <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
-                    }
+
+                    </div>
                 </div>
             </div>
         </p>
-    }
-    <p>
-        <div class="row">
-            <div class="col">
-                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
-            </div>
-        </div>
-    </p>
 
-    <p>
-        <div class="d-flex justify-content-center">
-            <button type="submit" class="btn btn-primary mx-2" disabled="@this.StateContainer.IsInProgress">
-                @if (this.StateContainer.IsInProgress)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                }
-                else
-                {
-                    <i class="oi oi-cloud-upload"></i>  
-                }
-                <span>&nbsp;Update</span>
-            </button>
-            <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@this.StateContainer.IsInProgress">
-                @if (this.StateContainer.IsInProgress)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                }
-                else
-                {
-                    <i class="oi oi-x"></i>
-                }
-                <span>&nbsp;Delete</span>
-            </button>
-        </div>
-    </p>
-</EditForm>
+        <p>
+            <div class="row align-items-center">
+                <div class="col-sm-4">
+                    <div class="form-check form-switch">
+                        <InputCheckbox class="form-check-input" type="checkbox" id="scheduleDestroySwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ScheduleExpiration" />
+                        <label class="form-check-label" for="scheduleDestroySwitch">Schedule Expiration</label>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <label for="destroy-datetime-input" class="visually-hidden">Expire At:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">Expire At</div>
+                        <InputDate id="destroy-datetime-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireAt" Type=InputDateType.DateTimeLocal DisplayName="ExpireAt" />
+                    </div>
+                </div>
+            </div>
+        </p>
+
+        <p>
+            <div class="row align-items-center">
+                <div class="col-sm-4">
+                    <div class="form-check form-switch">
+                        <InputCheckbox class="form-check-input" type="checkbox" id="destroyOnIdleSwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.ExpireOnIdleTime" />
+                        <label class="form-check-label" for="destroyOnIdleSwitch">Expire after idle time</label>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <label for="idle-days-input" class="visually-hidden">Idle days:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">Idle Days</div>
+                        <InputNumber id="idle-days-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire" DisplayName="DaysToExpire" />
+                    </div>
+                    <ValidationMessage id="idle-days-validation" For="@(() => this.compoundModel.Metadata.ExpirationMetadata.DaysToExpire)" />
+                </div>
+                <div class="col-sm">
+                    <label for="idle-timespan-input" class="visually-hidden">Idle time:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">Idle Time</div>
+                        <InputDate id="idle-timespan-input" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.ExpirationMetadata.TimeToExpire" Type=InputDateType.Time DisplayName="TimeToExpire" />
+                    </div>
+                </div>
+            </div>
+        </p>
+
+        <p>
+            <strong>Access list:</strong>
+        </p>
+
+        @for (int i = 0; i < this.compoundModel.Permissions.Count; i++)
+        {
+            var tempIndex = i;
+            <p>
+                <div class="row align-items-center">
+                    <div class="col-2">
+                        <div class="form-floating">
+                            <InputSelect id="@($"usertype-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)"
+                                         ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
+                                         Value="@compoundModel.Permissions[tempIndex].SubjectType"
+                                         ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
+                                         placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                                @foreach (var value in Enum.GetValues(typeof(SubjectType)))
+                                {
+                                    <option>@value</option>
+                                }
+                            </InputSelect>
+                            <label for="@($"usertype-input-{i}")" class="form-label">Type</label>
+                        </div>
+                        <ValidationMessage id="@($"ut-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectType)" />
+                    </div>
+                    @switch (compoundModel.Permissions[tempIndex].SubjectType)
+                    {
+                        case (SubjectType.User):
+                            <div class="col">
+                                <div class="input-group">
+                                    <div class="form-floating">
+                                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value:get="this.compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(this.compoundModel.Permissions[tempIndex], value); }" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
+                                        <label for="@($"username-input-{i}")" class="form-label">Username</label>
+                                    </div>
+                                    <span class="narrow-floating-group input-group-text">
+                                        @if (tempIndex < this.FixedAccessItemCount)
+                                        {
+                                            <button class="btn btn-link" type="button" disabled aria-label="Find user">
+                                                <span class="oi oi-magnifying-glass"></span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
+                                                <span class="oi oi-magnifying-glass"></span>
+                                            </button>
+                                        }
+                                    </span>
+                                </div>
+                                <ValidationMessage id="@($"un-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                            </div>
+                            break;
+
+                        case (SubjectType.Group):
+                            <div class="col">
+                                <div class="input-group">
+                                    <div class="form-floating">
+                                        <InputText id="@($"group-input-{i}")" class="form-control" readonly disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Group" aria-describedby="@($"grp-validation-{i}")" />
+                                        <label for="@($"group-input-{i}")" class="form-label">Group</label>
+                                    </div>
+                                    <span class="narrow-floating-group input-group-text">
+                                        @if (tempIndex < this.FixedAccessItemCount)
+                                        {
+                                            <button class="btn btn-link" type="button" disabled aria-label="Find group">
+                                                <span class="oi oi-magnifying-glass"></span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartGroupPickAsync(tempIndex))" aria-label="Find group">
+                                                <span class="oi oi-magnifying-glass"></span>
+                                            </button>
+                                        }
+                                    </span>
+                                </div>
+                                <ValidationMessage id="@($"grp-validation-{i}")" For="@(() => this.compoundModel.Permissions[tempIndex].SubjectName)" />
+                            </div>
+                            break;
+
+                        case (SubjectType.Application):
+                            <div class="col">
+                                <div class="form-floating">
+                                    <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
+                                        @if (!this.StateContainer.IsFetchingApplications)
+                                        {
+                                            if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
+                                            {
+                                                foreach (var application in this.StateContainer.RegisteredApplications.Where(a => a.Enabled))
+                                                {
+                                                    <option value="@application.DisplayName">@application.DisplayName</option>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <option value="">- No Applications -</option>
+                                            }
+                                        }
+                                    </InputSelect>
+                                    <label for="@($"application-input-{i}")" class="form-label">
+                                        @if (this.StateContainer.IsFetchingApplications)
+                                        {
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        }
+                                        Application
+                                    </label>
+                                </div>
+                                <ValidationMessage id="@($"app-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
+                            </div>
+                            break;
+                    }
+                    <div class="col">
+                        @if (tempIndex < this.FixedAccessItemCount)
+                        {
+                            <div class="form-floating">
+                                <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
+                                <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-floating">
+                                <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                                    <option>Read</option>
+                                    <option>Read,Write</option>
+                                    <option>Read,Write,GrantAccess</option>
+                                    <option>Read,Write,GrantAccess,RevokeAccess</option>
+                                </InputSelect>
+                                <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-2">
+                        @if (this.IsDeleted(tempIndex))
+                        {
+                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
+                        }
+                        else
+                        {
+                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
+                        }
+                    </div>
+                </div>
+            </p>
+        }
+        <p>
+            <div class="row">
+                <div class="col">
+                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                </div>
+            </div>
+        </p>
+
+        <p>
+            <div class="d-flex justify-content-center">
+                <button type="submit" class="btn btn-primary mx-2" disabled="@this.StateContainer.IsInProgress">
+                    @if (this.StateContainer.IsInProgress)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="oi oi-cloud-upload"></i>
+                    }
+                    <span>&nbsp;Update</span>
+                </button>
+                <button type="button" class="btn btn-danger mx-2" data-bs-toggle="modal" data-bs-target="#deletionDialog" disabled="@this.StateContainer.IsInProgress">
+                    @if (this.StateContainer.IsInProgress)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="oi oi-x"></i>
+                    }
+                    <span>&nbsp;Delete</span>
+                </button>
+            </div>
+        </p>
+    </EditForm>
 }
 
 @code {
@@ -462,25 +470,27 @@
 
     private ItemSearchDialog<GraphUserOutput> userPickDialog;
 
+    private ItemSearchDialog<GraphGroupOutput> groupPickDialog;
+
     private int currentPermissionItemIndex;
 
     private bool initializeTooltips = false;
 
     private CompoundModel compoundModel = new CompoundModel()
-    {
-        Metadata = new ObjectMetadata()
         {
-            ObjectName = string.Empty,
-            Content = new List<ContentMetadata>(),
-            ExpirationMetadata = new ExpirationMetadata()
+            Metadata = new ObjectMetadata()
             {
-                ScheduleExpiration = false,
-                ExpireAt = DateTime.MinValue,
-                ExpireOnIdleTime = false,
-                IdleTimeToExpire = TimeSpan.Zero
-            }
-        },
-        Permissions = new List<SubjectPermissions>()
+                ObjectName = string.Empty,
+                Content = new List<ContentMetadata>(),
+                ExpirationMetadata = new ExpirationMetadata()
+                {
+                    ScheduleExpiration = false,
+                    ExpireAt = DateTime.MinValue,
+                    ExpireOnIdleTime = false,
+                    IdleTimeToExpire = TimeSpan.Zero
+                }
+            },
+            Permissions = new List<SubjectPermissions>()
         {
             new SubjectPermissions()
             {
@@ -494,8 +504,8 @@
                 CanRevokeAccess = false
             }
         },
-        MainData = string.Empty
-    };
+            MainData = string.Empty
+        };
 
     private ObjectMetadata originalMetadata;
 
@@ -561,7 +571,7 @@
             try
             {
                 var fileModel = new InputBrowserFileModel(file);
-                this.Attachments.Add(new (fileModel));
+                this.Attachments.Add(new(fileModel));
                 if (this.Attachments.Count >= MaxAttachments)
                 {
                     break;
@@ -600,16 +610,16 @@
     private void AddPermissionItem()
     {
         this.compoundModel.Permissions.Add(new SubjectPermissions()
-        {
-            ObjectName = string.Empty,
-            SubjectName = string.Empty,
-            SubjectId = string.Empty,
+            {
+                ObjectName = string.Empty,
+                SubjectName = string.Empty,
+                SubjectId = string.Empty,
 
-            CanRead = true,
-            CanWrite = false,
-            CanGrantAccess = false,
-            CanRevokeAccess = false
-        });
+                CanRead = true,
+                CanWrite = false,
+                CanGrantAccess = false,
+                CanRevokeAccess = false
+            });
     }
 
     private void RemovePermissionItem(int index)
@@ -673,14 +683,14 @@
                 }
 
                 this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = compoundModelResult.Status,
-                    Message = message,
-                    ButtonText = buttonText,
-                    ButtonUri = this.CreateAccessRequestUri("Read"),
-                    ConsentRequired = consentRequired
-                };
+                    {
+                        Type = NotificationType.Warning,
+                        Status = compoundModelResult.Status,
+                        Message = message,
+                        ButtonText = buttonText,
+                        ButtonUri = this.CreateAccessRequestUri("Read"),
+                        ConsentRequired = consentRequired
+                    };
 
                 return;
             }
@@ -838,14 +848,14 @@
 
             var needToRequestAccess = !string.IsNullOrEmpty(missingAccess);
             var notification = new NotificationData()
-            {
-                Type = needToRequestAccess ? NotificationType.Warning : NotificationType.Success,
-                Status = needToRequestAccess ? "Success/Warning" : "Success",
-                Message = needToRequestAccess ? $"Secret '{this.compoundModel.Metadata.ObjectName}' updated successfully, but access was not updated." : $"Secret '{this.compoundModel.Metadata.ObjectName}' updated successfully",
-                CopyableUri = this.GetViewUri(this.compoundModel.Metadata.ObjectName),
-                ButtonText = needToRequestAccess ? "Request Access" : string.Empty,
-                ButtonUri = this.CreateAccessRequestUri(missingAccess)
-            };
+                {
+                    Type = needToRequestAccess ? NotificationType.Warning : NotificationType.Success,
+                    Status = needToRequestAccess ? "Success/Warning" : "Success",
+                    Message = needToRequestAccess ? $"Secret '{this.compoundModel.Metadata.ObjectName}' updated successfully, but access was not updated." : $"Secret '{this.compoundModel.Metadata.ObjectName}' updated successfully",
+                    CopyableUri = this.GetViewUri(this.compoundModel.Metadata.ObjectName),
+                    ButtonText = needToRequestAccess ? "Request Access" : string.Empty,
+                    ButtonUri = this.CreateAccessRequestUri(missingAccess)
+                };
 
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
@@ -875,21 +885,21 @@
             if (!"ok".Equals(secretData.Status))
             {
                 this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = secretData.Status,
-                    Message = secretData.Error
-                };
+                    {
+                        Type = NotificationType.Warning,
+                        Status = secretData.Status,
+                        Message = secretData.Error
+                    };
 
                 return;
             }
 
             var notification = new NotificationData()
-            {
-                Type = NotificationType.Success,
-                Status = "Success",
-                Message = $"Secret '{this.compoundModel.Metadata.ObjectName}' deleted successfully"
-            };
+                {
+                    Type = NotificationType.Success,
+                    Status = "Success",
+                    Message = $"Secret '{this.compoundModel.Metadata.ObjectName}' deleted successfully"
+                };
 
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
@@ -906,13 +916,13 @@
 
     private NotificationData CreateNotificationData(ResponseStatus status)
         => new NotificationData()
-    {
-        Type = NotificationType.Warning,
-        Status = status.Status,
-        Message = status.Error,
-        ButtonText = "forbidden".Equals(status.Status) ? "Request Access" : string.Empty,
-        ButtonUri = this.CreateAccessRequestUri("Read,Write")
-    };
+            {
+                Type = NotificationType.Warning,
+                Status = status.Status,
+                Message = status.Error,
+                ButtonText = "forbidden".Equals(status.Status) ? "Request Access" : string.Empty,
+                ButtonUri = this.CreateAccessRequestUri("Read,Write")
+            };
 
     public void DismissNotification()
     {
@@ -945,11 +955,11 @@
             var scopesToConsent = new List<string>();
             this.Configuration.Bind("AdditionalScopesToConsent", scopesToConsent);
             var requestOptions = new InteractiveRequestOptions
-            {
-                Interaction = InteractionType.GetToken,
-                ReturnUrl = this.NavManager.Uri,
-                Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
-            };
+                {
+                    Interaction = InteractionType.GetToken,
+                    ReturnUrl = this.NavManager.Uri,
+                    Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
+                };
 
             requestOptions.TryAddAdditionalParameter("prompt", "consent");
             this.NavManager.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath, requestOptions);
@@ -965,6 +975,12 @@
         await this.userPickDialog.StartItemSearchAsync();
     }
 
+    private async Task StartGroupPickAsync(int permissionItemIndex)
+    {
+        this.currentPermissionItemIndex = permissionItemIndex;
+        await this.groupPickDialog.StartItemSearchAsync();
+    }
+
     private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
         => await this.apiClient.SearchUsersAsync(searchInput);
 
@@ -972,5 +988,20 @@
     {
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedUser.UserPrincipalName;
         this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedUser.UserPrincipalName;
+    }
+
+    private async Task<BaseResponseObject<List<GraphGroupOutput>>> SearchGroupsAsync(SearchInput searchInput)
+        => await this.apiClient.SearchGroupsAsync(searchInput);
+
+    public void FinishGroupPick(GraphGroupOutput pickedGroup)
+    {
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedGroup.Id;
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedGroup.DisplayName;
+    }
+
+    private void OnSetUserName(SubjectPermissions permissions, string value)
+    {
+        permissions.SubjectName = value;
+        permissions.SubjectId = value;
     }
 }
