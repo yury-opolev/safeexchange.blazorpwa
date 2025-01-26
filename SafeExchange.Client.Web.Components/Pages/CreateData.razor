@@ -28,7 +28,7 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
-<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()">
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems>
     <ItemTemplate Context="group">
         <div class="px-2">
             <div class="text-truncate">

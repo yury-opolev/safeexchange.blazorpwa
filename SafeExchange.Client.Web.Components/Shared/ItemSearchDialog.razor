@@ -23,7 +23,6 @@
             </div>
 
             <div class="modal-body d-flex flex-column" style="height: 320px;">
-
                 @if (this.Notification != null)
                 {
                     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
@@ -43,51 +42,121 @@
                     </div>
                 }
 
-                <p>
-                    <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
-                </p>
-                <div class="overflow-auto">
-                    @if (this.searchIsInProgress)
-                    {
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <div class="px-2">
-                                    <div>
-                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
-                    }
-                    else
-                    {
-                        @if (this.itemsFound.Count > 0)
-                        {
-                            <ul class="list-group list-group-flush">
-                                @for (int i = 0; i < this.itemsFound.Count; i++)
+                @if (this.UsePinnedItems)
+                {
+                    <ul class="nav nav-tabs" id="mainContentTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="pinned-items-tab" data-bs-toggle="tab" data-bs-target="#pinned-items" type="button" role="tab" aria-controls="pinned-items" aria-selected="true">
+                                Pinned items
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab" aria-controls="search" aria-selected="false">
+                                Search
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content py-2" id="mainContent">
+                        <div class="tab-pane fade show active" id="pinned-items" role="tabpanel" aria-labelledby="pinned-items-tab">
+                            TODO
+                        </div>
+                        <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
+                            <p>
+                                <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                            </p>
+                            <div class="overflow-auto">
+                                @if (this.searchIsInProgress)
                                 {
-                                    var foundItemIndex = i;
-                                    var foundItem = this.itemsFound[i];
-                                    <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
-                                        @ItemTemplate(foundItem)
-                                    </button>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <div class="px-2">
+                                                <div>
+                                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
                                 }
-                            </ul>
-                        }
-                        else
+                                else
+                                {
+                                    @if (this.itemsFound.Count > 0)
+                                    {
+                                        <ul class="list-group list-group-flush">
+                                            @for (int i = 0; i < this.itemsFound.Count; i++)
+                                            {
+                                                var foundItemIndex = i;
+                                                var foundItem = this.itemsFound[i];
+                                                <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                                    @ItemTemplate(foundItem)
+                                                </button>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="px-2">
+                                                    <div>
+                                                        - No data -
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p>
+                        <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                    </p>
+                    <div class="overflow-auto">
+                        @if (this.searchIsInProgress)
                         {
                             <ul class="list-group list-group-flush">
                                 <li class="list-group-item">
                                     <div class="px-2">
                                         <div>
-                                            - No data -
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
                                         </div>
                                     </div>
                                 </li>
                             </ul>
                         }
-                    }
-                </div>
+                        else
+                        {
+                            @if (this.itemsFound.Count > 0)
+                            {
+                                <ul class="list-group list-group-flush">
+                                    @for (int i = 0; i < this.itemsFound.Count; i++)
+                                    {
+                                        var foundItemIndex = i;
+                                        var foundItem = this.itemsFound[i];
+                                        <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                            @ItemTemplate(foundItem)
+                                        </button>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">
+                                        <div class="px-2">
+                                            <div>
+                                                - No data -
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            }
+                        }
+                    </div>
+                }
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" @onclick="this.OnStopItemSearch">Cancel</button>
@@ -98,6 +167,9 @@
 </div>
 
 @code {
+
+    [Parameter]
+    public bool UsePinnedItems { get; set; } = false;
 
     [Parameter]
     public string DialogTitle { get; set; } = string.Empty;
