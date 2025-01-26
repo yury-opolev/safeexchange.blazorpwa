@@ -28,7 +28,8 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
-<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems>
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()"
+UsePinnedItems ListPinnedItemsAsyncCallback="this.ListPinnedGroupsAsync">
     <ItemTemplate Context="group">
         <div class="px-2">
             <div class="text-truncate">
@@ -216,10 +217,10 @@
                 <div class="col-2">
                     <div class="form-floating">
                         <InputSelect id="@($"usertype-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress"
-                                     ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
-                                     Value="@compoundModel.Permissions[tempIndex].SubjectType"
-                                     ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
-                                     placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                        ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
+                        Value="@compoundModel.Permissions[tempIndex].SubjectType"
+                        ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
+                        placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
                             @foreach (var value in Enum.GetValues(typeof(SubjectType)))
                             {
                                 <option>@value</option>
@@ -410,7 +411,6 @@
 
         this.editContext = new EditContext(this.compoundModel);
         await this.StateContainer.TryFetchRegisteredApplications(this.apiClient);
-        await this.StateContainer.TryFetchRegisteredGroups(this.apiClient);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -624,6 +624,24 @@
 
     private async Task<BaseResponseObject<List<GraphGroupOutput>>> SearchGroupsAsync(SearchInput searchInput)
         => await this.apiClient.SearchGroupsAsync(searchInput);
+
+    private async Task<BaseResponseObject<List<GraphGroupOutput>>> ListPinnedGroupsAsync()
+    {
+        await this.StateContainer.TryFetchPinnedGroups(this.apiClient);
+        var groups = this.StateContainer.PinnedGroups?.Select(x => new GraphGroupOutput()
+        {
+            Id = x.GroupId,
+            DisplayName = x.GroupDisplayName,
+            Mail = x.GroupMail
+            }).ToList() ?? Array.Empty<GraphGroupOutput>().ToList();
+
+        return new BaseResponseObject<List<GraphGroupOutput>>()
+        {
+            Status = "ok",
+            SubStatus = string.Empty,
+            Result = groups
+        };
+    }
 
     public void FinishGroupPick(GraphGroupOutput pickedGroup)
     {

@@ -58,7 +58,46 @@
                     </ul>
                     <div class="tab-content py-2" id="mainContent">
                         <div class="tab-pane fade show active" id="pinned-items" role="tabpanel" aria-labelledby="pinned-items-tab">
-                            TODO
+                            @if (this.listPinnedIsInProgress)
+                            {
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">
+                                        <div class="px-2">
+                                            <div>
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            }
+                            else
+                            {
+                                @if (this.pinnedItems.Count > 0)
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @for (int i = 0; i < this.pinnedItems.Count; i++)
+                                        {
+                                            var pinnedItemIndex = i;
+                                            var pinnedItem = this.pinnedItems[i];
+                                            <button type="button" class="list-group-item list-group-item-action @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
+                                                @ItemTemplate(pinnedItem)
+                                            </button>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <div class="px-2">
+                                                <div>
+                                                    - No pinned items -
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                }
+                            }
                         </div>
                         <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
                             <p>
@@ -190,9 +229,6 @@
     public Func<SearchInput, Task<BaseResponseObject<List<TItem>>>> SearchItemsAsyncCallback { get; set; }
 
     [Parameter]
-    public Func<TItem, bool, Task<BaseResponseObject<TItem>>> ChangePinnedItemAsyncCallback { get; set; }
-
-    [Parameter]
     public Func<Task<BaseResponseObject<List<TItem>>>> ListPinnedItemsAsyncCallback { get; set; }
 
     [Parameter]
@@ -211,7 +247,9 @@
     private int selectedFoundItemIndex = -1;
     private List<TItem> itemsFound = [];
 
-    private bool hasPinnedItems => (this.ListPinnedItemsAsyncCallback != default) && (this.ChangePinnedItemAsyncCallback != default);
+    private bool listPinnedIsInProgress = false;
+    private int selectedPinnedItemIndex = -1;
+    private List<TItem> pinnedItems = [];
 
     public void Dispose()
     {
@@ -228,9 +266,10 @@
         await this.itemPickDialogHelper.ShowModalAsync(this.modalDialog);
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         this.searchTimer.Elapsed += OnTimerElapsed;
+        await this.TryListPinnedItemsAsync();
     }
 
     public void OnStopItemSearch()
@@ -307,7 +346,7 @@
                 return;
             }
 
-            this.itemsFound = itemsResult.Result;
+            this.itemsFound = itemsResult.Result ?? Array.Empty<TItem>().ToList();
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -320,7 +359,9 @@
         }
     }
 
-    private void SwitchSelectedItem(int userIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == userIndex ? -1 : userIndex;
+    private void SwitchSelectedItem(int itemIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == itemIndex ? -1 : itemIndex;
+
+    private void SwitchSelectedPinnedItem(int itemIndex) => this.selectedPinnedItemIndex = this.selectedPinnedItemIndex == itemIndex ? -1 : itemIndex;
 
     private void FinishUserPick()
     {
@@ -358,5 +399,56 @@
         }
 
         this.NavManager.NavigateTo(this.Notification.ButtonUri);
+    }
+
+    private async Task TryListPinnedItemsAsync()
+    {
+        if (!this.UsePinnedItems)
+        {
+            return;
+        }
+
+        this.listPinnedIsInProgress = true;
+        this.StateHasChanged();
+
+        try
+        {
+            var pinnedItemsResponse = await this.ListPinnedItemsAsyncCallback();
+            if (!"ok".Equals(pinnedItemsResponse.Status) && !"no_content".Equals(pinnedItemsResponse.Status))
+            {
+                var consentRequired = false;
+                var message = pinnedItemsResponse.Error ?? string.Empty;
+                var buttonText = "forbidden".Equals(pinnedItemsResponse.Status) ? "Consent" : string.Empty;
+                if ("consent_required".Equals(pinnedItemsResponse.SubStatus))
+                {
+                    consentRequired = true;
+                    message = "User must give consent in Entra to read all users basic profiles in order to search users.";
+                    buttonText = "Consent";
+                }
+
+                this.Notification = new NotificationData()
+                    {
+                        Type = NotificationType.Warning,
+                        Status = pinnedItemsResponse.Status,
+                        Message = message,
+                        ButtonText = buttonText,
+                        ButtonUri = "/",
+                        ConsentRequired = consentRequired
+                    };
+
+                return;
+            }
+
+            this.pinnedItems = pinnedItemsResponse.Result ?? Array.Empty<TItem>().ToList();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.listPinnedIsInProgress = false;
+            this.StateHasChanged();
+        }
     }
 }
