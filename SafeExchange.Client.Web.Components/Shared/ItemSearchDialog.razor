@@ -46,12 +46,12 @@
                 {
                     <ul class="nav nav-tabs" id="mainContentTabs" role="tablist">
                         <li class="nav-item">
-                            <button class="nav-link active" id="pinned-items-tab" data-bs-toggle="tab" data-bs-target="#pinned-items" type="button" role="tab" aria-controls="pinned-items" aria-selected="true">
+                            <button class="nav-link active" id="pinned-items-tab" data-bs-toggle="tab" data-bs-target="#pinned-items" type="button" role="tab" aria-controls="pinned-items" aria-selected="true" @onclick="() => this.SetActiveTab(PinnedItemsTabIndex)">
                                 Pinned items
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab" aria-controls="search" aria-selected="false">
+                            <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab" aria-controls="search" aria-selected="false" @onclick="() => this.SetActiveTab(SearchTabIndex)">
                                 Search
                             </button>
                         </li>
@@ -199,13 +199,16 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" @onclick="this.OnStopItemSearch">Cancel</button>
-                <button type="button" class="btn btn-success" data-bs-dismiss="modal" disabled="@(this.selectedFoundItemIndex < 0)" @onclick="this.FinishUserPick">OK</button>
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" disabled="@(this.GetSelectedItem() == default)" @onclick="this.FinishUserPick">OK</button>
             </div>
         </div>
     </div>
 </div>
 
 @code {
+
+    private const int PinnedItemsTabIndex = 0;
+    private const int SearchTabIndex = 1;
 
     [Parameter]
     public bool UsePinnedItems { get; set; } = false;
@@ -251,6 +254,8 @@
     private int selectedPinnedItemIndex = -1;
     private List<TItem> pinnedItems = [];
 
+    private int currentTabIndex;
+
     public void Dispose()
     {
         this.searchTimer?.Dispose();
@@ -264,12 +269,15 @@
         this.selectedFoundItemIndex = -1;
 
         await this.itemPickDialogHelper.ShowModalAsync(this.modalDialog);
+
+        this.selectedPinnedItemIndex = -1;
+        await this.TryListPinnedItemsAsync();
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
+        this.currentTabIndex = this.UsePinnedItems ? PinnedItemsTabIndex : SearchTabIndex;
         this.searchTimer.Elapsed += OnTimerElapsed;
-        await this.TryListPinnedItemsAsync();
     }
 
     public void OnStopItemSearch()
@@ -365,10 +373,10 @@
 
     private void FinishUserPick()
     {
-        if (this.selectedFoundItemIndex >= 0)
+        var selectedItem = this.GetSelectedItem();
+        if (selectedItem != default)
         {
-            var item = this.itemsFound[this.selectedFoundItemIndex];
-            this.OnItemPickedCallback?.Invoke(item);
+            this.OnItemPickedCallback?.Invoke(selectedItem);
         }
 
         this.OnStopItemSearch();
@@ -449,6 +457,26 @@
         {
             this.listPinnedIsInProgress = false;
             this.StateHasChanged();
+        }
+    }
+
+    private void SetActiveTab(int tabIndex)
+    {
+        this.currentTabIndex = tabIndex;
+    }
+
+    private TItem? GetSelectedItem()
+    {
+        switch (this.currentTabIndex)
+        {
+            case PinnedItemsTabIndex:
+                return this.selectedPinnedItemIndex >= 0 ? this.pinnedItems[this.selectedPinnedItemIndex] : default;
+
+            case SearchTabIndex:
+                return this.selectedFoundItemIndex >= 0 ? this.itemsFound[this.selectedFoundItemIndex] : default;
+
+            default:
+                return default;
         }
     }
 }
