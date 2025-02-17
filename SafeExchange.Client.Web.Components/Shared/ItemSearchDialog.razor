@@ -79,9 +79,14 @@
                                         {
                                             var pinnedItemIndex = i;
                                             var pinnedItem = this.pinnedItems[i];
-                                            <button type="button" class="list-group-item list-group-item-action @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
-                                                @ItemTemplate(pinnedItem)
-                                            </button>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-primary-noborder w-75 @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
+                                                    @ItemTemplate(pinnedItem)
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary-noborder" @onclick="() => this.UnpinItemAsync(pinnedItemIndex)">
+                                                    <i class="bi bi-star-fill"></i>
+                                                </button>
+                                            </div>
                                         }
                                     </ul>
                                 }
@@ -125,9 +130,14 @@
                                             {
                                                 var foundItemIndex = i;
                                                 var foundItem = this.itemsFound[i];
-                                                <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
-                                                    @ItemTemplate(foundItem)
-                                                </button>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-outline-primary-noborder w-75 @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                                        @ItemTemplate(foundItem)
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-primary-noborder" @onclick="() => this.SwitchSelectedItemPinAsync(foundItemIndex)">
+                                                        <i class="bi bi-star"></i>
+                                                    </button>
+                                                </div>
                                             }
                                         </ul>
                                     }
@@ -369,7 +379,17 @@
 
     private void SwitchSelectedItem(int itemIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == itemIndex ? -1 : itemIndex;
 
+    private async Task SwitchSelectedItemPinAsync(int itemIndex)
+    {
+        Console.WriteLine($"SWITCH SELECTED ITEM PIN {itemIndex}");
+    }
+
     private void SwitchSelectedPinnedItem(int itemIndex) => this.selectedPinnedItemIndex = this.selectedPinnedItemIndex == itemIndex ? -1 : itemIndex;
+
+    private async Task UnpinItemAsync(int itemIndex)
+    {
+        Console.WriteLine($"UNPIN ITEM {itemIndex}");
+    }
 
     private void FinishUserPick()
     {
