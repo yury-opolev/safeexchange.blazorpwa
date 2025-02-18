@@ -79,11 +79,11 @@
                                         {
                                             var pinnedItemIndex = i;
                                             var pinnedItem = this.pinnedItems[i];
-                                            <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-outline-primary-noborder w-75 @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
+                                            <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
+                                                <div class="w-80">
                                                     @ItemTemplate(pinnedItem)
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary-noborder" @onclick="() => this.UnpinItemAsync(pinnedItemIndex)">
+                                                </div>
+                                                <button type="button" class="ms-auto btn btn-link @(this.selectedPinnedItemIndex == pinnedItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.UnpinItemAsync(pinnedItemIndex)">
                                                     <i class="bi bi-star-fill"></i>
                                                 </button>
                                             </div>
@@ -130,11 +130,11 @@
                                             {
                                                 var foundItemIndex = i;
                                                 var foundItem = this.itemsFound[i];
-                                                <div class="btn-group" role="group">
-                                                    <button type="button" class="btn btn-outline-primary-noborder w-75 @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                                <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                                    <div class="w-80">
                                                         @ItemTemplate(foundItem)
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-primary-noborder" @onclick="() => this.SwitchSelectedItemPinAsync(foundItemIndex)">
+                                                    </div>
+                                                    <button type="button" class="ms-auto btn btn-link @(this.selectedFoundItemIndex == foundItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchSelectedItemPinAsync(foundItemIndex)">
                                                         <i class="bi bi-star"></i>
                                                     </button>
                                                 </div>
@@ -185,9 +185,11 @@
                                     {
                                         var foundItemIndex = i;
                                         var foundItem = this.itemsFound[i];
-                                        <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
-                                            @ItemTemplate(foundItem)
-                                        </button>
+                                        <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                            <div class="w-100">
+                                                @ItemTemplate(foundItem)
+                                            </div>
+                                        </div>
                                     }
                                 </ul>
                             }
