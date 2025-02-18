@@ -83,7 +83,7 @@
                                                 <div class="w-80">
                                                     @ItemTemplate(pinnedItem)
                                                 </div>
-                                                <button type="button" class="ms-auto btn btn-link @(this.selectedPinnedItemIndex == pinnedItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.UnpinItemAsync(pinnedItemIndex)">
+                                                <button type="button" class="ms-auto btn btn-link @(this.selectedPinnedItemIndex == pinnedItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchItemPinAsync(pinnedItem, false)">
                                                     <i class="bi bi-star-fill"></i>
                                                 </button>
                                             </div>
@@ -106,7 +106,7 @@
                         </div>
                         <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
                             <p>
-                                <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                                <input class="form-control" disabled="@(this.searchIsInProgress || this.listPinnedIsInProgress)" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
                             </p>
                             <div class="overflow-auto">
                                 @if (this.searchIsInProgress)
@@ -132,10 +132,17 @@
                                                 var foundItem = this.itemsFound[i];
                                                 <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
                                                     <div class="w-80">
-                                                        @ItemTemplate(foundItem)
+                                                        @ItemTemplate(foundItem.item)
                                                     </div>
-                                                    <button type="button" class="ms-auto btn btn-link @(this.selectedFoundItemIndex == foundItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchSelectedItemPinAsync(foundItemIndex)">
-                                                        <i class="bi bi-star"></i>
+                                                    <button type="button" class="ms-auto btn btn-link @(this.selectedFoundItemIndex == foundItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchItemPinAsync(foundItem.item, !foundItem.isPinned)">
+                                                        @if (foundItem.isPinned)
+                                                        {
+                                                            <i class="bi bi-star-fill"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-star"></i>
+                                                        }
                                                     </button>
                                                 </div>
                                             }
@@ -187,7 +194,7 @@
                                         var foundItem = this.itemsFound[i];
                                         <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
                                             <div class="w-100">
-                                                @ItemTemplate(foundItem)
+                                                @ItemTemplate(foundItem.item)
                                             </div>
                                         </div>
                                     }
@@ -232,9 +239,6 @@
     public string Placeholder { get; set; } = string.Empty;
 
     [Parameter]
-    public RenderFragment<TItem> PinnedItemTemplate { get; set; } = default!;
-
-    [Parameter]
     public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
 
     [Parameter]
@@ -245,6 +249,9 @@
 
     [Parameter]
     public Func<Task<BaseResponseObject<List<TItem>>>> ListPinnedItemsAsyncCallback { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool, Task<BaseResponseObject<TItem>>> SwitchItemPinAsyncCallback { get; set; }
 
     [Parameter]
     public Action OnClosedCallback { get; set; }
@@ -260,7 +267,7 @@
     private string latestSearchString = string.Empty;
 
     private int selectedFoundItemIndex = -1;
-    private List<TItem> itemsFound = [];
+    private List<(TItem item, bool isPinned)> itemsFound = [];
 
     private bool listPinnedIsInProgress = false;
     private int selectedPinnedItemIndex = -1;
@@ -366,7 +373,7 @@
                 return;
             }
 
-            this.itemsFound = itemsResult.Result ?? Array.Empty<TItem>().ToList();
+            this.itemsFound = itemsResult.Result?.Select(x => (item: x, isPinned: this.IsPinnedItem(x))).ToList() ?? Array.Empty<(TItem item, bool isPinned)>().ToList();
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -381,16 +388,12 @@
 
     private void SwitchSelectedItem(int itemIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == itemIndex ? -1 : itemIndex;
 
-    private async Task SwitchSelectedItemPinAsync(int itemIndex)
-    {
-        Console.WriteLine($"SWITCH SELECTED ITEM PIN {itemIndex}");
-    }
-
     private void SwitchSelectedPinnedItem(int itemIndex) => this.selectedPinnedItemIndex = this.selectedPinnedItemIndex == itemIndex ? -1 : itemIndex;
 
-    private async Task UnpinItemAsync(int itemIndex)
+    private async Task SwitchItemPinAsync(TItem item, bool newPinnedValue)
     {
-        Console.WriteLine($"UNPIN ITEM {itemIndex}");
+        Console.WriteLine($"{nameof(SwitchItemPinAsync)}: {item}, new pinned value: {newPinnedValue}");
+        await Task.CompletedTask;
     }
 
     private void FinishUserPick()
@@ -469,7 +472,7 @@
                 return;
             }
 
-            this.pinnedItems = pinnedItemsResponse.Result ?? Array.Empty<TItem>().ToList();
+            this.pinnedItems = pinnedItemsResponse.Result?.ToList() ?? Array.Empty<TItem>().ToList();
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -495,10 +498,12 @@
                 return this.selectedPinnedItemIndex >= 0 ? this.pinnedItems[this.selectedPinnedItemIndex] : default;
 
             case SearchTabIndex:
-                return this.selectedFoundItemIndex >= 0 ? this.itemsFound[this.selectedFoundItemIndex] : default;
+                return this.selectedFoundItemIndex >= 0 ? this.itemsFound[this.selectedFoundItemIndex].item : default;
 
             default:
                 return default;
         }
     }
+
+    private bool IsPinnedItem(TItem item) => this.pinnedItems.Contains(item);
 }
