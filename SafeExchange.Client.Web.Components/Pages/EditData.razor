@@ -32,7 +32,7 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
-<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems ListPinnedItemsAsyncCallback="this.ListPinnedGroupsAsync">
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems ListPinnedItemsAsyncCallback="this.ListPinnedGroupsAsync" SwitchItemPinAsyncCallback="this.SwitchGroupPinAsync">
     <ItemTemplate Context="group">
         <div class="px-2">
             <div class="text-truncate">
@@ -1009,6 +1009,63 @@
                 SubStatus = string.Empty,
                 Result = groups
             };
+    }
+
+    private async Task<BaseResponseObject<GraphGroupOutput>> SwitchGroupPinAsync(GraphGroupOutput item, bool newPinValue)
+    {
+        var resultResponse = new BaseResponseObject<GraphGroupOutput>()
+            {
+                Status = string.Empty,
+                SubStatus = string.Empty,
+                Result = new GraphGroupOutput()
+                {
+                    Id = item.Id,
+                    DisplayName = item.DisplayName,
+                    Mail = item.Mail
+                }
+            };
+
+        if (newPinValue)
+        {
+            var pinnedGroupResponse = await this.apiClient.PutPinnedGroupAsync(item.Id, new PinnedGroupInput()
+                {
+                    GroupId = item.Id,
+                    GroupDisplayName = item.DisplayName,
+                    GroupMail = item.Mail
+                });
+
+            resultResponse.Status = pinnedGroupResponse.Status;
+            resultResponse.SubStatus = pinnedGroupResponse.SubStatus;
+            resultResponse.Error = pinnedGroupResponse.Error;
+
+            if (pinnedGroupResponse.Status == "ok" && pinnedGroupResponse.Result != default)
+            {
+                resultResponse.Result.Id = pinnedGroupResponse.Result.GroupId;
+                resultResponse.Result.DisplayName = pinnedGroupResponse.Result.GroupDisplayName;
+                resultResponse.Result.Mail = pinnedGroupResponse.Result.GroupMail;
+            }
+
+            var pinnedGroupIndex = this.StateContainer.PinnedGroups.FindIndex(x => x.GroupId.Equals(item.Id));
+            if (pinnedGroupIndex == -1)
+            {
+                this.StateContainer.PinnedGroups.Add(new PinnedGroup(item.Id, item.DisplayName, item.Mail));
+            }
+        }
+        else
+        {
+            var pinnedGroupDeletionResponse = await this.apiClient.DeletePinnedGroupAsync(item.Id);
+            resultResponse.Status = pinnedGroupDeletionResponse.Status;
+            resultResponse.SubStatus = pinnedGroupDeletionResponse.SubStatus;
+            resultResponse.Error = pinnedGroupDeletionResponse.Error;
+
+            var pinnedGroupIndex = this.StateContainer.PinnedGroups.FindIndex(x => x.GroupId.Equals(item.Id));
+            if (pinnedGroupIndex >= 0)
+            {
+                this.StateContainer.PinnedGroups.RemoveAt(pinnedGroupIndex);
+            }
+        }
+
+        return resultResponse;
     }
 
     public void FinishGroupPick(GraphGroupOutput pickedGroup)
