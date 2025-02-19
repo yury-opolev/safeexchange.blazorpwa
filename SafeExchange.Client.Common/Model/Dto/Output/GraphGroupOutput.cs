@@ -14,6 +14,21 @@ namespace SafeExchange.Client.Common.Model
 
         public string? Mail { get; set; }
 
+        public override bool Equals(object? obj)
+        {
+            if (obj == null)
+            {
+                return false;
+            }
+
+            if (obj is not GraphGroupOutput groupObj)
+            {
+                return false;
+            }
+
+            return this.Equals(groupObj);
+        }
+
         public bool Equals(GraphGroupOutput? other)
         {
             if (other == default)
