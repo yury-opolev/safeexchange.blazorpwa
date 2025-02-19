@@ -47,6 +47,11 @@
     .top-row a, .top-row .btn-link {
         margin-left: 0;
     }
+
+    .main > div {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+    }
 }
 
 @media (min-width: 641px) {

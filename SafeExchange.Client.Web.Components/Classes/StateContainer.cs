@@ -54,6 +54,12 @@ namespace SafeExchange.Client.Web.Components
 
         public List<Group> RegisteredGroups { get; set; }
 
+        public bool IsFetchingPinnedGroups { get; set; }
+
+        public DateTime PinnedGroupsFetchedAt { get; set; } = DateTime.MinValue;
+
+        public List<PinnedGroup> PinnedGroups { get; set; } = [];
+
         private ILogger logger;
 
         public StateContainer(ILogger<StateContainer> logger)
@@ -111,7 +117,7 @@ namespace SafeExchange.Client.Web.Components
                     var accessRequests = requests.Result.Select(ar => new AccessRequest(ar)).ToList();
                     foreach (var accessRequest in accessRequests)
                     {
-                        if (accessRequest.Requestor.Equals(currentUserUpn))
+                        if (accessRequest.RequestorName.Equals(currentUserUpn))
                         {
                             this.OutgoingAccessRequests.Add(accessRequest);
                         }
@@ -200,6 +206,38 @@ namespace SafeExchange.Client.Web.Components
             finally
             {
                 this.IsFetchingGroups = false;
+                NotifyStateChanged();
+            }
+        }
+
+        public async Task<ResponseStatus> TryFetchPinnedGroups(ApiClient apiClient)
+        {
+            if (this.PinnedGroupsFetchedAt != DateTime.MinValue)
+            {
+                return new ResponseStatus() { Status = "ok" }; // already fetched
+            }
+
+            this.IsFetchingPinnedGroups = true;
+
+            try
+            {
+                var pinnedGroupsResponse = await apiClient.ListPinnedGroupsAsync();
+                if (pinnedGroupsResponse.Status == "ok")
+                {
+                    var pinnedGroups = pinnedGroupsResponse.Result.Select(g => new PinnedGroup(g)).ToList();
+                    this.PinnedGroups = pinnedGroups ?? [];
+                    this.PinnedGroupsFetchedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    // no-op
+                }
+
+                return pinnedGroupsResponse.ToResponseStatus();
+            }
+            finally
+            {
+                this.IsFetchingPinnedGroups = false;
                 NotifyStateChanged();
             }
         }

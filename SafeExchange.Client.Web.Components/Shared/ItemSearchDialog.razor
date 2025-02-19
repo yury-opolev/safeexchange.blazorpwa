@@ -7,7 +7,7 @@
 
 @implements IDisposable
 
-@typeparam TItem
+@typeparam TItem where TItem : class
 
 @inject NavigationManager NavManager
 @inject ItemPickDialogHelper itemPickDialogHelper
@@ -23,7 +23,6 @@
             </div>
 
             <div class="modal-body d-flex flex-column" style="height: 320px;">
-
                 @if (this.Notification != null)
                 {
                     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
@@ -43,61 +42,209 @@
                     </div>
                 }
 
-                <p>
-                    <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
-                </p>
-                <div class="overflow-auto">
-                    @if (this.searchIsInProgress)
-                    {
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                <div class="px-2">
-                                    <div>
-                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                    </div>
-                                </div>
-                            </li>
-                        </ul>
-                    }
-                    else
-                    {
-                        @if (this.itemsFound.Count > 0)
-                        {
-                            <ul class="list-group list-group-flush">
-                                @for (int i = 0; i < this.itemsFound.Count; i++)
+                @if (this.UsePinnedItems)
+                {
+                    <ul class="nav nav-tabs" id="mainContentTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="pinned-items-tab" data-bs-toggle="tab" data-bs-target="#pinned-items" type="button" role="tab" aria-controls="pinned-items" aria-selected="true" @onclick="() => this.SetActiveTab(PinnedItemsTabIndex)">
+                                Pinned items
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab" aria-controls="search" aria-selected="false" @onclick="() => this.SetActiveTab(SearchTabIndex)">
+                                Search
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content py-2" id="mainContent">
+                        <div class="tab-pane fade show active" id="pinned-items" role="tabpanel" aria-labelledby="pinned-items-tab">
+                            @if (this.listPinnedIsInProgress)
+                            {
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">
+                                        <div class="px-2">
+                                            <div>
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            }
+                            else
+                            {
+                                @if (this.pinnedItems.Count > 0)
                                 {
-                                    var foundItemIndex = i;
-                                    var foundItem = this.itemsFound[i];
-                                    <button type="button" class="list-group-item list-group-item-action @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
-                                        @ItemTemplate(foundItem)
-                                    </button>
+                                    <ul class="list-group list-group-flush">
+                                        @for (int i = 0; i < this.pinnedItems.Count; i++)
+                                        {
+                                            var pinnedItemIndex = i;
+                                            var pinnedItem = this.pinnedItems[i];
+                                            <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
+                                                <div class="w-80">
+                                                    @ItemTemplate(pinnedItem.Item)
+                                                </div>
+                                                <button type="button" class="ms-auto btn btn-link @(this.selectedPinnedItemIndex == pinnedItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchItemPinAsync(pinnedItem.Item, false)">
+                                                    @if (pinnedItem.IsInProgress)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-star-fill"></i>
+                                                    }
+                                                </button>
+                                            </div>
+                                        }
+                                    </ul>
                                 }
-                            </ul>
-                        }
-                        else
+                                else
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <div class="px-2">
+                                                <div>
+                                                    - No pinned items -
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                }
+                            }
+                        </div>
+                        <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
+                            <p>
+                                <input class="form-control" disabled="@(this.searchIsInProgress || this.listPinnedIsInProgress)" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                            </p>
+                            <div class="overflow-auto">
+                                @if (this.searchIsInProgress)
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <div class="px-2">
+                                                <div>
+                                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                }
+                                else
+                                {
+                                    @if (this.itemsFound.Count > 0)
+                                    {
+                                        <ul class="list-group list-group-flush">
+                                            @for (int i = 0; i < this.itemsFound.Count; i++)
+                                            {
+                                                var foundItemIndex = i;
+                                                var foundItem = this.itemsFound[i];
+                                                <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                                    <div class="w-80">
+                                                        @ItemTemplate(foundItem.Item)
+                                                    </div>
+                                                    <button type="button" class="ms-auto btn btn-link @(this.selectedFoundItemIndex == foundItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchItemPinAsync(foundItem.Item, !foundItem.IsPinned)">
+                                                        @if (foundItem.IsInProgress)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                        }
+                                                        else
+                                                        {
+                                                            @if (foundItem.IsPinned)
+                                                            {
+                                                                <i class="bi bi-star-fill"></i>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="bi bi-star"></i>
+                                                            }
+                                                        }
+                                                    </button>
+                                                </div>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item">
+                                                <div class="px-2">
+                                                    <div>
+                                                        - No data -
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <p>
+                        <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
+                    </p>
+                    <div class="overflow-auto">
+                        @if (this.searchIsInProgress)
                         {
                             <ul class="list-group list-group-flush">
                                 <li class="list-group-item">
                                     <div class="px-2">
                                         <div>
-                                            - No users -
+                                            <span class="spinner-border spinner-border-sm" role="status"></span>
                                         </div>
                                     </div>
                                 </li>
                             </ul>
                         }
-                    }
-                </div>
+                        else
+                        {
+                            @if (this.itemsFound.Count > 0)
+                            {
+                                <ul class="list-group list-group-flush">
+                                    @for (int i = 0; i < this.itemsFound.Count; i++)
+                                    {
+                                        var foundItemIndex = i;
+                                        var foundItem = this.itemsFound[i];
+                                        <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedFoundItemIndex == foundItemIndex ? "active" : "")" aria-current="@(this.selectedFoundItemIndex == foundItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedItem(foundItemIndex)">
+                                            <div class="w-100">
+                                                @ItemTemplate(foundItem.Item)
+                                            </div>
+                                        </div>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">
+                                        <div class="px-2">
+                                            <div>
+                                                - No data -
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            }
+                        }
+                    </div>
+                }
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" @onclick="this.OnStopItemSearch">Cancel</button>
-                <button type="button" class="btn btn-success" data-bs-dismiss="modal" disabled="@(this.selectedFoundItemIndex < 0)" @onclick="this.FinishUserPick">OK</button>
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" disabled="@(this.GetSelectedItem() == default)" @onclick="this.FinishUserPick">OK</button>
             </div>
         </div>
     </div>
 </div>
 
 @code {
+
+    private const int PinnedItemsTabIndex = 0;
+    private const int SearchTabIndex = 1;
+
+    [Parameter]
+    public bool UsePinnedItems { get; set; } = false;
 
     [Parameter]
     public string DialogTitle { get; set; } = string.Empty;
@@ -115,6 +262,12 @@
     public Func<SearchInput, Task<BaseResponseObject<List<TItem>>>> SearchItemsAsyncCallback { get; set; }
 
     [Parameter]
+    public Func<Task<BaseResponseObject<List<TItem>>>> ListPinnedItemsAsyncCallback { get; set; }
+
+    [Parameter]
+    public Func<TItem, bool, Task<BaseResponseObject<TItem>>> SwitchItemPinAsyncCallback { get; set; }
+
+    [Parameter]
     public Action OnClosedCallback { get; set; }
 
     private NotificationData Notification;
@@ -128,7 +281,13 @@
     private string latestSearchString = string.Empty;
 
     private int selectedFoundItemIndex = -1;
-    private List<TItem> itemsFound = [];
+    private List<SearchDialogItemHolder<TItem>> itemsFound = [];
+
+    private bool listPinnedIsInProgress = false;
+    private int selectedPinnedItemIndex = -1;
+    private List<SearchDialogItemHolder<TItem>> pinnedItems = [];
+
+    private int currentTabIndex;
 
     public void Dispose()
     {
@@ -143,10 +302,14 @@
         this.selectedFoundItemIndex = -1;
 
         await this.itemPickDialogHelper.ShowModalAsync(this.modalDialog);
+
+        this.selectedPinnedItemIndex = -1;
+        await this.TryListPinnedItemsAsync();
     }
 
     protected override void OnInitialized()
     {
+        this.currentTabIndex = this.UsePinnedItems ? PinnedItemsTabIndex : SearchTabIndex;
         this.searchTimer.Elapsed += OnTimerElapsed;
     }
 
@@ -201,30 +364,22 @@
             var itemsResult = await this.SearchItemsAsyncCallback?.Invoke(serchInput) ?? new BaseResponseObject<List<TItem>>() { Result = [] };
             if (!"ok".Equals(itemsResult.Status) && !"no_content".Equals(itemsResult.Status))
             {
-                var consentRequired = false;
-                var message = itemsResult.Error ?? string.Empty;
-                var buttonText = "forbidden".Equals(itemsResult.Status) ? "Consent" : string.Empty;
-                if ("consent_required".Equals(itemsResult.SubStatus))
-                {
-                    consentRequired = true;
-                    message = "User must give consent in Entra to read all users basic profiles in order to search users.";
-                    buttonText = "Consent";
-                }
-
                 this.Notification = new NotificationData()
                     {
                         Type = NotificationType.Warning,
                         Status = itemsResult.Status,
-                        Message = message,
-                        ButtonText = buttonText,
+                        Message = itemsResult.Error ?? string.Empty,
+                        ButtonText = string.Empty,
                         ButtonUri = "/",
-                        ConsentRequired = consentRequired
+                        ConsentRequired = false
                     };
 
                 return;
             }
 
-            this.itemsFound = itemsResult.Result;
+            this.itemsFound =
+                itemsResult.Result?.Select(x => new SearchDialogItemHolder<TItem>(x, this.IsPinnedItem(x), false)).ToList()
+                    ?? Array.Empty<SearchDialogItemHolder<TItem>>().ToList();
         }
         catch (AccessTokenNotAvailableException exception)
         {
@@ -237,14 +392,97 @@
         }
     }
 
-    private void SwitchSelectedItem(int userIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == userIndex ? -1 : userIndex;
+    private void SwitchSelectedItem(int itemIndex) => this.selectedFoundItemIndex = this.selectedFoundItemIndex == itemIndex ? -1 : itemIndex;
+
+    private void SwitchSelectedPinnedItem(int itemIndex) => this.selectedPinnedItemIndex = this.selectedPinnedItemIndex == itemIndex ? -1 : itemIndex;
+
+    private async Task SwitchItemPinAsync(TItem item, bool newPinValue)
+    {
+        var pinnedItemIndex = this.pinnedItems.FindIndex(x => x.Item.Equals(item));
+        if (pinnedItemIndex >= 0)
+        {
+            var pinnedItemToChange = this.pinnedItems[pinnedItemIndex];
+            pinnedItemToChange.IsInProgress = true;
+        }
+
+        var foundItemIndex = this.itemsFound.FindIndex(x => x.Item.Equals(item));
+        if (foundItemIndex >= 0)
+        {
+            var foundItemToChange = this.itemsFound[foundItemIndex];
+            foundItemToChange.IsInProgress = true;
+        }
+
+        this.StateHasChanged();
+
+        try
+        {
+            var itemResult = await this.SwitchItemPinAsyncCallback?.Invoke(item, newPinValue) ?? new BaseResponseObject<TItem>() { Result = item };
+            if (!"ok".Equals(itemResult.Status))
+            {
+                this.Notification = new NotificationData()
+                    {
+                        Type = NotificationType.Warning,
+                        Status = itemResult.Status,
+                        Message = itemResult.Error ?? string.Empty,
+                        ButtonText = string.Empty,
+                        ButtonUri = "/",
+                        ConsentRequired = false
+                    };
+
+                return;
+            }
+
+            if (!newPinValue)
+            {
+                if (pinnedItemIndex >= 0)
+                {
+                    this.pinnedItems.RemoveAt(pinnedItemIndex);
+                    pinnedItemIndex = -1;
+                }
+
+                if (foundItemIndex >= 0)
+                {
+                    var foundItemToChange = this.itemsFound[foundItemIndex];
+                    foundItemToChange.IsPinned = newPinValue;
+                }
+            }
+            else
+            {
+                if (foundItemIndex >= 0)
+                {
+                    var foundItemToChange = this.itemsFound[foundItemIndex];
+                    foundItemToChange.IsPinned = newPinValue;
+                }
+
+                this.pinnedItems.Add(new SearchDialogItemHolder<TItem>(itemResult.Result, newPinValue, false));
+                pinnedItemIndex = this.pinnedItems.Count - 1;
+            }
+        }
+        finally
+        {
+            if (pinnedItemIndex >= 0)
+            {
+                var pinnedItemToChange = this.pinnedItems[pinnedItemIndex];
+                pinnedItemToChange.IsInProgress = false;
+            }
+
+            if (foundItemIndex >= 0)
+            {
+                var foundItemToChange = this.itemsFound[foundItemIndex];
+                foundItemToChange.IsInProgress = false;
+            }
+
+            this.StateHasChanged();
+        }
+
+    }
 
     private void FinishUserPick()
     {
-        if (this.selectedFoundItemIndex >= 0)
+        var selectedItem = this.GetSelectedItem();
+        if (selectedItem != default)
         {
-            var item = this.itemsFound[this.selectedFoundItemIndex];
-            this.OnItemPickedCallback?.Invoke(item);
+            this.OnItemPickedCallback?.Invoke(selectedItem);
         }
 
         this.OnStopItemSearch();
@@ -275,5 +513,74 @@
         }
 
         this.NavManager.NavigateTo(this.Notification.ButtonUri);
+    }
+
+    private async Task TryListPinnedItemsAsync()
+    {
+        if (!this.UsePinnedItems)
+        {
+            return;
+        }
+
+        this.listPinnedIsInProgress = true;
+        this.StateHasChanged();
+
+        try
+        {
+            var pinnedItemsResponse = await this.ListPinnedItemsAsyncCallback();
+            if (!"ok".Equals(pinnedItemsResponse.Status) && !"no_content".Equals(pinnedItemsResponse.Status))
+            {
+                this.Notification = new NotificationData()
+                    {
+                        Type = NotificationType.Warning,
+                        Status = pinnedItemsResponse.Status,
+                        Message = pinnedItemsResponse.Error ?? string.Empty,
+                        ButtonText = string.Empty,
+                        ButtonUri = "/",
+                        ConsentRequired = false
+                    };
+
+                return;
+            }
+
+            this.pinnedItems =
+                pinnedItemsResponse.Result?.Select(x => new SearchDialogItemHolder<TItem>(x, true, false)).ToList()
+                    ?? Array.Empty<SearchDialogItemHolder<TItem>>().ToList();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.listPinnedIsInProgress = false;
+            this.StateHasChanged();
+        }
+    }
+
+    private void SetActiveTab(int tabIndex)
+    {
+        this.currentTabIndex = tabIndex;
+    }
+
+    private TItem? GetSelectedItem()
+    {
+        switch (this.currentTabIndex)
+        {
+            case PinnedItemsTabIndex:
+                return this.selectedPinnedItemIndex >= 0 ? this.pinnedItems[this.selectedPinnedItemIndex].Item : default;
+
+            case SearchTabIndex:
+                return this.selectedFoundItemIndex >= 0 ? this.itemsFound[this.selectedFoundItemIndex].Item : default;
+
+            default:
+                return default;
+        }
+    }
+
+    private bool IsPinnedItem(TItem item)
+    {
+        var pinnedItem = this.pinnedItems.FirstOrDefault(x => x.Item.Equals(item));
+        return pinnedItem != default;
     }
 }

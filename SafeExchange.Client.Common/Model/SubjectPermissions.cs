@@ -16,6 +16,7 @@ namespace SafeExchange.Client.Common.Model
             this.ObjectName = source.ObjectName;
             this.SubjectType = source.SubjectType.ToSubjectType();
             this.SubjectName = source.SubjectName;
+            this.SubjectId = source.SubjectId;
 
             this.CanRead = source.CanRead;
             this.CanWrite = source.CanWrite;
@@ -28,6 +29,8 @@ namespace SafeExchange.Client.Common.Model
         public SubjectType SubjectType { get; set; }
 
         public string SubjectName { get; set; }
+
+        public string SubjectId { get; set; }
 
         public bool CanRead { get; set; }
 
@@ -58,6 +61,7 @@ namespace SafeExchange.Client.Common.Model
         {
             SubjectType = this.SubjectType.ToDto(),
             SubjectName = this.SubjectName,
+            SubjectId = this.SubjectId,
 
             CanRead = this.CanRead,
             CanWrite = this.CanWrite,

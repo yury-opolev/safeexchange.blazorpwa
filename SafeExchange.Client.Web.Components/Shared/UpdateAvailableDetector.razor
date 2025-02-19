@@ -1,0 +1,39 @@
+﻿@using Microsoft.JSInterop
+
+@inject IJSRuntime JS
+
+@if (this.newVersionAvailable)
+{
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show bg-warning" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Update</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                A new version is available. Click here to reload.
+                <div class="mt-2 pt-2">
+                    <button type="button" class="btn btn-light" onclick="window.location.reload()">Reload</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+
+    private bool newVersionAvailable = false;
+
+    protected override async Task OnInitializedAsync() => await RegisterForUpdateAvailableNotification();
+
+    private async Task RegisterForUpdateAvailableNotification()
+        => await JS.InvokeAsync<object>("registerForUpdateAvailableNotification", DotNetObjectReference.Create(this), nameof(OnUpdateAvailable));
+
+    [JSInvokable(nameof(OnUpdateAvailable))]
+    public Task OnUpdateAvailable()
+    {
+        this.newVersionAvailable = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+}

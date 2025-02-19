@@ -16,7 +16,8 @@ namespace SafeExchange.Client.Common.Model
         {
             this.Id = source.Id;
             this.RequestorType = source.SubjectType.ToSubjectType();
-            this.Requestor = source.SubjectName;
+            this.RequestorName = source.SubjectName;
+            this.RequestorId = source.SubjectId;
             this.SecretName = source.ObjectName;
 
             this.CanRead = source.CanRead;
@@ -31,7 +32,9 @@ namespace SafeExchange.Client.Common.Model
 
         public SubjectType RequestorType { get; set; }
 
-        public string Requestor { get; set; }
+        public string RequestorName { get; set; }
+
+        public string RequestorId { get; set; }
 
         public string SecretName { get; set; }
 
