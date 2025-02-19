@@ -530,24 +530,14 @@
             var pinnedItemsResponse = await this.ListPinnedItemsAsyncCallback();
             if (!"ok".Equals(pinnedItemsResponse.Status) && !"no_content".Equals(pinnedItemsResponse.Status))
             {
-                var consentRequired = false;
-                var message = pinnedItemsResponse.Error ?? string.Empty;
-                var buttonText = "forbidden".Equals(pinnedItemsResponse.Status) ? "Consent" : string.Empty;
-                if ("consent_required".Equals(pinnedItemsResponse.SubStatus))
-                {
-                    consentRequired = true;
-                    message = "User must give consent in Entra to read all users basic profiles in order to search users.";
-                    buttonText = "Consent";
-                }
-
                 this.Notification = new NotificationData()
                     {
                         Type = NotificationType.Warning,
                         Status = pinnedItemsResponse.Status,
-                        Message = message,
-                        ButtonText = buttonText,
+                        Message = pinnedItemsResponse.Error ?? string.Empty,
+                        ButtonText = string.Empty,
                         ButtonUri = "/",
-                        ConsentRequired = consentRequired
+                        ConsentRequired = false
                     };
 
                 return;
