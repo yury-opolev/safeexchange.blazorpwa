@@ -364,24 +364,14 @@
             var itemsResult = await this.SearchItemsAsyncCallback?.Invoke(serchInput) ?? new BaseResponseObject<List<TItem>>() { Result = [] };
             if (!"ok".Equals(itemsResult.Status) && !"no_content".Equals(itemsResult.Status))
             {
-                var consentRequired = false;
-                var message = itemsResult.Error ?? string.Empty;
-                var buttonText = "forbidden".Equals(itemsResult.Status) ? "Consent" : string.Empty;
-                if ("consent_required".Equals(itemsResult.SubStatus))
-                {
-                    consentRequired = true;
-                    message = "User must give consent in Entra to read all users basic profiles in order to search users.";
-                    buttonText = "Consent";
-                }
-
                 this.Notification = new NotificationData()
                     {
                         Type = NotificationType.Warning,
                         Status = itemsResult.Status,
-                        Message = message,
-                        ButtonText = buttonText,
+                        Message = itemsResult.Error ?? string.Empty,
+                        ButtonText = string.Empty,
                         ButtonUri = "/",
-                        ConsentRequired = consentRequired
+                        ConsentRequired = false
                     };
 
                 return;
@@ -406,10 +396,8 @@
 
     private void SwitchSelectedPinnedItem(int itemIndex) => this.selectedPinnedItemIndex = this.selectedPinnedItemIndex == itemIndex ? -1 : itemIndex;
 
-    private async Task SwitchItemPinAsync(TItem item, bool newPinnedValue)
+    private async Task SwitchItemPinAsync(TItem item, bool newPinValue)
     {
-        Console.WriteLine($"{nameof(SwitchItemPinAsync)}: {item}, new pinned value: {newPinnedValue}");
-
         var pinnedItemIndex = this.pinnedItems.FindIndex(x => x.Item.Equals(item));
         if (pinnedItemIndex >= 0)
         {
@@ -428,11 +416,47 @@
 
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(3));
-        }
-        catch (AccessTokenNotAvailableException exception)
-        {
-            exception.Redirect();
+            var itemResult = await this.SwitchItemPinAsyncCallback?.Invoke(item, newPinValue) ?? new BaseResponseObject<TItem>() { Result = item };
+            if (!"ok".Equals(itemResult.Status))
+            {
+                this.Notification = new NotificationData()
+                    {
+                        Type = NotificationType.Warning,
+                        Status = itemResult.Status,
+                        Message = itemResult.Error ?? string.Empty,
+                        ButtonText = string.Empty,
+                        ButtonUri = "/",
+                        ConsentRequired = false
+                    };
+
+                return;
+            }
+
+            if (!newPinValue)
+            {
+                if (pinnedItemIndex >= 0)
+                {
+                    this.pinnedItems.RemoveAt(pinnedItemIndex);
+                    pinnedItemIndex = -1;
+                }
+
+                if (foundItemIndex >= 0)
+                {
+                    var foundItemToChange = this.itemsFound[foundItemIndex];
+                    foundItemToChange.IsPinned = newPinValue;
+                }
+            }
+            else
+            {
+                if (foundItemIndex >= 0)
+                {
+                    var foundItemToChange = this.itemsFound[foundItemIndex];
+                    foundItemToChange.IsPinned = newPinValue;
+                }
+
+                this.pinnedItems.Add(new SearchDialogItemHolder<TItem>(item, newPinValue, false));
+                pinnedItemIndex = this.pinnedItems.Count - 1;
+            }
         }
         finally
         {

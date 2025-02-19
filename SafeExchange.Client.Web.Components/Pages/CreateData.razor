@@ -28,7 +28,7 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
-<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems ListPinnedItemsAsyncCallback="this.ListPinnedGroupsAsync">
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..." OnItemPickedCallback="this.FinishGroupPick" SearchItemsAsyncCallback="this.SearchGroupsAsync" OnClosedCallback="() => this.StateHasChanged()" UsePinnedItems ListPinnedItemsAsyncCallback="this.ListPinnedGroupsAsync" SwitchItemPinAsyncCallback="this.SwitchGroupPinAsync">
     <ItemTemplate Context="group">
         <div class="px-2">
             <div class="text-truncate">
@@ -216,10 +216,10 @@
                 <div class="col-2">
                     <div class="form-floating">
                         <InputSelect id="@($"usertype-input-{i}")" class="form-select" disabled="@this.StateContainer.IsInProgress"
-                                     ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
-                                     Value="@compoundModel.Permissions[tempIndex].SubjectType"
-                                     ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
-                                     placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
+                        ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
+                        Value="@compoundModel.Permissions[tempIndex].SubjectType"
+                        ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
+                        placeholder="Type" aria-describedby="@($"ut-validation-{i}")">
                             @foreach (var value in Enum.GetValues(typeof(SubjectType)))
                             {
                                 <option>@value</option>
@@ -639,6 +639,19 @@
                 Status = "ok",
                 SubStatus = string.Empty,
                 Result = groups
+            };
+    }
+
+    private async Task<BaseResponseObject<GraphGroupOutput>> SwitchGroupPinAsync(GraphGroupOutput item, bool newPinValue)
+    {
+        // TODO
+        await Task.Delay(TimeSpan.FromSeconds(2));
+
+        return new BaseResponseObject<GraphGroupOutput>()
+            {
+                Status = "ok",
+                SubStatus = string.Empty,
+                Result = item
             };
     }
 
