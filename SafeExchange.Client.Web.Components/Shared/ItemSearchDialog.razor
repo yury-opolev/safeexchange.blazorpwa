@@ -454,7 +454,7 @@
                     foundItemToChange.IsPinned = newPinValue;
                 }
 
-                this.pinnedItems.Add(new SearchDialogItemHolder<TItem>(item, newPinValue, false));
+                this.pinnedItems.Add(new SearchDialogItemHolder<TItem>(itemResult.Result, newPinValue, false));
                 pinnedItemIndex = this.pinnedItems.Count - 1;
             }
         }

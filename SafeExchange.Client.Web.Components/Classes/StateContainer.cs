@@ -56,7 +56,9 @@ namespace SafeExchange.Client.Web.Components
 
         public bool IsFetchingPinnedGroups { get; set; }
 
-        public List<PinnedGroup> PinnedGroups { get; set; }
+        public DateTime PinnedGroupsFetchedAt { get; set; } = DateTime.MinValue;
+
+        public List<PinnedGroup> PinnedGroups { get; set; } = [];
 
         private ILogger logger;
 
@@ -210,7 +212,7 @@ namespace SafeExchange.Client.Web.Components
 
         public async Task<ResponseStatus> TryFetchPinnedGroups(ApiClient apiClient)
         {
-            if (this.PinnedGroups != null)
+            if (this.PinnedGroupsFetchedAt != DateTime.MinValue)
             {
                 return new ResponseStatus() { Status = "ok" }; // already fetched
             }
@@ -224,6 +226,7 @@ namespace SafeExchange.Client.Web.Components
                 {
                     var pinnedGroups = pinnedGroupsResponse.Result.Select(g => new PinnedGroup(g)).ToList();
                     this.PinnedGroups = pinnedGroups ?? [];
+                    this.PinnedGroupsFetchedAt = DateTime.UtcNow;
                 }
                 else
                 {
