@@ -437,6 +437,16 @@
                 if (pinnedItemIndex >= 0)
                 {
                     this.pinnedItems.RemoveAt(pinnedItemIndex);
+                    if (this.selectedPinnedItemIndex == pinnedItemIndex)
+                    {
+                        this.selectedPinnedItemIndex = -1;
+                    }
+
+                    if (this.selectedPinnedItemIndex > pinnedItemIndex)
+                    {
+                        this.selectedPinnedItemIndex -= 1;
+                    }
+
                     pinnedItemIndex = -1;
                 }
 
