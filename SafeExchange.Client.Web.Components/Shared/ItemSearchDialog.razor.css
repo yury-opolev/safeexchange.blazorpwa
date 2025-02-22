@@ -1,0 +1,19 @@
+﻿
+.itemsearch-dialog {
+    height: 320px;
+}
+
+.itemsearch-dialog-listparent {
+    display: flex;
+    height: 200px;
+}
+
+.itemsearch-dialog-listparent-pinned {
+    display: flex;
+    height: 254px;
+}
+
+.itemsearch-dialog-list {
+    height: 100%;
+    overflow: auto;
+}

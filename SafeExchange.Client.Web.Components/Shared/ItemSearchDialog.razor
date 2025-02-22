@@ -22,7 +22,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @onclick="this.OnStopItemSearch"></button>
             </div>
 
-            <div class="modal-body d-flex flex-column" style="height: 320px;">
+            <div class="modal-body d-flex flex-column itemsearch-dialog">
                 @if (this.Notification != null)
                 {
                     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
@@ -58,67 +58,69 @@
                     </ul>
                     <div class="tab-content py-2" id="mainContent">
                         <div class="tab-pane fade show active" id="pinned-items" role="tabpanel" aria-labelledby="pinned-items-tab">
-                            @if (this.listPinnedIsInProgress)
-                            {
-                                <ul class="list-group list-group-flush">
-                                    <li class="list-group-item">
-                                        <div class="px-2">
-                                            <div>
-                                                <span class="spinner-border spinner-border-sm" role="status"></span>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            }
-                            else
-                            {
-                                @if (this.pinnedItems.Count > 0)
+                            <div class="itemsearch-dialog-listparent-pinned">
+                                @if (this.listPinnedIsInProgress)
                                 {
-                                    <ul class="list-group list-group-flush">
-                                        @for (int i = 0; i < this.pinnedItems.Count; i++)
-                                        {
-                                            var pinnedItemIndex = i;
-                                            var pinnedItem = this.pinnedItems[i];
-                                            <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
-                                                <div class="w-80">
-                                                    @ItemTemplate(pinnedItem.Item)
-                                                </div>
-                                                <button type="button" class="ms-auto btn btn-link @(this.selectedPinnedItemIndex == pinnedItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchItemPinAsync(pinnedItem.Item, false)">
-                                                    @if (pinnedItem.IsInProgress)
-                                                    {
-                                                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <i class="bi bi-star-fill"></i>
-                                                    }
-                                                </button>
-                                            </div>
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <ul class="list-group list-group-flush">
+                                    <ul class="list-group list-group-flush itemsearch-dialog-list">
                                         <li class="list-group-item">
                                             <div class="px-2">
                                                 <div>
-                                                    - No pinned items -
+                                                    <span class="spinner-border spinner-border-sm" role="status"></span>
                                                 </div>
                                             </div>
                                         </li>
                                     </ul>
                                 }
-                            }
+                                else
+                                {
+                                    @if (this.pinnedItems.Count > 0)
+                                    {
+                                        <ul class="list-group list-group-flush itemsearch-dialog-list">
+                                            @for (int i = 0; i < this.pinnedItems.Count; i++)
+                                            {
+                                                var pinnedItemIndex = i;
+                                                var pinnedItem = this.pinnedItems[i];
+                                                <div class="btn btn-outline-primary-noborder btn-text-align-left d-flex @(this.selectedPinnedItemIndex == pinnedItemIndex ? "active" : "")" aria-current="@(this.selectedPinnedItemIndex == pinnedItemIndex ? "true" : null)" @onclick="() => this.SwitchSelectedPinnedItem(pinnedItemIndex)">
+                                                    <div class="w-80">
+                                                        @ItemTemplate(pinnedItem.Item)
+                                                    </div>
+                                                    <button type="button" class="ms-auto btn btn-link @(this.selectedPinnedItemIndex == pinnedItemIndex ? "text-white" : "text-primary")" @onclick:stopPropagation="true" @onclick="() => this.SwitchItemPinAsync(pinnedItem.Item, false)">
+                                                        @if (pinnedItem.IsInProgress)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-star-fill"></i>
+                                                        }
+                                                    </button>
+                                                </div>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <ul class="list-group list-group-flush itemsearch-dialog-list">
+                                            <li class="list-group-item">
+                                                <div class="px-2">
+                                                    <div>
+                                                        - No pinned items -
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    }
+                                }
+                            </div>
                         </div>
                         <div class="tab-pane fade" id="search" role="tabpanel" aria-labelledby="search-tab">
                             <p>
                                 <input class="form-control" disabled="@(this.searchIsInProgress || this.listPinnedIsInProgress)" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
                             </p>
-                            <div class="overflow-auto">
+                            <div class="itemsearch-dialog-listparent">
                                 @if (this.searchIsInProgress)
                                 {
-                                    <ul class="list-group list-group-flush">
+                                    <ul class="list-group list-group-flush itemsearch-dialog-list">
                                         <li class="list-group-item">
                                             <div class="px-2">
                                                 <div>
@@ -132,7 +134,7 @@
                                 {
                                     @if (this.itemsFound.Count > 0)
                                     {
-                                        <ul class="list-group list-group-flush">
+                                        <ul class="list-group list-group-flush itemsearch-dialog-list">
                                             @for (int i = 0; i < this.itemsFound.Count; i++)
                                             {
                                                 var foundItemIndex = i;
@@ -164,7 +166,7 @@
                                     }
                                     else
                                     {
-                                        <ul class="list-group list-group-flush">
+                                        <ul class="list-group list-group-flush itemsearch-dialog-list">
                                             <li class="list-group-item">
                                                 <div class="px-2">
                                                     <div>
@@ -184,10 +186,10 @@
                     <p>
                         <input class="form-control" disabled="@this.searchIsInProgress" placeholder="@this.Placeholder" @bind="this.searchString" @bind:event="oninput" @bind:after="@this.ResetSearchTimer" />
                     </p>
-                    <div class="overflow-auto">
+                    <div class="itemsearch-dialog-listparent">
                         @if (this.searchIsInProgress)
                         {
-                            <ul class="list-group list-group-flush">
+                            <ul class="list-group list-group-flush itemsearch-dialog-list">
                                 <li class="list-group-item">
                                     <div class="px-2">
                                         <div>
@@ -201,7 +203,7 @@
                         {
                             @if (this.itemsFound.Count > 0)
                             {
-                                <ul class="list-group list-group-flush">
+                                <ul class="list-group list-group-flush itemsearch-dialog-list">
                                     @for (int i = 0; i < this.itemsFound.Count; i++)
                                     {
                                         var foundItemIndex = i;
@@ -216,7 +218,7 @@
                             }
                             else
                             {
-                                <ul class="list-group list-group-flush">
+                                <ul class="list-group list-group-flush itemsearch-dialog-list">
                                     <li class="list-group-item">
                                         <div class="px-2">
                                             <div>
