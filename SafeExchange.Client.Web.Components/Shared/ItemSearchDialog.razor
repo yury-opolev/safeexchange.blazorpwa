@@ -419,7 +419,7 @@
         try
         {
             var itemResult = await this.SwitchItemPinAsyncCallback?.Invoke(item, newPinValue) ?? new BaseResponseObject<TItem>() { Result = item };
-            if (!"ok".Equals(itemResult.Status))
+            if (!"ok".Equals(itemResult.Status) && !this.GroupWasUnpinnedPreviously(newPinValue, itemResult))
             {
                 this.Notification = new NotificationData()
                     {
@@ -488,6 +488,9 @@
         }
 
     }
+
+    private bool GroupWasUnpinnedPreviously(bool newPinValue, BaseResponseObject<TItem> response)
+        => !newPinValue && response.Status == "no_content";
 
     private void FinishUserPick()
     {
