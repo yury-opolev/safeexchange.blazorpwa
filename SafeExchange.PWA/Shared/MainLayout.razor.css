@@ -48,7 +48,7 @@
         margin-left: 0;
     }
 
-    .main > div {
+    .main > .content {
         padding-left: 0.5rem !important;
         padding-right: 0.5rem !important;
     }

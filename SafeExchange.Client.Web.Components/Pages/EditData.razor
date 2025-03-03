@@ -25,8 +25,8 @@
             <div class="text-truncate">
                 @user.DisplayName
             </div>
-            <div class="text-secondary text-truncate">
-                @user.UserPrincipalName
+            <div class="text-truncate">
+                <small>@user.UserPrincipalName</small>
             </div>
         </div>
     </ItemTemplate>
@@ -38,8 +38,8 @@
             <div class="text-truncate">
                 @group.DisplayName
             </div>
-            <div class="text-secondary text-truncate">
-                @(group.Mail ?? "- no mail -")
+            <div class="text-truncate">
+                <small>@(group.Mail ?? "- no mail -")</small>
             </div>
         </div>
     </ItemTemplate>
@@ -134,6 +134,7 @@
         <p>
             <div class="collapsible-content">
                 <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+                    <i class="bi bi-chevron-right"></i>
                     &nbsp; Attachments
                 </button>
                 <div class="collapse" id="collapseAttachments">
@@ -150,7 +151,7 @@
                                         <div>
                                             <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control bg-light")">
                                                 @attachment.FileName
-                                                <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                                                <small class="my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
                                             </span>
                                         </div>
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
@@ -180,7 +181,7 @@
                                             @switch (attachment.Status)
                                             {
                                                 case (UploadStatus.NotStarted):
-                                                    <i class="oi oi-file text-secondary"></i>
+                                                    <i class="oi oi-file"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
 
@@ -202,7 +203,7 @@
                                         </div>
                                         <div>
                                             <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
-                                            <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
+                                            <small class="my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
                                         </div>
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
                                             <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>

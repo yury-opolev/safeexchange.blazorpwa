@@ -11,11 +11,13 @@
     font-size: 1.1rem;
 }
 
-.oi {
-    width: 2rem;
-    font-size: 1.1rem;
-    vertical-align: text-top;
-    top: -2px;
+.bi {
+    display: inline-block;
+    position: relative;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 1.0rem;
+    background-size: cover;
 }
 
 .nav-item {
