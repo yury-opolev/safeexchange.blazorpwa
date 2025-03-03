@@ -57,7 +57,7 @@ a, .btn-link {
 }
 
 .text-removed {
-    background-color: pink !important;
+    background-color: var(--bs-danger-bg-subtle) !important;
     text-decoration-line: line-through !important;
 }
 

@@ -149,7 +149,7 @@
                                     var attachment = this.ExistingAttachments[ai];
                                     <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap attachment-row">
                                         <div>
-                                            <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control bg-light")">
+                                            <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control")">
                                                 @attachment.FileName
                                                 <small class="my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
                                             </span>
@@ -278,7 +278,7 @@
                 <div class="row align-items-center">
                     <div class="col-2">
                         <div class="form-floating">
-                            <InputSelect id="@($"usertype-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)"
+                            <InputSelect id="@($"usertype-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)"
                                          ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
                                          Value="@compoundModel.Permissions[tempIndex].SubjectType"
                                          ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
@@ -298,7 +298,7 @@
                             <div class="col">
                                 <div class="input-group">
                                     <div class="form-floating">
-                                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value:get="this.compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(this.compoundModel.Permissions[tempIndex], value); }" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
+                                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value:get="this.compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(this.compoundModel.Permissions[tempIndex], value); }" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
                                         <label for="@($"username-input-{i}")" class="form-label">Username</label>
                                     </div>
                                     <span class="narrow-floating-group input-group-text">
@@ -349,7 +349,7 @@
                         case (SubjectType.Application):
                             <div class="col">
                                 <div class="form-floating">
-                                    <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
+                                    <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
                                         @if (!this.StateContainer.IsFetchingApplications)
                                         {
                                             if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
@@ -381,14 +381,14 @@
                         @if (tempIndex < this.FixedAccessItemCount)
                         {
                             <div class="form-floating">
-                                <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
+                                <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
                                 <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
                             </div>
                         }
                         else
                         {
                             <div class="form-floating">
-                                <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                                <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
                                     <option>Read</option>
                                     <option>Read,Write</option>
                                     <option>Read,Write,GrantAccess</option>
