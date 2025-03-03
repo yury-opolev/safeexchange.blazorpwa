@@ -1,9 +1,10 @@
 ﻿@using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+@using SafeExchange.Client.Web.Components.Classes.Model
 @using SafeExchange.Client.Web.Components.Model;
 
 @inject NotificationsSubscriber subscriber
 
-<div class="modal fade" id="settingsDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+<div class="modal fade" id="settingsDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -11,17 +12,29 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mx-2">
-                    <EditForm Model="@this.SubState">
-                        <div>Notifications:</div>
-                        <div class="my-2 mx-4">
-                            <InputRadioGroup @bind-Value="this.SubState">
-                                <InputRadio Value="SubscriptionState.Subscribed" disabled="@this.IsInProgress" /> Enabled
-                                <br>
-                                <InputRadio Value="SubscriptionState.NotSubscribed" disabled="@this.IsInProgress" /> Disabled
-                            </InputRadioGroup>
+                <div class="px-4 py-2">
+                    <div class="row gy-2">
+                        <div class="px-0">Theme:</div>
+                        <div class="btn-group" role="group" aria-label="Color theme picker">
+                            <input type="radio" class="btn-check" name="btnradio" id="lightThemeSwitch" autocomplete="off" checked disabled="@this.IsInProgress" @bind-value:get="@this.colorThemes[0].IsSelected" @bind-value:set="(c) => this.OnColorThemeChangedAsync(ColorTheme.Light)">
+                            <label class="btn btn-outline-primary" for="lightThemeSwitch">
+                                &nbsp; <i class="bi bi-sun"></i>
+                                &nbsp; Light
+                            </label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="darkThemeSwitch" autocomplete="off" disabled="@this.IsInProgress" @bind-value:get="@this.colorThemes[1].IsSelected" @bind-value:set="(c) => this.OnColorThemeChangedAsync(ColorTheme.Dark)" >
+                            <label class="btn btn-outline-primary" for="darkThemeSwitch">
+                                &nbsp; <i class="bi bi-moon"></i>
+                                &nbsp; Dark
+                            </label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="autoThemeSwitch" autocomplete="off" disabled="@this.IsInProgress" @bind-value:get="@this.colorThemes[2].IsSelected" @bind-value:set="(c) => this.OnColorThemeChangedAsync(ColorTheme.Auto)" >
+                            <label class="btn btn-outline-primary" for="autoThemeSwitch">
+                                &nbsp; <i class="bi bi-circle-half"></i>
+                                &nbsp; Auto
+                            </label>
                         </div>
-                    </EditForm>
+                    </div>
                 </div>
                 @if (this.IsInProgress)
                 {
@@ -47,115 +60,27 @@
 
 @code {
 
-    private SubscriptionState subState;
-
-    private SubscriptionState SubState
-    {
-        get => this.subState;
-
-        set
-        {
-            if (value == this.subState)
-            {
-                return;
-            }
-
-            _ = this.OnSubscriptionChangeAsync(value);
-        }
-    }
-
     private bool IsInProgress { get; set; }
 
     private string AlertHeader { get; set; }
 
     private string AlertMessage { get; set; }
 
+    private List<CheckableEnum<ColorTheme>> colorThemes = new List<CheckableEnum<ColorTheme>>();
+
     protected override async Task OnInitializedAsync()
     {
-        var isSubscribed = await subscriber.IsSubscribed();
-        this.subState = isSubscribed ? SubscriptionState.Subscribed : SubscriptionState.NotSubscribed;
+        this.colorThemes = new List<CheckableEnum<ColorTheme>>();
+        this.colorThemes.Add(new CheckableEnum<ColorTheme>() { IsSelected = true, Value = ColorTheme.Light });
+        this.colorThemes.Add(new CheckableEnum<ColorTheme>() { Value = ColorTheme.Dark });
+        this.colorThemes.Add(new CheckableEnum<ColorTheme>() { Value = ColorTheme.Auto });
+
         this.IsInProgress = false;
     }
 
-    private async Task OnSubscriptionChangeAsync(SubscriptionState updatedState)
+    private async Task OnColorThemeChangedAsync(ColorTheme theme)
     {
-        if (updatedState == SubscriptionState.Subscribed)
-        {
-            await this.SubscribeAsync();
-        }
-        else
-        {
-            await this.UnsubscribeAsync();
-        }
-    }
-
-    private async Task SubscribeAsync()
-    {
-        var resultingState = SubscriptionState.NotSubscribed;
-        this.IsInProgress = true;
-        this.AlertMessage = string.Empty;
-        try
-        {
-            var result = await subscriber.Subscribe();
-            if (result.Status == "ok")
-            {
-                resultingState = SubscriptionState.Subscribed;
-            }
-            else
-            {
-                this.AlertHeader = result.Status;
-                this.AlertMessage = result.Error;
-            }
-        }
-        catch (AccessTokenNotAvailableException ex)
-        {
-            ex.Redirect();
-        }
-        catch (Exception ex)
-        {
-            this.AlertHeader = "exception";
-            this.AlertMessage = ex.Message;
-        }
-        finally
-        {
-            this.subState = resultingState;
-            this.IsInProgress = false;
-            this.StateHasChanged();
-        }
-    }
-
-    private async Task UnsubscribeAsync()
-    {
-        var resultingState = SubscriptionState.Subscribed;
-        this.IsInProgress = true;
-        this.AlertMessage = string.Empty;
-        try
-        {
-            var result = await subscriber.Unsubscribe();
-            if (result.Status == "ok")
-            {
-                resultingState = SubscriptionState.NotSubscribed;
-            }
-            else
-            {
-                this.AlertHeader = result.Status;
-                this.AlertMessage = result.Error;
-            }
-        }
-        catch (AccessTokenNotAvailableException ex)
-        {
-            ex.Redirect();
-        }
-        catch (Exception ex)
-        {
-            this.AlertHeader = "exception";
-            this.AlertMessage = ex.Message;
-        }
-        finally
-        {
-            this.subState = resultingState;
-            this.IsInProgress = false;
-            this.StateHasChanged();
-        }
+        Console.WriteLine($"STATE: {theme}");
+        await Task.CompletedTask;
     }
 }
