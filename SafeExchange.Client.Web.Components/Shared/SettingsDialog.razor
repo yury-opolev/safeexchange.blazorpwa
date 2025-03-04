@@ -3,6 +3,7 @@
 @using SafeExchange.Client.Web.Components.Model;
 
 @inject NotificationsSubscriber subscriber
+@inject ColorThemeHelper colorThemeHelper
 
 <div class="modal fade" id="settingsDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel">
     <div class="modal-dialog" role="document">
@@ -12,30 +13,27 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="px-4 py-2">
+                <EditForm class="px-4 py-2" EditContext="@editContext">
                     <div class="row gy-2">
                         <div class="px-0">Theme:</div>
-                        <div class="btn-group" role="group" aria-label="Color theme picker">
-                            <input type="radio" class="btn-check" name="btnradio" id="lightThemeSwitch" autocomplete="off" checked disabled="@this.IsInProgress" @bind-value:get="@this.colorThemes[0].IsSelected" @bind-value:set="(c) => this.OnColorThemeChangedAsync(ColorTheme.Light)">
-                            <label class="btn btn-outline-primary" for="lightThemeSwitch">
-                                &nbsp; <i class="bi bi-sun"></i>
-                                &nbsp; Light
-                            </label>
+                        <div Name="colorThemeRadioGroup" aria-label="Color theme picker">
+                            <div class="py-2 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="lightThemeSwitch" disabled="@this.IsInProgress" @bind="this.colorThemeContext.IsLightSelected" />
+                                <label class="form-check-label" for="lightThemeSwitch">&nbsp;<i class="bi bi-sun"></i>&nbsp; Light</label>
+                            </div>
 
-                            <input type="radio" class="btn-check" name="btnradio" id="darkThemeSwitch" autocomplete="off" disabled="@this.IsInProgress" @bind-value:get="@this.colorThemes[1].IsSelected" @bind-value:set="(c) => this.OnColorThemeChangedAsync(ColorTheme.Dark)" >
-                            <label class="btn btn-outline-primary" for="darkThemeSwitch">
-                                &nbsp; <i class="bi bi-moon"></i>
-                                &nbsp; Dark
-                            </label>
+                            <div class="py-2 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="lightThemeSwitch" disabled="@this.IsInProgress" @bind="this.colorThemeContext.IsDarkSelected" />
+                                <label class="form-check-label" for="lightThemeSwitch">&nbsp; <i class="bi bi-moon"></i>&nbsp; Dark</label>
+                            </div>
 
-                            <input type="radio" class="btn-check" name="btnradio" id="autoThemeSwitch" autocomplete="off" disabled="@this.IsInProgress" @bind-value:get="@this.colorThemes[2].IsSelected" @bind-value:set="(c) => this.OnColorThemeChangedAsync(ColorTheme.Auto)" >
-                            <label class="btn btn-outline-primary" for="autoThemeSwitch">
-                                &nbsp; <i class="bi bi-circle-half"></i>
-                                &nbsp; Auto
-                            </label>
+                            <div class="py-2 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="lightThemeSwitch" disabled="@this.IsInProgress" @bind="this.colorThemeContext.IsAutoSelected" />
+                                <label class="form-check-label" for="lightThemeSwitch">&nbsp; <i class="bi bi-circle-half"></i>&nbsp; Auto</label>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </EditForm>
                 @if (this.IsInProgress)
                 {
                     <div class="d-flex justify-content-center">
@@ -52,7 +50,7 @@
                 }
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled="@this.IsInProgress" >Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled="@this.IsInProgress">Close</button>
             </div>
         </div>
     </div>
@@ -66,21 +64,27 @@
 
     private string AlertMessage { get; set; }
 
-    private List<CheckableEnum<ColorTheme>> colorThemes = new List<CheckableEnum<ColorTheme>>();
+    private ColorThemeContext colorThemeContext;
+
+    private EditContext editContext;
 
     protected override async Task OnInitializedAsync()
     {
-        this.colorThemes = new List<CheckableEnum<ColorTheme>>();
-        this.colorThemes.Add(new CheckableEnum<ColorTheme>() { IsSelected = true, Value = ColorTheme.Light });
-        this.colorThemes.Add(new CheckableEnum<ColorTheme>() { Value = ColorTheme.Dark });
-        this.colorThemes.Add(new CheckableEnum<ColorTheme>() { Value = ColorTheme.Auto });
+        this.colorThemeContext = new ColorThemeContext();
+        this.colorThemeContext.OnValueChangedAsync = OnColorThemeChangedAsync;
+        this.editContext = new EditContext(this.colorThemeContext);
+
+        var preferredTheme = await colorThemeHelper.GetPreferredThemeAsync();
+        this.colorThemeContext.Value = preferredTheme;
+
+        await this.colorThemeHelper.SetThemeAsync(preferredTheme);
 
         this.IsInProgress = false;
+        this.StateHasChanged();
     }
 
     private async Task OnColorThemeChangedAsync(ColorTheme theme)
     {
-        Console.WriteLine($"STATE: {theme}");
-        await Task.CompletedTask;
+        await colorThemeHelper.SetThemeAsync(theme);
     }
 }
