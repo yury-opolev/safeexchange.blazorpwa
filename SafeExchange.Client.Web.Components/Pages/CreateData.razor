@@ -84,14 +84,20 @@
                     <select class="ql-background"></select>
                 </span>
                 <span class="ql-formats">
-                    <button class="ql-link"></button>
+                    <button class="ql-link">
+                        <i class="bi bi-link-45deg"></i>
+                    </button>
                     <button class="ql-image"></button>
                 </span>
                 <span class="ql-formats">
-                    <button type="button" class="ql-password"><i class="bi bi-lock-fill toolbar-password-img"></i></button>
+                    <button type="button" class="ql-password">
+                        <i class="bi bi-lock-fill"></i>
+                    </button>
                 </span>
                 <span class="ql-formats">
-                    <button class="ql-clean"></button>
+                    <button type="button" class="ql-clean">
+                        <i class="bi bi-eraser"></i>
+                    </button>
                 </span>
             </div>
             <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>

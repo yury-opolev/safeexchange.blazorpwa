@@ -401,11 +401,11 @@
                     <div class="col-2">
                         @if (this.IsDeleted(tempIndex))
                         {
-                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
+                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="bi bi-arrow-counterclockwise"></span></button>
                         }
                         else
                         {
-                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
+                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="bi bi-x-lg"></span></button>
                         }
                     </div>
                 </div>
@@ -414,7 +414,7 @@
         <p>
             <div class="row">
                 <div class="col">
-                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="bi bi-plus-lg"></span>&nbsp; Add user</button>
                 </div>
             </div>
         </p>
@@ -428,7 +428,7 @@
                     }
                     else
                     {
-                        <i class="oi oi-cloud-upload"></i>
+                        <i class="bi bi-cloud-arrow-up"></i>
                     }
                     <span>&nbsp;Update</span>
                 </button>
@@ -439,7 +439,7 @@
                     }
                     else
                     {
-                        <i class="oi oi-x"></i>
+                        <i class="bi bi-x"></i>
                     }
                     <span>&nbsp;Delete</span>
                 </button>

@@ -30,8 +30,8 @@
                     <small class="my-0">@secretPermissions.PermissionsString</small>
                 </div>
                 <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
-                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ViewObject(secretPermissions.ObjectName))"><i class="oi oi-eye"></i><span>&nbsp;View</span></button>
-                    <button class="btn btn-outline-primary" type="button" disabled="@(!secretPermissions.CanWrite || this.StateContainer.IsInProgress)" @onclick="@(e => this.EditObject(secretPermissions.ObjectName))"><i class="oi oi-pencil"></i><span>&nbsp; Edit</span></button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ViewObject(secretPermissions.ObjectName))"><i class="bi bi-eye"></i><span>&nbsp;View</span></button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@(!secretPermissions.CanWrite || this.StateContainer.IsInProgress)" @onclick="@(e => this.EditObject(secretPermissions.ObjectName))"><i class="bi bi-pencil"></i><span>&nbsp; Edit</span></button>
                 </div>
             </li>
         }
