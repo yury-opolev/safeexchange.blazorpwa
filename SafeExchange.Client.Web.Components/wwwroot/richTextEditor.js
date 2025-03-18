@@ -40,11 +40,11 @@ PasswordBlot.tagName = 'SPAN';
 PasswordBlot.className = "ql-password-holder";
 
 Quill.register(PasswordBlot, true);
-Quill.register('modules/blotFormatter', QuillBlotFormatter.default);
+Quill.register('modules/blotFormatter2', QuillBlotFormatter2.default);
 
-class CustomImageSpec extends QuillBlotFormatter.ImageSpec {
+class CustomImageSpec extends QuillBlotFormatter2.ImageSpec {
     getActions() {
-        return [ QuillBlotFormatter.ResizeAction, QuillBlotFormatter.DeleteAction ];
+        return [ QuillBlotFormatter2.ResizeAction, QuillBlotFormatter2.DeleteAction ];
     }
 }
 
@@ -120,7 +120,7 @@ function setEnabled(quillElement, enabled) {
     if (!quillElement) {
         return;
     }
-    const quill = quillElement.__quill;
+    const quill = Quill.find(quillElement);
     if (!quill) {
         return;
     }
@@ -128,20 +128,22 @@ function setEnabled(quillElement, enabled) {
 }
 
 function getContents(quillElement) {
-    return quillElement.__quill.getContents();
+    const quill = Quill.find(quillElement);
+    return quill.getContents();
 }
 
 function setContents(quillElement, contentsToSet) {
-    const quill = quillElement.__quill;
+    const quill = Quill.find(quillElement);
     quill.setContents(contentsToSet, 'api');
 }
 
 function getHtml(quillElement) {
-    return quillElement.__quill.root.innerHTML;
+    const quill = Quill.find(quillElement);
+    return quill.root.innerHTML;
 }
 
 function setHtml(quillElement, htmlToSet) {
-    const quill = quillElement.__quill;
+    const quill = Quill.find(quillElement);
     if (!quill) {
         return;
     }
@@ -150,11 +152,13 @@ function setHtml(quillElement, htmlToSet) {
 }
 
 function getText(quillElement) {
-    return quillElement.__quill.getText();
+    const quill = Quill.find(quillElement);
+    return quill.getText();
 }
 
 function setText(quillElement, textToSet) {
-    quillElement.__quill.setText(textToSet, 'api');
+    const quill = Quill.find(quillElement);
+    quill.setText(textToSet, 'api');
 }
 
 export { initializeEditor, setEnabled, getContents, setContents, getHtml, setHtml, getText, setText };
