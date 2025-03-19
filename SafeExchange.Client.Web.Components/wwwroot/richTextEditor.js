@@ -42,12 +42,6 @@ PasswordBlot.className = "ql-password-holder";
 Quill.register(PasswordBlot, true);
 Quill.register('modules/blotFormatter2', QuillBlotFormatter2.default);
 
-class CustomImageSpec extends QuillBlotFormatter2.ImageSpec {
-    getActions() {
-        return [ QuillBlotFormatter2.ResizeAction, QuillBlotFormatter2.DeleteAction ];
-    }
-}
-
 function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextElement) {
     var options = {
         placeholder: placeholder,
@@ -93,8 +87,20 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
         keyboard: { bindings: bindings },
         toolbar: toolbarOptions,
         imageDrop: true,
-        blotFormatter: {
-            specs: [ CustomImageSpec ]
+        blotFormatter2: {
+            align: {
+                allowAligning: true,
+            },
+            resize: {
+                allowResizing: true,
+            },
+            delete: {
+                allowKeyboardDelete: true,
+            },
+            image: {
+                allowAltTitleEdit: false,
+                allowCompressor: false
+            }
         }
     };
 
