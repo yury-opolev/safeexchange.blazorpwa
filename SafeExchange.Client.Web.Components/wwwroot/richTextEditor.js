@@ -208,7 +208,7 @@ function setHtml(quillElement, htmlToSet) {
     if (!quill) {
         return;
     }
-    const delta = quill.clipboard.convert(htmlToSet);
+    const delta = quill.clipboard.convert({ html: htmlToSet });
     quill.setContents(delta, 'api');
 }
 
