@@ -40,6 +40,47 @@ PasswordBlot.tagName = 'SPAN';
 PasswordBlot.className = "ql-password-holder";
 
 Quill.register(PasswordBlot, true);
+
+class CopyableBlot extends EmbedBlot {
+    static create(value) {
+        const node = super.create(value);
+        node.setAttribute("data-value", value);
+
+        const copyToClipboardButton = document.createElement("button");
+        copyToClipboardButton.className = "btn d-inline-flex btn-sm";
+        copyToClipboardButton.setAttribute("type", "button");
+        copyToClipboardButton.setAttribute("data-bs-toggle", "tooltip");
+        copyToClipboardButton.setAttribute("data-bs-placement", "top");
+        copyToClipboardButton.setAttribute("title", "Copy to Clipboard");
+
+        const buttonIcon = document.createElement("span");
+        buttonIcon.className = "saex-copy";
+
+        copyToClipboardButton.appendChild(buttonIcon);
+
+        const innerSpan = document.createElement("span");
+        innerSpan.innerHTML = value;
+
+        const outerSpan = document.createElement("span");
+        outerSpan.className = "border-bottom border-secondary border-2 ql-copyable-span";
+        outerSpan.appendChild(innerSpan);
+        outerSpan.appendChild(copyToClipboardButton);
+
+        node.appendChild(outerSpan);
+
+        return node;
+    }
+
+    static value(node) {
+        return node.getAttribute("data-value");
+    }
+}
+CopyableBlot.blotName = 'copyable';
+CopyableBlot.tagName = 'SPAN';
+CopyableBlot.className = "ql-copyable-holder";
+
+Quill.register(CopyableBlot, true);
+
 Quill.register('modules/blotFormatter2', QuillBlotFormatter2.default);
 
 function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextElement) {
@@ -65,6 +106,20 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
                         var position = range.index;
                         this.quill.deleteText(position, range.length)
                         this.quill.insertEmbed(position, 'password', text, Quill.sources.USER);
+                        this.quill.setSelection(position + 1, Quill.sources.API);
+                        await dotNetRef.invokeMethodAsync("OnCopyableElementInsertedJS");
+                    }
+                },
+                'copyable': async function (value) {
+                    if (value) {
+                        var range = this.quill.getSelection();
+                        if (range == null || range.length === 0) {
+                            return;
+                        }
+                        var text = this.quill.getText(range);
+                        var position = range.index;
+                        this.quill.deleteText(position, range.length)
+                        this.quill.insertEmbed(position, 'copyable', text, Quill.sources.USER);
                         this.quill.setSelection(position + 1, Quill.sources.API);
                         await dotNetRef.invokeMethodAsync("OnCopyableElementInsertedJS");
                     }
