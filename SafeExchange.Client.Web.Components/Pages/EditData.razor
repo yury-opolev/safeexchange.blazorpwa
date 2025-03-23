@@ -158,11 +158,11 @@
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
                                             @if (this.IsAttachmentDeleted(attachment))
                                             {
-                                                <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-action-undo"></span></button>
+                                                <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="bi bi-arrow-counterclockwise"></span></button>
                                             }
                                             else
                                             {
-                                                <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-x"></span></button>
+                                                <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="bi bi-x-lg"></span></button>
                                             }
                                         </div>
                                     </li>
@@ -182,7 +182,7 @@
                                             @switch (attachment.Status)
                                             {
                                                 case (UploadStatus.NotStarted):
-                                                    <i class="oi oi-file"></i>
+                                                    <i class="bi bi-file-earmark"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
 
@@ -192,12 +192,12 @@
                                                     break;
 
                                                 case (UploadStatus.Success):
-                                                    <i class="oi oi-check text-success"></i>
+                                                    <i class="bi bi-check-lg text-success"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
 
                                                 case (UploadStatus.Error):
-                                                    <i class="oi oi-warning text-warning"></i>
+                                                    <i class="bi bi-exclamation-triangle text-warning"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
                                             }
@@ -207,7 +207,7 @@
                                             <small class="my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
                                         </div>
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                            <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
+                                            <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="bi bi-x-lg"></i></button>
                                         </div>
                                     </li>
                                 }
@@ -306,13 +306,13 @@
                                         @if (tempIndex < this.FixedAccessItemCount)
                                         {
                                             <button class="btn btn-link" type="button" disabled aria-label="Find user">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                         else
                                         {
                                             <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                     </span>
@@ -332,13 +332,13 @@
                                         @if (tempIndex < this.FixedAccessItemCount)
                                         {
                                             <button class="btn btn-link" type="button" disabled aria-label="Find group">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                         else
                                         {
                                             <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartGroupPickAsync(tempIndex))" aria-label="Find group">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                     </span>
@@ -440,7 +440,7 @@
                     }
                     else
                     {
-                        <i class="bi bi-x"></i>
+                        <i class="bi bi-trash"></i>
                     }
                     <span>&nbsp;Delete</span>
                 </button>

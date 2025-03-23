@@ -85,17 +85,17 @@
                                                     break;
 
                                                 case (DownloadStatus.Success):
-                                                    <i class="oi oi-check text-success"></i>
+                                                    <i class="bi bi-check-lg text-success"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
 
                                                 case (DownloadStatus.Error):
-                                                    <i class="oi oi-warning text-warning"></i>
+                                                    <i class="bi bi-exclamation-triangle text-warning"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
                                             }
                                             <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
-                                                <i class="oi oi-cloud-download"></i><span>&nbsp;Download</span>
+                                                <i class="bi bi-cloud-download"></i><span>&nbsp;Download</span>
                                             </button>
                                         </div>
                                     </li>
@@ -154,12 +154,12 @@
                         }
                         else
                         {
-                            <i class="oi oi-reload"></i>
+                            <i class="bi bi-arrow-clockwise"></i>
                         }
                         <span>&nbsp;Refresh</span>
                     </button>
                     <button class="btn btn-outline-primary" type="button" disabled="@(!this.CanEditObject() || this.StateContainer.IsInProgress)" @onclick="EditObject">
-                        <i class="oi oi-pencil"></i><span>&nbsp;Edit</span>
+                        <i class="bi bi-pencil"></i><span>&nbsp;Edit</span>
                     </button>
                 </div>
             </div>
