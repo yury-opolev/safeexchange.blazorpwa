@@ -126,7 +126,7 @@
                         <button class="ql-clean"></button>
                     </span>
                 </div>
-                <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
+                <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
             </div>
             <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
         </p>

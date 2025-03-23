@@ -9,6 +9,7 @@
     box-sizing: border-box;
     font-family: Helvetica,Arial,sans-serif;
     font-size: 13px;
+    min-height: 300px;
     height: 100%;
     margin: 0;
     position: relative
@@ -634,15 +635,15 @@
 
 @media (pointer:coarse) {
     .ql-snow.ql-toolbar button:hover:not(.ql-active), .ql-snow .ql-toolbar button:hover:not(.ql-active) {
-        color: #444
+        color: var(--bs-body-color)
     }
 
         .ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-fill, .ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-fill, .ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-stroke.ql-fill, .ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke.ql-fill {
-            fill: #444
+            fill: var(--bs-body-color)
         }
 
         .ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-stroke, .ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke, .ql-snow.ql-toolbar button:hover:not(.ql-active) .ql-stroke-miter, .ql-snow .ql-toolbar button:hover:not(.ql-active) .ql-stroke-miter {
-            stroke: #444
+            stroke: var(--bs-body-color)
         }
 }
 
@@ -689,7 +690,7 @@
 
     .ql-snow .ql-stroke {
         fill: none;
-        stroke: #444;
+        stroke: var(--bs-body-color);
         stroke-linecap: round;
         stroke-linejoin: round;
         stroke-width: 2
@@ -697,13 +698,13 @@
 
     .ql-snow .ql-stroke-miter {
         fill: none;
-        stroke: #444;
+        stroke: var(--bs-body-color);
         stroke-miterlimit: 10;
         stroke-width: 2
     }
 
     .ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill {
-        fill: #444
+        fill: var(--bs-body-color)
     }
 
     .ql-snow .ql-empty {
@@ -796,7 +797,7 @@
     }
 
     .ql-snow .ql-picker {
-        color: #444;
+        color: var(--bs-body-color);
         display: inline-block;
         float: left;
         font-size: 14px;
@@ -822,7 +823,7 @@
         }
 
     .ql-snow .ql-picker-options {
-        background-color: #fff;
+        background-color: var(--bs-body-bg);
         display: none;
         min-width: 100%;
         padding: 4px 8px;
@@ -1074,7 +1075,7 @@
     background-color: #fff;
     border: 1px solid #ccc;
     box-shadow: 0 0 5px #ddd;
-    color: #444;
+    color: var(--bs-body-color);
     padding: 5px 12px;
     white-space: nowrap
 }
@@ -1152,5 +1153,10 @@
 .ql-container.ql-snow {
     border: 1px solid #ccc
 }
+
+span.ql-password-span {
+    display: inline-block;
+}
+
 
 /*# sourceMappingURL=quill.snow.css.map*/

@@ -88,13 +88,13 @@
                     <button class="ql-image"></button>
                 </span>
                 <span class="ql-formats">
-                    <button type="button" class="ql-password"></button>
+                    <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
                 </span>
                 <span class="ql-formats">
                     <button type="button" class="ql-clean"></button>
                 </span>
             </div>
-            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
+            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
         </div>
         <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
     </p>
