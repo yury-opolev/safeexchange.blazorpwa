@@ -32,6 +32,20 @@ a, .btn-link {
     --bs-gradient: none;
 }
 
+.list-group .list-item-hover-border {
+    border-width: 1px;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: var(--bs-border-radius);
+}
+
+    .list-group .list-item-hover-border:hover {
+        border-width: 1px;
+        border-style: solid;
+        border-color: var(--bs-btn-active-color);
+        border-radius: var(--bs-border-radius);
+    }
+
 .btn-text-align-left {
     text-align: left !important;
 }

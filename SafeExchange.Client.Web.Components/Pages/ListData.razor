@@ -22,7 +22,7 @@
         {
             var secretPermissions = this.SecretsPermissions[i];
             var objectUri = this.GetViewUri(secretPermissions.ObjectName);
-            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+            <li class="list-group-item list-item-hover-border d-flex justify-content-between align-items-center flex-wrap">
                 <div>
                     <CopyableContent Data="@objectUri">
                         <span>@secretPermissions.ObjectName</span>
