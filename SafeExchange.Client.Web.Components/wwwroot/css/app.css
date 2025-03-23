@@ -33,17 +33,15 @@ a, .btn-link {
 }
 
 .list-group .list-item-hover-border {
-    border-width: 1px;
-    border-style: solid;
-    border-color: transparent;
+    border-style: none;
     border-radius: var(--bs-border-radius);
+    background-color: var(--bs-body-bg);
 }
 
     .list-group .list-item-hover-border:hover {
-        border-width: 1px;
-        border-style: solid;
-        border-color: var(--bs-btn-active-color);
+        border-style: none;
         border-radius: var(--bs-border-radius);
+        background-color: var(--bs-secondary-bg);
     }
 
 .btn-text-align-left {
