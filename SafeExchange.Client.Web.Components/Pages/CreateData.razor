@@ -21,8 +21,8 @@
             <div class="text-truncate">
                 @user.DisplayName
             </div>
-            <div class="text-secondary text-truncate">
-                @user.UserPrincipalName
+            <div class="text-truncate">
+                <small>@user.UserPrincipalName</small>
             </div>
         </div>
     </ItemTemplate>
@@ -34,8 +34,8 @@
             <div class="text-truncate">
                 @group.DisplayName
             </div>
-            <div class="text-secondary text-truncate">
-                @(group.Mail ?? "- no mail -")
+            <div class="text-truncate">
+                <small>@(group.Mail ?? "- no mail -")</small>
             </div>
         </div>
     </ItemTemplate>
@@ -84,17 +84,18 @@
                     <select class="ql-background"></select>
                 </span>
                 <span class="ql-formats">
-                    <button class="ql-link"></button>
+                    <button type="button" class="ql-link"></button>
                     <button class="ql-image"></button>
                 </span>
                 <span class="ql-formats">
-                    <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
+                    <button type="button" class="ql-copyable"><i class="oi oi-layers toolbar-qlcustom-img"></i></button>
+                    <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-qlcustom-img"></i></button>
                 </span>
                 <span class="ql-formats">
-                    <button class="ql-clean"></button>
+                    <button type="button" class="ql-clean"></button>
                 </span>
             </div>
-            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
+            <QuillEditor @ref="this.quillEditor" aria-label="Content" aria-describedby="content-validation" @bind-Value="@this.compoundModel.MainData" Placeholder="" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
         </div>
         <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
     </p>
@@ -102,6 +103,7 @@
     <p>
         <div class="collapsible-content">
             <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+                <i class="bi bi-chevron-right"></i>
                 &nbsp; Attachments
             </button>
             <div class="collapse" id="collapseAttachments">
@@ -119,32 +121,32 @@
                                         @switch (attachment.Status)
                                         {
                                             case (UploadStatus.NotStarted):
-                                                <i class="oi oi-file text-secondary"></i>
+                                                <i class="bi bi-file-earmark"></i>
                                                 <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                 break;
 
                                             case (UploadStatus.InProgress):
                                                 <span class="spinner-border spinner-border-sm" role="status"></span>
-                                                <span>@($"{attachment.ProgressPercents:00}")%&nbsp;</span>
+                                                <span>@($"{attachment.ProgressPercents:0}")%&nbsp;</span>
                                                 break;
 
                                             case (UploadStatus.Success):
-                                                <i class="oi oi-check text-success"></i>
+                                                <i class="bi bi-check-lg text-success"></i>
                                                 <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                 break;
 
                                             case (UploadStatus.Error):
-                                                <i class="oi oi-warning text-warning"></i>
+                                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
                                                 <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                 break;
                                         }
                                     </div>
                                     <div>
                                         <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
-                                        <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
+                                        <small class="my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
                                     </div>
                                     <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                        <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
+                                        <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="bi bi-x-lg"></i></button>
                                     </div>
                                 </li>
                             }
@@ -240,7 +242,7 @@
                                 </div>
                                 <span class="narrow-floating-group input-group-text">
                                     <button class="btn" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
-                                        <span class="oi oi-magnifying-glass"></span>
+                                        <span class="bi bi-search"></span>
                                     </button>
                                 </span>
                             </div>
@@ -257,7 +259,7 @@
                                 </div>
                                 <span class="narrow-floating-group input-group-text">
                                     <button class="btn" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.StartGroupPickAsync(tempIndex))" aria-label="Find group">
-                                        <span class="oi oi-magnifying-glass"></span>
+                                        <span class="bi bi-search"></span>
                                     </button>
                                 </span>
                             </div>
@@ -308,7 +310,7 @@
                     </div>
                 </div>
                 <div class="col-2">
-                    <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
+                    <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="bi bi-x-lg"></span></button>
                 </div>
             </div>
         </p>
@@ -316,7 +318,7 @@
     <p>
         <div class="row">
             <div class="col">
-                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="bi bi-plus-lg"></span>&nbsp; Add user</button>
             </div>
         </div>
     </p>

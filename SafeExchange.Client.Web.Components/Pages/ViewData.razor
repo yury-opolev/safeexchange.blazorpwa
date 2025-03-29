@@ -20,146 +20,150 @@
 
 @if (this.Notification != null)
 {
-<div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
-    <p>
-        <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
-    </p>
-    @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
-    {
-        <hr>
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
         <p>
-                <button class="btn btn-warning" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="() => this.HandleNotificationButtonClick()">
-                <span>@this.Notification.ButtonText</span>
-            </button>
+            <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
         </p>
-    }
-    <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
-</div>
+        @if (!string.IsNullOrEmpty(this.Notification.ButtonText))
+        {
+            <hr>
+            <p>
+                <button class="btn btn-warning" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="() => this.HandleNotificationButtonClick()">
+                    <span>@this.Notification.ButtonText</span>
+                </button>
+            </p>
+        }
+        <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
+    </div>
 }
 
 @if (this.compoundModel != null)
 {
     <EditForm Model="@this.compoundModel">
-    <p>
-        <div class="ql-container ql-snow">
-            <div @ref="this.quillElement" id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
-            @if (!this.StateContainer.IsInProgress)
-            {
-                @((MarkupString)this.compoundModel.MainData)
-            }
-            </div>
-        </div>
-    </p>
-
-    @if (this.Attachments.Count > 0)
-    {
         <p>
+            <div class="ql-container ql-snow">
+                <div @ref="this.quillElement" id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
+                    @if (!this.StateContainer.IsInProgress)
+                    {
+                        @((MarkupString)this.compoundModel.MainData)
+                    }
+                </div>
+            </div>
+        </p>
+
+        @if (this.Attachments.Count > 0)
+        {
+            <p>
+                <div class="collapsible-content">
+                    <button class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+                        <i class="bi bi-chevron-right"></i>
+                        &nbsp; Attachments
+                    </button>
+                    <div class="collapse" id="collapseAttachments">
+                        <div class="card card-body">
+
+                            <ul class="list-group list-group-flush">
+                                @for (int ai = 0; ai < this.Attachments.Count; ai++)
+                                {
+                                    var attachment = this.Attachments[ai];
+                                    var downloadItem = this.Downloads[ai];
+                                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                        <div>
+                                            <span id="@($"attachment-{ai}")">@attachment.FileName</span>
+                                            <small class="my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                                        </div>
+                                        <div>
+                                            @switch (downloadItem.Status)
+                                            {
+                                                case (DownloadStatus.NotStarted):
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                    break;
+
+                                                case (DownloadStatus.InProgress):
+                                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                    <span>@($"{downloadItem.ProgressPercents:00}")%&nbsp;&nbsp;</span>
+                                                    break;
+
+                                                case (DownloadStatus.Success):
+                                                    <i class="bi bi-check-lg text-success"></i>
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                    break;
+
+                                                case (DownloadStatus.Error):
+                                                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                                                    break;
+                                            }
+                                            <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
+                                                <i class="bi bi-cloud-download"></i><span>&nbsp;Download</span>
+                                            </button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </p>
+        }
+
         <div class="collapsible-content">
-            <button class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
-                &nbsp; Attachments
+            <button class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAccessList" aria-expanded="false" aria-controls="collapseAccessList">
+                <i class="bi bi-chevron-right"></i>
+                &nbsp; Access List
             </button>
-            <div class="collapse" id="collapseAttachments">
+            <div class="collapse" id="collapseAccessList">
                 <div class="card card-body">
 
-                    <ul class="list-group list-group-flush">
-                        @for (int ai = 0; ai < this.Attachments.Count; ai++)
-                        {
-                            var attachment = this.Attachments[ai];
-                            var downloadItem = this.Downloads[ai];
-                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                                <div>
-                                    <span id="@($"attachment-{ai}")">@attachment.FileName</span>
-                                    <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                    @{
+                        int i = 0;
+                    }
+                    @foreach (var permissionsItem in this.compoundModel.Permissions)
+                    {
+                        <div>
+                            <div class="row">
+                                <div class="col">
+                                    <InputText id="@($"username-{i}")" class="form-control-plaintext" @bind-Value="@permissionsItem.SubjectName" readonly />
                                 </div>
-                                <div>
-                                    @switch (downloadItem.Status)
-                                    {
-                                        case (DownloadStatus.NotStarted):
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-
-                                        case (DownloadStatus.InProgress):
-                                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                                            <span>@($"{downloadItem.ProgressPercents:00}")%&nbsp;&nbsp;</span>
-                                            break;
-
-                                        case (DownloadStatus.Success):
-                                            <i class="oi oi-check text-success"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-
-                                        case (DownloadStatus.Error):
-                                            <i class="oi oi-warning text-warning"></i>
-                                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                            break;
-                                    }
-                                    <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
-                                        <i class="oi oi-cloud-download"></i><span>&nbsp;Download</span>
-                                    </button>
+                                <div class="col">
+                                    <InputText id="@($"permissions-{i}")" class="form-control-plaintext" @bind-Value="@permissionsItem.PermissionsString" readonly aria-label="Permissions" aria-labelledby="@($"permissions-{i} username-{i}")" />
                                 </div>
-                            </li>
-                        }
-                    </ul>
+                            </div>
+                        </div>
+                        i += 1;
+                    }
+
+                    @if (this.compoundModel.Permissions.Count == 0)
+                    {
+                        <div>
+                            - No access was granted to users -
+                        </div>
+                    }
+
                 </div>
             </div>
         </div>
+
+        <p>
+            <div class="d-flex mt-3 justify-content-center">
+                <div class="btn-group" role="group" aria-label="Item buttons">
+                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="FetchData">
+                        @if (this.StateContainer.IsInProgress)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-arrow-clockwise"></i>
+                        }
+                        <span>&nbsp;Refresh</span>
+                    </button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@(!this.CanEditObject() || this.StateContainer.IsInProgress)" @onclick="EditObject">
+                        <i class="bi bi-pencil"></i><span>&nbsp;Edit</span>
+                    </button>
+                </div>
+            </div>
         </p>
-    }
-
-    <div class="collapsible-content">
-        <button class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAccessList" aria-expanded="false" aria-controls="collapseAccessList">
-            &nbsp; Access List
-        </button>
-        <div class="collapse" id="collapseAccessList">
-            <div class="card card-body">
-
-                @{ int i = 0; }
-                @foreach (var permissionsItem in this.compoundModel.Permissions)
-                {
-                    <div>
-                        <div class="row">
-                            <div class="col">
-                                <InputText id="@($"username-{i}")" class="form-control-plaintext" @bind-Value="@permissionsItem.SubjectName" readonly />
-                            </div>
-                            <div class="col">
-                                <InputText id="@($"permissions-{i}")" class="form-control-plaintext" @bind-Value="@permissionsItem.PermissionsString" readonly aria-label="Permissions" aria-labelledby="@($"permissions-{i} username-{i}")" />
-                            </div>
-                        </div>
-                    </div>
-                    i += 1;
-                }
-
-                @if (this.compoundModel.Permissions.Count == 0)
-                {
-                    <div>
-                        - No access was granted to users -
-                    </div>
-                }
-
-            </div>
-        </div>
-    </div>
-
-    <p>
-        <div class="d-flex mt-3 justify-content-center">
-            <div class="btn-group" role="group" aria-label="Item buttons">
-                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="FetchData">
-                    @if (this.StateContainer.IsInProgress)
-                    {
-                        <span class="spinner-border spinner-border-sm" role="status"></span>
-                    }
-                    else
-                    {
-                        <i class="oi oi-reload"></i>
-                    }
-                    <span>&nbsp;Refresh</span>
-                </button>
-                <button class="btn btn-outline-primary" type="button" disabled="@(!this.CanEditObject() || this.StateContainer.IsInProgress)" @onclick="EditObject">
-                    <i class="oi oi-pencil"></i><span>&nbsp;Edit</span>
-                </button>
-            </div>
-        </div>
-    </p>
     </EditForm>
 }
 
@@ -180,20 +184,20 @@
     private bool initializeTooltips = false;
 
     private CompoundModel compoundModel = new CompoundModel()
-    {
-        Metadata = new ObjectMetadata()
         {
-            ObjectName = string.Empty,
-            Content = new List<ContentMetadata>(),
-            ExpirationMetadata = new ExpirationMetadata()
+            Metadata = new ObjectMetadata()
             {
-                ScheduleExpiration = false,
-                ExpireAt = DateTime.MinValue,
-                ExpireOnIdleTime = false,
-                IdleTimeToExpire = TimeSpan.Zero
-            }
-        },
-        Permissions = new List<SubjectPermissions>()
+                ObjectName = string.Empty,
+                Content = new List<ContentMetadata>(),
+                ExpirationMetadata = new ExpirationMetadata()
+                {
+                    ScheduleExpiration = false,
+                    ExpireAt = DateTime.MinValue,
+                    ExpireOnIdleTime = false,
+                    IdleTimeToExpire = TimeSpan.Zero
+                }
+            },
+            Permissions = new List<SubjectPermissions>()
         {
             new SubjectPermissions()
             {
@@ -207,8 +211,8 @@
                 CanRevokeAccess = false
             }
         },
-        MainData = string.Empty
-    };
+            MainData = string.Empty
+        };
 
     private List<ContentMetadata> Attachments { get; set; } = new();
 
@@ -297,14 +301,14 @@
                 }
 
                 this.Notification = new NotificationData()
-                {
-                    Type = NotificationType.Warning,
-                    Status = compoundModelResult.Status,
-                    Message = message,
-                    ButtonText = buttonText,
-                    ButtonUri = this.CreateAccessRequestUri("Read"),
-                    ConsentRequired = consentRequired
-                };
+                    {
+                        Type = NotificationType.Warning,
+                        Status = compoundModelResult.Status,
+                        Message = message,
+                        ButtonText = buttonText,
+                        ButtonUri = this.CreateAccessRequestUri("Read"),
+                        ConsentRequired = consentRequired
+                    };
 
                 return;
             }
@@ -429,11 +433,11 @@
         catch (Exception exception)
         {
             this.Notification = new NotificationData()
-            {
-                Type = NotificationType.Warning,
-                Status = string.Empty,
-                Message = exception.Message
-            };
+                {
+                    Type = NotificationType.Warning,
+                    Status = string.Empty,
+                    Message = exception.Message
+                };
         }
         finally
         {
@@ -456,11 +460,11 @@
         if (dataStreamResponse.Status != "ok")
         {
             this.Notification = new NotificationData()
-            {
-                Type = NotificationType.Warning,
-                Status = dataStreamResponse.Status,
-                Message = $"Cannot download attachment: {(dataStreamResponse.Error ?? "Unknown exception.")}."
-            };
+                {
+                    Type = NotificationType.Warning,
+                    Status = dataStreamResponse.Status,
+                    Message = $"Cannot download attachment: {(dataStreamResponse.Error ?? "Unknown exception.")}."
+                };
 
             return;
         }
@@ -487,11 +491,11 @@
             var scopesToConsent = new List<string>();
             this.Configuration.Bind("AdditionalScopesToConsent", scopesToConsent);
             var requestOptions = new InteractiveRequestOptions
-            {
-                Interaction = InteractionType.GetToken,
-                ReturnUrl = this.NavManager.Uri,
-                Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
-            };
+                {
+                    Interaction = InteractionType.GetToken,
+                    ReturnUrl = this.NavManager.Uri,
+                    Scopes = scopesToConsent ?? Array.Empty<string>().ToList()
+                };
 
             requestOptions.TryAddAdditionalParameter("prompt", "consent");
             this.NavManager.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath, requestOptions);

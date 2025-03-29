@@ -25,8 +25,8 @@
             <div class="text-truncate">
                 @user.DisplayName
             </div>
-            <div class="text-secondary text-truncate">
-                @user.UserPrincipalName
+            <div class="text-truncate">
+                <small>@user.UserPrincipalName</small>
             </div>
         </div>
     </ItemTemplate>
@@ -38,8 +38,8 @@
             <div class="text-truncate">
                 @group.DisplayName
             </div>
-            <div class="text-secondary text-truncate">
-                @(group.Mail ?? "- no mail -")
+            <div class="text-truncate">
+                <small>@(group.Mail ?? "- no mail -")</small>
             </div>
         </div>
     </ItemTemplate>
@@ -120,13 +120,14 @@
                         <button class="ql-image"></button>
                     </span>
                     <span class="ql-formats">
-                        <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-password-img"></i></button>
+                        <button type="button" class="ql-copyable"><i class="oi oi-layers toolbar-qlcustom-img"></i></button>
+                        <button type="button" class="ql-password"><i class="oi oi-lock-locked toolbar-qlcustom-img"></i></button>
                     </span>
                     <span class="ql-formats">
                         <button class="ql-clean"></button>
                     </span>
                 </div>
-                <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="Content" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
+                <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
             </div>
             <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
         </p>
@@ -134,6 +135,7 @@
         <p>
             <div class="collapsible-content">
                 <button @ref="this.attachmentsButtonElement" class="btn mb-2 d-inline-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAttachments" aria-expanded="false" aria-controls="collapseAttachments">
+                    <i class="bi bi-chevron-right"></i>
                     &nbsp; Attachments
                 </button>
                 <div class="collapse" id="collapseAttachments">
@@ -148,19 +150,19 @@
                                     var attachment = this.ExistingAttachments[ai];
                                     <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap attachment-row">
                                         <div>
-                                            <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control bg-light")">
+                                            <span id="@($"existing-attachment-{ai}")" class="@(this.IsAttachmentDeleted(attachment)? "form-control text-removed" : "form-control")">
                                                 @attachment.FileName
-                                                <small class="text-secondary my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                                                <small class="my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
                                             </span>
                                         </div>
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
                                             @if (this.IsAttachmentDeleted(attachment))
                                             {
-                                                <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-action-undo"></span></button>
+                                                <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="bi bi-arrow-counterclockwise"></span></button>
                                             }
                                             else
                                             {
-                                                <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="oi oi-x"></span></button>
+                                                <button id="@($"delete-existing-attachment-{ai}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.DeleteExistingAttachment(attachment))" aria-label="Remove attachment" aria-labelledby="@($"delete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="bi bi-x-lg"></span></button>
                                             }
                                         </div>
                                     </li>
@@ -180,7 +182,7 @@
                                             @switch (attachment.Status)
                                             {
                                                 case (UploadStatus.NotStarted):
-                                                    <i class="oi oi-file text-secondary"></i>
+                                                    <i class="bi bi-file-earmark"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
 
@@ -190,22 +192,22 @@
                                                     break;
 
                                                 case (UploadStatus.Success):
-                                                    <i class="oi oi-check text-success"></i>
+                                                    <i class="bi bi-check-lg text-success"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
 
                                                 case (UploadStatus.Error):
-                                                    <i class="oi oi-warning text-warning"></i>
+                                                    <i class="bi bi-exclamation-triangle text-warning"></i>
                                                     <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
                                             }
                                         </div>
                                         <div>
                                             <span id="@($"attachment-{i}")">@attachment.SourceFile.Name</span>
-                                            <small class="text-secondary my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
+                                            <small class="my-0">&nbsp;&nbsp; Size: @(ContentMetadata.BytesToString(attachment.SourceFile.Size))</small>
                                         </div>
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                            <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="oi oi-x"></i></button>
+                                            <button id="@($"remove-attachment-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.Attachments.Remove(attachment))" aria-label="Remove attachment" aria-labelledby="@($"remove-attachment-{i} attachment-{i}")"><i class="bi bi-x-lg"></i></button>
                                         </div>
                                     </li>
                                 }
@@ -277,7 +279,7 @@
                 <div class="row align-items-center">
                     <div class="col-2">
                         <div class="form-floating">
-                            <InputSelect id="@($"usertype-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)"
+                            <InputSelect id="@($"usertype-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)"
                                          ValueExpression="@(() => compoundModel.Permissions[tempIndex].SubjectType)"
                                          Value="@compoundModel.Permissions[tempIndex].SubjectType"
                                          ValueChanged="@((SubjectType value) => OnPermissionTypeChanged(compoundModel.Permissions[tempIndex], value))"
@@ -297,20 +299,20 @@
                             <div class="col">
                                 <div class="input-group">
                                     <div class="form-floating">
-                                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value:get="this.compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(this.compoundModel.Permissions[tempIndex], value); }" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
+                                        <InputText id="@($"username-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value:get="this.compoundModel.Permissions[tempIndex].SubjectName" @bind-Value:set="(value) => { this.OnSetUserName(this.compoundModel.Permissions[tempIndex], value); }" placeholder="Username" readonly="@(tempIndex < this.FixedAccessItemCount)" aria-describedby="@($"un-validation-{i}")" />
                                         <label for="@($"username-input-{i}")" class="form-label">Username</label>
                                     </div>
                                     <span class="narrow-floating-group input-group-text">
                                         @if (tempIndex < this.FixedAccessItemCount)
                                         {
                                             <button class="btn btn-link" type="button" disabled aria-label="Find user">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                         else
                                         {
                                             <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartUserPickAsync(tempIndex))" aria-label="Find user">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                     </span>
@@ -330,13 +332,13 @@
                                         @if (tempIndex < this.FixedAccessItemCount)
                                         {
                                             <button class="btn btn-link" type="button" disabled aria-label="Find group">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                         else
                                         {
                                             <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartGroupPickAsync(tempIndex))" aria-label="Find group">
-                                                <span class="oi oi-magnifying-glass"></span>
+                                                <span class="bi bi-search"></span>
                                             </button>
                                         }
                                     </span>
@@ -348,7 +350,7 @@
                         case (SubjectType.Application):
                             <div class="col">
                                 <div class="form-floating">
-                                    <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
+                                    <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
                                         @if (!this.StateContainer.IsFetchingApplications)
                                         {
                                             if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
@@ -380,14 +382,14 @@
                         @if (tempIndex < this.FixedAccessItemCount)
                         {
                             <div class="form-floating">
-                                <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control bg-light")" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
+                                <InputText id="@($"permissions-select-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" readonly aria-labelledby="@($"permissions-select-{i} username-input-{i}")" />
                                 <label for="@($"permissions-select-{i}")" class="form-label">Permissions</label>
                             </div>
                         }
                         else
                         {
                             <div class="form-floating">
-                                <InputSelect id="@($"permissions-select-{i}")" class="form-control bg-light" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
+                                <InputSelect id="@($"permissions-select-{i}")" class="form-control" disabled="@this.StateContainer.IsInProgress" @bind-Value="@this.compoundModel.Permissions[tempIndex].PermissionsString" aria-labelledby="@($"permissions-select-{i} username-input-{i}")">
                                     <option>Read</option>
                                     <option>Read,Write</option>
                                     <option>Read,Write,GrantAccess</option>
@@ -400,11 +402,11 @@
                     <div class="col-2">
                         @if (this.IsDeleted(tempIndex))
                         {
-                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="oi oi-action-undo"></span></button>
+                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="bi bi-arrow-counterclockwise"></span></button>
                         }
                         else
                         {
-                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="oi oi-x"></span></button>
+                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="bi bi-x-lg"></span></button>
                         }
                     </div>
                 </div>
@@ -413,7 +415,7 @@
         <p>
             <div class="row">
                 <div class="col">
-                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="oi oi-plus"></span>&nbsp; Add user</button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="bi bi-plus-lg"></span>&nbsp; Add user</button>
                 </div>
             </div>
         </p>
@@ -427,7 +429,7 @@
                     }
                     else
                     {
-                        <i class="oi oi-cloud-upload"></i>
+                        <i class="bi bi-cloud-arrow-up"></i>
                     }
                     <span>&nbsp;Update</span>
                 </button>
@@ -438,7 +440,7 @@
                     }
                     else
                     {
-                        <i class="oi oi-x"></i>
+                        <i class="bi bi-trash"></i>
                     }
                     <span>&nbsp;Delete</span>
                 </button>

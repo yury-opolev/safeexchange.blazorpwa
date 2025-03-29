@@ -32,6 +32,18 @@ a, .btn-link {
     --bs-gradient: none;
 }
 
+.list-group .list-item-hover-border {
+    border-style: none;
+    border-radius: var(--bs-border-radius);
+    background-color: var(--bs-body-bg);
+}
+
+    .list-group .list-item-hover-border:hover {
+        border-style: none;
+        border-radius: var(--bs-border-radius);
+        background-color: var(--bs-secondary-bg);
+    }
+
 .btn-text-align-left {
     text-align: left !important;
 }
@@ -57,33 +69,28 @@ a, .btn-link {
 }
 
 .text-removed {
-    background-color: pink !important;
+    background-color: var(--bs-danger-bg-subtle) !important;
     text-decoration-line: line-through !important;
 }
 
 .collapsible-content > .btn {
     padding: .25rem .5rem;
     font-weight: 600;
-    color: rgba(0, 0, 0, 0.65);
     background-color: transparent;
     border: 0
 }
 
-.collapsible-content > .btn::before {
-    width: 1.25em;
-    line-height: 0;
-    content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
-    transition: transform 0.35s ease;
-    transform-origin: .5em 50%
-}
+    .collapsible-content > .btn > i {
+        transition: transform 0.35s ease;
+    }
 
 @media (prefers-reduced-motion: reduce) {
-    .collapsible-content > .btn::before {
+    .collapsible-content > .btn > i {
         transition: none
     }
 }
 
-.collapsible-content > .btn[aria-expanded="true"]::before {
+.collapsible-content > .btn[aria-expanded="true"] > i {
     transform: rotate(90deg)
 }
 

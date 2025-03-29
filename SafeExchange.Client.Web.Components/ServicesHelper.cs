@@ -62,6 +62,7 @@ namespace SafeExchange.Client.Web.Components
             builder.Services.AddScoped<RichTextEditor>();
             builder.Services.AddScoped<DownloadUploadHelper>();
             builder.Services.AddScoped<ItemPickDialogHelper>();
+            builder.Services.AddScoped<ColorThemeHelper>();
 
             builder.Services.AddMsalAuthentication(options =>
             {

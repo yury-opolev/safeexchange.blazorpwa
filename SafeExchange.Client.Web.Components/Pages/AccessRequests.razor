@@ -69,12 +69,12 @@
                             <div>
                                 <div>@(accessRequest.RequestorName)</div>
                                 <div><strong>@(accessRequest.SecretName)</strong></div>
-                                <small class="text-secondary my-0">@(accessRequest.PermissionsString)</small>
+                                <small class="my-0">@(accessRequest.PermissionsString)</small>
                                 <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
                             <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
-                                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, true))"><i class="oi oi-circle-check"></i><span>&nbsp; Grant</span></button>
-                                <button class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, false))"><i class="oi oi-circle-x"></i><span>&nbsp; Reject</span></button>
+                                <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, true))"><i class="bi bi-check-circle"></i><span>&nbsp; Grant</span></button>
+                                <button class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ProcessAccessRequestAsync(accessRequest, false))"><i class="bi bi-x-circle"></i><span>&nbsp; Reject</span></button>
                             </div>
                         </li>
                     }
@@ -106,9 +106,9 @@
                                 <div><strong>@(accessRequest.SecretName)</strong></div>
                                 <small class="my-0">@(accessRequest.PermissionsString)</small>
                                 <small>&nbsp;-&nbsp;</small>
-                                <small class="text-secondary my-0">Requested at: @(accessRequest.RequestedAt)</small>
+                                <small class="my-0">Requested at: @(accessRequest.RequestedAt)</small>
                             </div>
-                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancellationDialog" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="oi oi-circle-x"></i><span>&nbsp; Cancel</span></button>
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancellationDialog" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.SetRequestToCancellation(accessRequest))"><i class="bi bi-x-circle"></i><span>&nbsp; Cancel</span></button>
                         </li>
                     }
                 </ul>

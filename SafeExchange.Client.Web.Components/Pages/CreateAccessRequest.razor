@@ -15,7 +15,7 @@
     </div>
 }
 
-<div class="card bg-light mb-3">
+<div class="card mb-3">
     <div class="card-header"><strong>New Access Request:</strong></div>
     <div class="card-body">
 
@@ -37,7 +37,10 @@
                 </label>
             </p>
             <p>
-                <button class="btn btn-outline-primary" type="submit" disabled="@this.StateContainer.IsInProgress"><span class="oi oi-cloud-upload"></span>&nbsp; Request Access</button>
+                <button class="btn btn-outline-primary" type="submit" disabled="@this.StateContainer.IsInProgress">
+                    <span class="bi bi-envelope-arrow-up"></span>
+                    &nbsp; Request Access
+                </button>
             </p>
         </EditForm>
     </div>
