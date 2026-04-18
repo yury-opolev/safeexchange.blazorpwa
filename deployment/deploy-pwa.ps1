@@ -76,7 +76,12 @@ $InformationPreference = 'Continue'
 $here       = $PSScriptRoot
 $repoRoot   = Split-Path -Parent $here
 $pwaProject = Join-Path $repoRoot 'SafeExchange.PWA/SafeExchange.PWA.csproj'
-$publishDir = Join-Path $repoRoot 'SafeExchange.PWA/bin/Release/net8.0/browser-wasm/publish/wwwroot'
+
+# Pin the publish output to a dedicated folder under the repo so it can't
+# drift with future SDK conventions (net7 used bin/.../browser-wasm/publish,
+# net8 default is bin/.../publish). Passed to `dotnet publish -o`.
+$publishRoot = Join-Path $repoRoot 'SafeExchange.PWA/bin/Release/pwa-publish'
+$publishDir  = Join-Path $publishRoot 'wwwroot'
 
 if (-not $EnvFile) {
     $EnvFile = Join-Path $here '.env'
@@ -176,7 +181,14 @@ if ($subscription -and $subscription -ne $account.id) {
 # ──────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "Publishing $pwaProject (Release)..." -ForegroundColor Cyan
-& dotnet publish $pwaProject -c Release
+
+# Wipe the pinned output folder so stale artefacts from a previous publish
+# can't sneak into the upload.
+if (Test-Path $publishRoot) {
+    Remove-Item -LiteralPath $publishRoot -Recurse -Force
+}
+
+& dotnet publish $pwaProject -c Release -o $publishRoot
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
 }
