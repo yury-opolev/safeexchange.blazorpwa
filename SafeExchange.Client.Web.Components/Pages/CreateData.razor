@@ -542,6 +542,8 @@
             timer.Elapsed += (_, _) => InvokeAsync(() => StateHasChanged());
             timer.Start();
 
+            this.compoundModel.MainData = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
+
             var result = await apiClient.CreateFromCompoundModelAsync(this.compoundModel, this.Attachments);
             if (!"ok".Equals(result.Status))
             {

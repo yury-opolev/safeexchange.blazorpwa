@@ -9,6 +9,21 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'wasm-unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob: https://graph.microsoft.com;
+        font-src 'self';
+        connect-src 'self' https://login.microsoftonline.com https://*.azurewebsites.net https://graph.microsoft.com;
+        frame-src https://login.microsoftonline.com;
+        form-action 'self' https://login.microsoftonline.com;
+        worker-src 'self';
+        manifest-src 'self';
+        base-uri 'self';
+        object-src 'none';
+    ">
+
     <title>SafeExchange</title>
     <base href="/" />
     <link href="_content/SafeExchange.Client.Web.Components/css/bootstrap.min.css" rel="stylesheet" />
@@ -35,6 +50,14 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+    <!--
+        sw-registrator.js must run before blazor.webassembly.js so that
+        window.registerForUpdateAvailableNotification is defined by the
+        time Blazor's runtime fires UpdateAvailableDetector's
+        OnInitializedAsync via JS interop.
+    -->
+    <script src="sw-registrator.js"></script>
+
     <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 
@@ -44,8 +67,6 @@
     <script src="_content/SafeExchange.Client.Web.Components/quill.2.0.3.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/quill-modules/image-drop.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/quill-modules/quill-blot-formatter2.min.js"></script>
-
-    <script src="sw-registrator.js"></script>
 </body>
 
 </html>

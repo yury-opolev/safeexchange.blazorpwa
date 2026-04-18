@@ -782,6 +782,7 @@
             }
 
             var newMainContent = this.compoundModel.Metadata.Content.First(c => c.IsMain);
+            this.compoundModel.MainData = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
             using (var dataStream = new MemoryStream())
             {
                 using (var writer = new StreamWriter(dataStream, leaveOpen: true))
