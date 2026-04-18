@@ -212,6 +212,21 @@ $appsettingsClientId  = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_CLIEN
 $appsettingsBackend   = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_BACKEND_$envSuffix"
 $appsettingsScope     = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_SCOPE_$envSuffix"
 
+# Telemetry is opt-in per env. When APPSETTINGS_TELEMETRY_ENABLED_<ENV>
+# is absent or false, the Telemetry section in appsettings stays at its
+# source defaults (Enabled=false, empty connection string). The C#
+# TelemetryService honours the flag by never calling the AI JS SDK
+# initialiser, so no data can leave the browser.
+$appsettingsTelemetryEnabledRaw = Read-EnvValue -Path $EnvFile -Name "APPSETTINGS_TELEMETRY_ENABLED_$envSuffix"
+$appsettingsTelemetryEnabled    = $false
+if ($appsettingsTelemetryEnabledRaw) {
+    $appsettingsTelemetryEnabled = [System.Convert]::ToBoolean($appsettingsTelemetryEnabledRaw)
+}
+$appsettingsTelemetryConnection = Read-EnvValue -Path $EnvFile -Name "APPSETTINGS_TELEMETRY_CONNECTION_STRING_$envSuffix"
+if ($appsettingsTelemetryEnabled -and -not $appsettingsTelemetryConnection) {
+    throw "APPSETTINGS_TELEMETRY_ENABLED_$envSuffix is true but APPSETTINGS_TELEMETRY_CONNECTION_STRING_$envSuffix is empty."
+}
+
 $publishAppsettings = Join-Path $publishDir 'appsettings.json'
 if (-not (Test-Path $publishAppsettings)) {
     throw "Published appsettings.json not found at $publishAppsettings"
@@ -223,11 +238,14 @@ $settings.AzureAdB2C.Authority       = $appsettingsAuthority
 $settings.AzureAdB2C.ClientId        = $appsettingsClientId
 $settings.BackendApi.BaseAddress     = $appsettingsBackend
 $settings.AccessTokenScopes          = @($appsettingsScope)
+$settings.Telemetry.Enabled          = $appsettingsTelemetryEnabled
+$settings.Telemetry.ConnectionString = if ($appsettingsTelemetryEnabled) { $appsettingsTelemetryConnection } else { '' }
 $settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $publishAppsettings -NoNewline
-Write-Host "  ClientId:       $appsettingsClientId" -ForegroundColor DarkGray
-Write-Host "  Authority:      $appsettingsAuthority" -ForegroundColor DarkGray
-Write-Host "  BackendApi:     $appsettingsBackend" -ForegroundColor DarkGray
-Write-Host "  Scope:          $appsettingsScope" -ForegroundColor DarkGray
+Write-Host "  ClientId:         $appsettingsClientId" -ForegroundColor DarkGray
+Write-Host "  Authority:        $appsettingsAuthority" -ForegroundColor DarkGray
+Write-Host "  BackendApi:       $appsettingsBackend" -ForegroundColor DarkGray
+Write-Host "  Scope:            $appsettingsScope" -ForegroundColor DarkGray
+Write-Host "  Telemetry.Enabled: $appsettingsTelemetryEnabled" -ForegroundColor DarkGray
 
 if ($WhatIf) {
     Write-Host ""

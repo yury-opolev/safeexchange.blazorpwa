@@ -11,6 +11,7 @@ namespace SafeExchange.Client.Web.Components
     using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
     using Polly;
     using SafeExchange.Client.Common;
 
@@ -70,6 +71,15 @@ namespace SafeExchange.Client.Web.Components
                 builder.Configuration.Bind("AccessTokenScopes", options.ProviderOptions.DefaultAccessTokenScopes);
                 builder.Configuration.Bind("AdditionalScopesToConsent", options.ProviderOptions.AdditionalScopesToConsent);
             });
+
+            // Telemetry — authenticated-only client-side Application Insights.
+            // TelemetryOptions.Enabled controls whether the SDK is initialised
+            // at all; TelemetryService internally gates emission on
+            // AuthenticationStateProvider. See docs/telemetry/ for the full
+            // threat model and design notes.
+            builder.Services.Configure<TelemetryOptions>(builder.Configuration.GetSection(TelemetryOptions.SectionName));
+            builder.Services.AddScoped<TelemetryService>();
+            builder.Services.AddSingleton<ILoggerProvider, TelemetryLoggerProvider>();
         }
     }
 }
