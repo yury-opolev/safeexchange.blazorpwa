@@ -50,6 +50,14 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+    <!--
+        sw-registrator.js must run before blazor.webassembly.js so that
+        window.registerForUpdateAvailableNotification is defined by the
+        time Blazor's runtime fires UpdateAvailableDetector's
+        OnInitializedAsync via JS interop.
+    -->
+    <script src="sw-registrator.js"></script>
+
     <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 
@@ -59,8 +67,6 @@
     <script src="_content/SafeExchange.Client.Web.Components/quill.2.0.3.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/quill-modules/image-drop.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/quill-modules/quill-blot-formatter2.min.js"></script>
-
-    <script src="sw-registrator.js"></script>
 </body>
 
 </html>
