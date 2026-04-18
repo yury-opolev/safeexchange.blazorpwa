@@ -73,11 +73,10 @@ namespace SafeExchange.Client.Web.Components
             });
 
             // Telemetry — authenticated-only client-side Application Insights.
-            // TelemetryOptions.Enabled controls whether the SDK is initialised
-            // at all; TelemetryService internally gates emission on
-            // AuthenticationStateProvider. See docs/telemetry/ for the full
-            // threat model and design notes.
-            builder.Services.Configure<TelemetryOptions>(builder.Configuration.GetSection(TelemetryOptions.SectionName));
+            // TelemetryService fetches the connection string from the backend
+            // on first authentication, so no credential ever sits in the
+            // public wwwroot/appsettings.json bundle. See
+            // docs/telemetry/ for the full threat model and design notes.
             builder.Services.AddScoped<TelemetryService>();
             builder.Services.AddSingleton<ILoggerProvider, TelemetryLoggerProvider>();
         }
