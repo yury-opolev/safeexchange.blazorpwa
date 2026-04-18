@@ -15,8 +15,8 @@
 
 | # | Mitigation | Effect on threats | Cost | Chosen? |
 |---|---|---|---|---|
-| M1 | Hide the connection string from the bundle. | T1, T3 | Impossible in a pure SPA — credentials must be client-side. | **No.** |
-| M2 | Proxy telemetry via our backend API (authenticated). | T1, T3 (major reduction); T2 (reduced to per-user rate) | High — doubles API request volume, needs new endpoint + server-side AI SDK. | **No** (documented as future option). |
+| M1 | Hide the connection string from the bundle. | T1, T3 | Backend endpoint `GET /v2/telemetry/config` serves the string only to authenticated callers. String lives in backend Key Vault. | **Yes.** |
+| M2 | Proxy telemetry via our backend API (authenticated). | T1, T3 (major reduction); T2 (reduced to per-user rate) | High — doubles API request volume, needs new endpoint + server-side AI SDK. | **No** (M1 is sufficient for current threat model). |
 | M3 | Daily ingestion cap on the App Insights resource. | T1, T2, T3 (bounded cost); degrades legitimate telemetry after cap. | Low — one CLI call. | **Yes.** 2 GB/day per env. |
 | M4 | Client-side sampling. | T2 (reduces noise); spam still counts against cap. | Low. | Kept at 100% for now; turned down if volume grows. |
 | M5 | Authenticated-only telemetry gate. | T2 (partial — still requires a valid login); **no help** against T1/T3 because those bypass our client code. | Low — design decision. | **Yes.** Both our JS and C# sides enforce it. |
@@ -28,8 +28,8 @@
 
 ## What we explicitly accepted (residual risk)
 
-- **The connection string is extractable.** Anyone who can open devtools on `www.safeexchange.dk` can read `Telemetry:ConnectionString` from the bundled `appsettings.json`. This is inherent to client-side SPAs, and the backend-proxy mitigation (M2) is disproportionate for the current threat model. The daily cap (M3) bounds the blast radius to 2 GB/day (~$5/day at default pricing).
-- **Authenticated users can emit arbitrary events.** The auth gate prevents anonymous ingestion, but any tenant user could, in principle, call our JS bridge directly from devtools. We accept this — their events carry their own `oid` so anomalies can be investigated.
+- **An authenticated user can extract the connection string.** `GET /v2/telemetry/config` returns the raw string to anyone holding a valid tenant JWT. They could then POST to the ingestion endpoint directly from their own infrastructure. The daily cap (M3) bounds the blast radius to 2 GB/day (~$5/day). Future hardening: serve a short-lived, per-session ingestion token instead of the raw connection string — see "Future improvements" below.
+- **Authenticated users can emit arbitrary events through our app.** The auth gate prevents anonymous ingestion, but any tenant user could call our JS bridge directly from devtools. We accept this — their events carry their own `oid` so anomalies can be investigated.
 - **No rate-limiting per user/IP at the AI ingestion layer.** Azure AI does not expose this natively; adding it requires fronting AI with an API Management instance (out of scope).
 
 ## What we deliberately do NOT send
@@ -86,13 +86,18 @@ Three escape hatches from widest to narrowest:
 
 1. **Daily cap reached.** App Insights will drop new events until
    reset. Monitor the 90% threshold email.
-2. **Flip the flag.** Edit `deployment/.env`, set
-   `APPSETTINGS_TELEMETRY_ENABLED_PRD=false`, redeploy. No code
-   change needed. Takes about 5 minutes end-to-end.
+2. **Delete the KV secret.** Remove `WebClientTelemetry--ConnectionString`
+   from the per-env Key Vault (`az keyvault secret delete`). The next
+   backend host refresh (≤ 5 minutes) makes
+   `GET /v2/telemetry/config` return `{ enabled: false }` to every
+   client, and new browsers stop initialising the SDK. No code
+   change, no redeploy. Already-loaded tabs keep emitting until
+   refresh — use option 3 if you need to cut them off too.
 3. **Rotate the connection string.** In Azure Portal → App Insights
    resource → API Access → regenerate key. The old string becomes
-   invalid immediately. Update `.env` with the new string and
-   redeploy.
+   invalid immediately at the AI side. Update the KV secret with
+   the new string (`az keyvault secret set`); the backend picks it
+   up within a few minutes.
 
 ## What to do if telemetry looks hostile
 
@@ -110,8 +115,30 @@ Indicators worth watching:
 Response playbook:
 
 1. Regenerate the connection string (invalidates the attacker key).
-2. Flip `APPSETTINGS_TELEMETRY_ENABLED_<ENV>` to `false`, redeploy.
+2. Delete/disable the KV secret to make the backend hand out an
+   empty `connectionString` to new callers.
 3. Investigate the spike in Log Analytics (`customEvents`,
    `exceptions`, `traces` tables). Filter on `operation_Name`,
    `appId`, and `client_IP` to narrow the attacker's pattern.
 4. File a finding in `docs/owasp/` under A09 (logging + alerting).
+
+## Future improvements
+
+1. **Short-lived per-session ingestion tokens.** Instead of handing
+   the raw connection string to the browser, the backend could mint
+   a short-lived token (e.g. 1 hour) that the JS SDK uses to
+   authenticate at the ingestion endpoint. Rotation becomes
+   automatic; a leaked token expires on its own. Requires the AI
+   SDK's AAD-auth ingestion path and a token-broker endpoint on the
+   backend. Bigger lift than the current gated-config pattern;
+   consider when tenant membership alone is not a sufficient trust
+   boundary.
+2. **Rotating per-user `telemetryId`.** Instead of passing the
+   AAD `oid` (stable, long-lived) as `user_AuthenticatedId`, the
+   backend could issue a rotating pseudonymous id (rotated weekly
+   or monthly) stored against the user record and served alongside
+   the connection string from `/v2/telemetry/config`. Client and
+   backend both tag telemetry with it. This bounds the window over
+   which a telemetry leak can link a user's activity to a
+   week/month. Drawback: cross-rotation investigations need a
+   server-side mapping to stitch activity together.
