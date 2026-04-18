@@ -222,6 +222,11 @@ switch ($hostingType) {
         # would remove those, but it's not available on every az
         # version, so the caller should manually clear $web if it
         # matters for a given deploy.
+        # AAD auth — requires the operator to hold "Storage Blob Data
+        # Contributor" on the storage account. Paired with
+        # allowSharedKeyAccess=false on the account so shared-key
+        # upload paths cannot be used as a fallback. See
+        # deployment/README when configuring a new environment.
         $azArgs = @(
             'storage', 'blob', 'upload-batch'
             '--account-name',   $storageAccount
@@ -297,17 +302,24 @@ switch ($hostingType) {
 # ──────────────────────────────────────────────────────────────────
 # Optional: purge Front Door cache
 # ──────────────────────────────────────────────────────────────────
+# AFD profiles typically live in a shared networking/DNS resource
+# group that is different from the storage RG, so the purge needs
+# its own FRONT_DOOR_RG_<ENV>. Falls back to the storage RG only
+# when FRONT_DOOR_RG_* is not set — keeps the scaffold compatible
+# with single-RG setups.
 $afdProfile  = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_PROFILE_$envSuffix"
 $afdEndpoint = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_ENDPOINT_$envSuffix"
+$afdRg       = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_RG_$envSuffix"
+if (-not $afdRg) { $afdRg = $resourceGroup }
 
 if ($afdProfile -and $afdEndpoint) {
     Write-Host ""
-    Write-Host "Purging Front Door cache ($afdProfile / $afdEndpoint)..." -ForegroundColor Cyan
+    Write-Host "Purging Front Door cache ($afdProfile / $afdEndpoint in $afdRg)..." -ForegroundColor Cyan
     $azArgs = @(
         'afd', 'endpoint', 'purge'
         '--profile-name',     $afdProfile
         '--endpoint-name',    $afdEndpoint
-        '--resource-group',   $resourceGroup
+        '--resource-group',   $afdRg
         '--content-paths',    '/*'
     )
     & az @azArgs
