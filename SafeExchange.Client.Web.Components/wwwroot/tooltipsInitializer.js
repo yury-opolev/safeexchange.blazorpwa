@@ -16,6 +16,23 @@ function addQuillClipboardTooltips(quillElement, initialText, clickText) {
     });
 }
 
+// Initialise a single Bootstrap tooltip on the given element with the
+// same click-swap behaviour as addTooltips (title flips to clickText
+// while shown, then back to initialText when hidden). Idempotent —
+// marks the element after first wiring so repeat calls are no-ops.
+// Pair with a C# @onclick handler when the button also needs to do
+// something else on click; the click handlers co-exist.
+function addTooltipFor(element, initialText, clickText) {
+    if (!element || element.dataset.saexTooltipWired === "1") {
+        return;
+    }
+    new bootstrap.Tooltip(element);
+    $(element).on('click', function () {
+        $(this).attr("title", clickText).tooltip("_fixTitle").tooltip("show").attr("title", initialText).tooltip("_fixTitle");
+    });
+    element.dataset.saexTooltipWired = "1";
+}
+
 function initClipboardTooltip(element, content, initialText, clickText) {
     const tooltip = new bootstrap.Tooltip(element)
     element.onclick = async () => {
@@ -24,4 +41,4 @@ function initClipboardTooltip(element, content, initialText, clickText) {
     };
 }
 
-export { addTooltips, addQuillClipboardTooltips };
+export { addTooltips, addQuillClipboardTooltips, addTooltipFor };

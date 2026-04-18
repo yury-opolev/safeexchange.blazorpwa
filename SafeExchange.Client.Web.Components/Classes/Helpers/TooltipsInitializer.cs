@@ -31,6 +31,14 @@ namespace SafeExchange.Client.Web.Components
             await module.InvokeVoidAsync("addQuillClipboardTooltips", quillElement, initialText, clickText);
         }
 
+        // Wires a Bootstrap tooltip onto a specific element. Idempotent —
+        // safe to call from OnAfterRenderAsync on every render.
+        public async Task InitializeSingleTooltipAsync(ElementReference element, string initialText, string clickText)
+        {
+            var module = await moduleTask.Value;
+            await module.InvokeVoidAsync("addTooltipFor", element, initialText, clickText);
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (moduleTask.IsValueCreated)

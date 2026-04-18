@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Microsoft.Extensions.Options
 @using SafeExchange.Client.Web.Components
@@ -8,6 +8,7 @@
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject ClipboardService Clipboard
 @inject TelemetryService Telemetry
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 <AuthorizeView>
     <Authorized>
@@ -29,8 +30,8 @@
                     <small class="text-muted d-block">Session id</small>
                     <div class="d-flex align-items-center gap-2">
                         <code class="text-truncate flex-grow-1" title="@this.Telemetry.SessionOperationId">@this.Telemetry.SessionOperationId</code>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" title="@(this.sessionIdCopied ? "Copied" : "Copy to clipboard")" aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
-                            <i class="bi @(this.sessionIdCopied ? "bi-check2" : "bi-clipboard")"></i>
+                        <button @ref="this.copyButtonRef" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard" aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
+                            <i class="bi bi-clipboard"></i>
                         </button>
                     </div>
                 </div>
@@ -49,7 +50,7 @@
 </AuthorizeView>
 
 @code{
-    private bool sessionIdCopied;
+    private ElementReference copyButtonRef;
 
     private void BeginSignIn(MouseEventArgs args)
     {
@@ -61,13 +62,20 @@
         Navigation.NavigateToLogout(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The copy button only exists once the user is authenticated AND
+        // TelemetryService has finished fetching the backend config, so
+        // firstRender is too early. InitializeSingleTooltipAsync is
+        // idempotent — safe to call on every render.
+        if (this.Telemetry.IsEnabled)
+        {
+            await this.TooltipsInitializerInstance.InitializeSingleTooltipAsync(this.copyButtonRef, "Copy to clipboard", "Copied");
+        }
+    }
+
     private async Task CopySessionIdAsync()
     {
         await this.Clipboard.WriteTextAsync(this.Telemetry.SessionOperationId);
-        this.sessionIdCopied = true;
-        this.StateHasChanged();
-        await Task.Delay(2000);
-        this.sessionIdCopied = false;
-        this.StateHasChanged();
     }
 }
