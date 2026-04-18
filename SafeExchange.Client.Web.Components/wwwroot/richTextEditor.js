@@ -59,7 +59,7 @@ class CopyableBlot extends EmbedBlot {
         copyToClipboardButton.appendChild(buttonIcon);
 
         const innerSpan = document.createElement("span");
-        innerSpan.innerHTML = value;
+        innerSpan.textContent = value;
 
         const outerSpan = document.createElement("span");
         outerSpan.className = "border-bottom border-secondary border-2 ql-copyable-span";

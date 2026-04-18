@@ -45,7 +45,7 @@
                 <div @ref="this.quillElement" id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
                     @if (!this.StateContainer.IsInProgress)
                     {
-                        @((MarkupString)this.compoundModel.MainData)
+                        @((MarkupString)MainDataSanitizer.Sanitize(this.compoundModel.MainData))
                     }
                 </div>
             </div>
