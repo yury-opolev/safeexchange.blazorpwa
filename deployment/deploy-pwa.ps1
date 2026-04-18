@@ -198,6 +198,37 @@ if (-not (Test-Path $publishDir)) {
 }
 Write-Host "Publish output: $publishDir" -ForegroundColor DarkGray
 
+# ──────────────────────────────────────────────────────────────────
+# Inject env-specific appsettings.json values
+# ──────────────────────────────────────────────────────────────────
+# Source appsettings.json ships staging-dev defaults so `dotnet run`
+# works locally. Real per-env values (tenant, clientId, backend URL,
+# API scope) live only in deployment/.env and are merged into the
+# published appsettings.json here, before it reaches $web. This
+# prevents prod credentials from sitting in git while still letting
+# the deployed bundle be a normal static asset.
+$appsettingsAuthority = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_AUTHORITY_$envSuffix"
+$appsettingsClientId  = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_CLIENT_ID_$envSuffix"
+$appsettingsBackend   = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_BACKEND_$envSuffix"
+$appsettingsScope     = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_SCOPE_$envSuffix"
+
+$publishAppsettings = Join-Path $publishDir 'appsettings.json'
+if (-not (Test-Path $publishAppsettings)) {
+    throw "Published appsettings.json not found at $publishAppsettings"
+}
+
+Write-Host "Rewriting $publishAppsettings with $envSuffix overrides..." -ForegroundColor DarkGray
+$settings = Get-Content -LiteralPath $publishAppsettings -Raw | ConvertFrom-Json
+$settings.AzureAdB2C.Authority       = $appsettingsAuthority
+$settings.AzureAdB2C.ClientId        = $appsettingsClientId
+$settings.BackendApi.BaseAddress     = $appsettingsBackend
+$settings.AccessTokenScopes          = @($appsettingsScope)
+$settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $publishAppsettings -NoNewline
+Write-Host "  ClientId:       $appsettingsClientId" -ForegroundColor DarkGray
+Write-Host "  Authority:      $appsettingsAuthority" -ForegroundColor DarkGray
+Write-Host "  BackendApi:     $appsettingsBackend" -ForegroundColor DarkGray
+Write-Host "  Scope:          $appsettingsScope" -ForegroundColor DarkGray
+
 if ($WhatIf) {
     Write-Host ""
     Write-Host "What-if: skipping upload and cache purge. Nothing was uploaded." -ForegroundColor Yellow
