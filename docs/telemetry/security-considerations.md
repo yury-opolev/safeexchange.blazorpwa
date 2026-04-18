@@ -48,6 +48,38 @@ avoid inadvertently capturing `Set-Cookie` or `Authorization`-like
 response headers; request headers are tracked but **not** Authorization
 by default (SDK's default allowlist).
 
+## Ingestion auth mode
+
+Both AI resources (`safeexchange-staging-insights`,
+`safeexchange-backend-insights`) have `DisableLocalAuth = false` —
+the ingestion endpoint accepts connection-string / instrumentation-key
+writes without requiring an AAD token.
+
+This is the required mode for browser telemetry: a pure SPA cannot
+realistically acquire an AAD token for the AI ingestion scope (would
+need user consent on the resource, cross-origin token exchange, etc).
+
+The flag defaults to `true` for workspace-based App Insights resources
+created via `az monitor app-insights component create`, which is why
+our initial browser telemetry deploy produced a `401 Authentication
+required` from the ingestion endpoint. Flipping it:
+
+```powershell
+az resource update --resource-type "microsoft.insights/components" \
+  -n safeexchange-staging-insights -g safeexchange-staging \
+  --set properties.DisableLocalAuth=false
+```
+
+The residual security exposure (anyone with the connection string can
+write to the AI endpoint) is managed by the daily cap (M3), the
+authenticated-only wrapper gate (M5), the separate AI per env (M9),
+and the ability to rotate the connection string at will (see
+`setup.md`).
+
+The backend Function continues to write via managed identity
+regardless of this flag — its code path uses the resource-level OAuth
+token, not the connection string.
+
 ## Killing telemetry quickly
 
 Three escape hatches from widest to narrowest:

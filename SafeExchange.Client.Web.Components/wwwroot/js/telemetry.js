@@ -44,11 +44,12 @@ window.saexTelemetry = (() => {
                     // LocationChanged events.
                     enableAutoRouteTracking: false,
 
-                    // Start in "off" mode. setAuthenticated(true) flips this
-                    // to false (emission on). This guarantees no telemetry
-                    // leaves the browser for anonymous sessions even if
-                    // another script accidentally calls a track* method.
-                    disableTelemetry: true,
+                    // Anonymous-session gate lives in this wrapper (see
+                    // isReady() below). Do NOT set disableTelemetry: true
+                    // at construction — the v3 SDK treats that value as
+                    // effectively immutable, so flipping it at runtime
+                    // after setAuthenticated(true) does not actually
+                    // re-enable emission.
 
                     // W3C Trace Context for correlation across client and
                     // backend. distributedTracingMode = 2 == AI_AND_W3C.
@@ -83,9 +84,7 @@ window.saexTelemetry = (() => {
                     // docs/telemetry/security-considerations.md.
                     appInsights.setAuthenticatedUserContext(userId, undefined, true);
                 }
-                appInsights.config.disableTelemetry = false;
             } else {
-                appInsights.config.disableTelemetry = true;
                 appInsights.clearAuthenticatedUserContext();
             }
         },
