@@ -18,6 +18,7 @@
 @inject DownloadUploadHelper downloadUploadHelper
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
+@inject TelemetryService Telemetry
 
 <ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
     <ItemTemplate Context="user">
@@ -860,6 +861,11 @@
                     ButtonUri = this.CreateAccessRequestUri(missingAccess)
                 };
 
+            await this.Telemetry.TrackEventAsync("UpdateSecret", new Dictionary<string, string>
+            {
+                ["name"] = this.compoundModel.Metadata.ObjectName
+            });
+
             this.StateContainer.SetNextNotification(notification);
             NavManager.NavigateTo($"/");
         }
@@ -896,6 +902,11 @@
 
                 return;
             }
+
+            await this.Telemetry.TrackEventAsync("DeleteSecret", new Dictionary<string, string>
+            {
+                ["name"] = this.compoundModel.Metadata.ObjectName
+            });
 
             var notification = new NotificationData()
                 {

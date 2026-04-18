@@ -165,6 +165,7 @@ public sealed class TelemetryService : IAsyncDisposable
         {
             return;
         }
+        var transitionedToAuthenticated = isAuthenticated && !this.currentlyAuthenticated;
         this.currentlyAuthenticated = isAuthenticated;
 
         string? opaqueId = null;
@@ -179,6 +180,15 @@ public sealed class TelemetryService : IAsyncDisposable
         }
 
         await this.SafeInvokeAsync("saexTelemetry.setAuthenticated", isAuthenticated, opaqueId).ConfigureAwait(false);
+
+        // Baseline heartbeat: emit exactly once per sign-in so there is
+        // always at least one event to prove the pipeline is alive for
+        // this session. Fires AFTER the gate flip so the event itself
+        // can reach the SDK.
+        if (transitionedToAuthenticated)
+        {
+            await this.TrackEventAsync("SessionStarted").ConfigureAwait(false);
+        }
     }
 
     private IDictionary<string, string> WithSessionCorrelation(IDictionary<string, string>? source)
