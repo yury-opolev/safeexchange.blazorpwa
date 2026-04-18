@@ -17,6 +17,7 @@
 @inject DownloadUploadHelper downloadUploadHelper
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
+@inject TelemetryService Telemetry
 
 @if (this.Notification != null)
 {
@@ -327,6 +328,11 @@
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
 
             this.initializeTooltips = true;
+
+            await this.Telemetry.TrackEventAsync("ReadSecret", new Dictionary<string, string>
+            {
+                ["name"] = objectName
+            });
         }
         catch (AccessTokenNotAvailableException exception)
         {

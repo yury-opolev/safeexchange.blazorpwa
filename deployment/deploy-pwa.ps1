@@ -224,10 +224,41 @@ $settings.AzureAdB2C.ClientId        = $appsettingsClientId
 $settings.BackendApi.BaseAddress     = $appsettingsBackend
 $settings.AccessTokenScopes          = @($appsettingsScope)
 $settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $publishAppsettings -NoNewline
-Write-Host "  ClientId:       $appsettingsClientId" -ForegroundColor DarkGray
-Write-Host "  Authority:      $appsettingsAuthority" -ForegroundColor DarkGray
-Write-Host "  BackendApi:     $appsettingsBackend" -ForegroundColor DarkGray
-Write-Host "  Scope:          $appsettingsScope" -ForegroundColor DarkGray
+Write-Host "  ClientId:         $appsettingsClientId" -ForegroundColor DarkGray
+Write-Host "  Authority:        $appsettingsAuthority" -ForegroundColor DarkGray
+Write-Host "  BackendApi:       $appsettingsBackend" -ForegroundColor DarkGray
+Write-Host "  Scope:            $appsettingsScope" -ForegroundColor DarkGray
+
+# Blazor's service worker validates every cached asset against the
+# SHA-256 hash embedded in service-worker-assets.js during install.
+# Because we just rewrote appsettings.json, its hash no longer matches
+# the one the publish step recorded — service-worker install would fail
+# with "Failed to find a valid digest in the 'integrity' attribute for
+# resource '.../appsettings.json'". Recompute and patch the single
+# affected entry so the SW install stays green.
+$appsettingsBytes = [System.IO.File]::ReadAllBytes($publishAppsettings)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $appsettingsHashBytes = $sha256.ComputeHash($appsettingsBytes)
+} finally {
+    $sha256.Dispose()
+}
+$appsettingsIntegrity = 'sha256-' + [Convert]::ToBase64String($appsettingsHashBytes)
+
+$swAssets = Join-Path $publishDir 'service-worker-assets.js'
+if (Test-Path $swAssets) {
+    $swContent = Get-Content -LiteralPath $swAssets -Raw
+    $pattern = '(?s)("hash":\s*")sha256-[^"]+(",\s*"url":\s*"appsettings\.json")'
+    $swUpdated = [regex]::Replace($swContent, $pattern, ('${1}' + $appsettingsIntegrity + '${2}'))
+    if ($swUpdated -eq $swContent) {
+        Write-Warning "Could not locate appsettings.json entry in $swAssets; SW install may fail SRI."
+    } else {
+        Set-Content -LiteralPath $swAssets -Value $swUpdated -NoNewline
+        Write-Host "  SW integrity patched: $appsettingsIntegrity" -ForegroundColor DarkGray
+    }
+} else {
+    Write-Warning "$swAssets not found — skipping SRI patch. Non-PWA publish?"
+}
 
 if ($WhatIf) {
     Write-Host ""

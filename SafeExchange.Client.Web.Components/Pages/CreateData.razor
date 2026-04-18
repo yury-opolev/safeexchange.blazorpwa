@@ -14,6 +14,7 @@
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
+@inject TelemetryService Telemetry
 
 <ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
     <ItemTemplate Context="user">
@@ -556,6 +557,11 @@
 
                 return;
             }
+
+            await this.Telemetry.TrackEventAsync("CreateSecret", new Dictionary<string, string>
+            {
+                ["name"] = this.compoundModel.Metadata.ObjectName
+            });
 
             var notification = new NotificationData()
                 {

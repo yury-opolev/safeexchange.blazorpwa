@@ -1,10 +1,13 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using Microsoft.Extensions.Options
+@using SafeExchange.Client.Web.Components
 @using SafeExchange.Client.Web.Components.Helpers
 
 @inject NavigationManager Navigation
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
+@inject ClipboardService Clipboard
+@inject TelemetryService Telemetry
 
 <AuthorizeView>
     <Authorized>
@@ -20,6 +23,19 @@
                 <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settingsDialog"><i class="bi bi-gear"></i><span>&nbsp; Settings</span></button>
             </form>
             <div class="dropdown-divider"></div>
+            @if (this.Telemetry.IsEnabled)
+            {
+                <div class="px-4 py-2">
+                    <small class="text-muted d-block">Session id</small>
+                    <div class="d-flex align-items-center gap-2">
+                        <code class="text-truncate flex-grow-1" title="@this.Telemetry.SessionOperationId">@this.Telemetry.SessionOperationId</code>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" title="@(this.sessionIdCopied ? "Copied" : "Copy to clipboard")" aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
+                            <i class="bi @(this.sessionIdCopied ? "bi-check2" : "bi-clipboard")"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="dropdown-divider"></div>
+            }
             <div class="px-4">
                 <button class="nav-link btn btn-link" @onclick="BeginSignOut">Sign out</button>
             </div>
@@ -33,6 +49,8 @@
 </AuthorizeView>
 
 @code{
+    private bool sessionIdCopied;
+
     private void BeginSignIn(MouseEventArgs args)
     {
         Navigation.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath);
@@ -41,5 +59,15 @@
     private void BeginSignOut(MouseEventArgs args)
     {
         Navigation.NavigateToLogout(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
+    }
+
+    private async Task CopySessionIdAsync()
+    {
+        await this.Clipboard.WriteTextAsync(this.Telemetry.SessionOperationId);
+        this.sessionIdCopied = true;
+        this.StateHasChanged();
+        await Task.Delay(2000);
+        this.sessionIdCopied = false;
+        this.StateHasChanged();
     }
 }

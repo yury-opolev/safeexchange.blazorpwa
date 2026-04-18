@@ -15,7 +15,7 @@
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: blob: https://graph.microsoft.com;
         font-src 'self';
-        connect-src 'self' https://login.microsoftonline.com https://*.azurewebsites.net https://graph.microsoft.com;
+        connect-src 'self' https://login.microsoftonline.com https://*.azurewebsites.net https://graph.microsoft.com https://*.applicationinsights.azure.com https://*.in.applicationinsights.azure.com https://*.livediagnostics.monitor.azure.com https://js.monitor.azure.com;
         frame-src https://login.microsoftonline.com;
         form-action 'self' https://login.microsoftonline.com;
         worker-src 'self';
@@ -51,12 +51,22 @@
         <a class="dismiss">🗙</a>
     </div>
     <!--
-        sw-registrator.js must run before blazor.webassembly.js so that
-        window.registerForUpdateAvailableNotification is defined by the
-        time Blazor's runtime fires UpdateAvailableDetector's
-        OnInitializedAsync via JS interop.
+        sw-registrator.js and the telemetry wrapper both need to run
+        before blazor.webassembly.js so their window.* functions are
+        defined when Blazor's runtime fires JS interop from component
+        lifecycles (OnInitializedAsync).
     -->
     <script src="sw-registrator.js"></script>
+
+    <!--
+        Application Insights JS SDK is bundled locally (wwwroot/js/)
+        rather than loaded from the Microsoft CDN so script-src can
+        stay at 'self' — see docs/telemetry/security-considerations.md.
+        telemetry.js provides a thin window.saexTelemetry wrapper that
+        gates all emission on authentication state.
+    -->
+    <script src="_content/SafeExchange.Client.Web.Components/js/ai.3.3.9.min.js"></script>
+    <script src="_content/SafeExchange.Client.Web.Components/js/telemetry.js"></script>
 
     <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>

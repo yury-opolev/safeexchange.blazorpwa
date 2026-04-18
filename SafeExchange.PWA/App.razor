@@ -1,18 +1,36 @@
+@using SafeExchange.Client.Web.Components
+@inject TelemetryService Telemetry
+
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    @if (!context.User.Identity.IsAuthenticated)
-                    {
-                        <RedirectToLogin />
+            <ErrorBoundary @ref="this.errorBoundary">
+                <ChildContent>
+                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                        <NotAuthorized>
+                            @if (!context.User.Identity.IsAuthenticated)
+                            {
+                                <RedirectToLogin />
+                            }
+                            else
+                            {
+                                <p>You are not authorized to access this resource.</p>
+                            }
+                        </NotAuthorized>
+                    </AuthorizeRouteView>
+                </ChildContent>
+                <ErrorContent Context="ex">
+                    @{
+                        this.HandleErrorBoundaryException(ex);
                     }
-                    else
-                    {
-                        <p>You are not authorized to access this resource.</p>
-                    }
-                </NotAuthorized>
-            </AuthorizeRouteView>
+                    <div class="alert alert-danger m-3" role="alert">
+                        <h4 class="alert-heading">Something went wrong.</h4>
+                        <p>The page encountered an unexpected error. The error has been reported.</p>
+                        <hr>
+                        <p class="mb-0"><button type="button" class="btn btn-outline-dark" @onclick="this.ResetErrorBoundary">Try again</button></p>
+                    </div>
+                </ErrorContent>
+            </ErrorBoundary>
         </Found>
         <NotFound>
             <LayoutView Layout="@typeof(MainLayout)">
@@ -21,3 +39,22 @@
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+
+@code {
+    private ErrorBoundary? errorBoundary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await this.Telemetry.InitializeAsync();
+    }
+
+    private void HandleErrorBoundaryException(Exception ex)
+    {
+        _ = this.Telemetry.TrackExceptionAsync(ex);
+    }
+
+    private void ResetErrorBoundary()
+    {
+        this.errorBoundary?.Recover();
+    }
+}
