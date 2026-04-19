@@ -12,6 +12,7 @@ namespace SafeExchange.Client.Common
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Json;
+    using System.Security.Cryptography;
     using System.Text;
     using System.Text.Json;
     using System.Threading.Tasks;
@@ -227,7 +228,7 @@ namespace SafeExchange.Client.Common
                     {
                         attachment.Status = UploadStatus.Error;
                         attachment.Error = $"'Attachment {attachment.SourceFile.Name}' creation failed.";
-                        continue; // no-op, skip to next attachment
+                        continue;
                     }
 
                     var content = new ContentMetadata(createdContent.Result);
@@ -235,25 +236,61 @@ namespace SafeExchange.Client.Common
                     var dataStream = attachment.SourceFile.OpenReadStream(Constants.MaxAttachmentDataLength);
                     var chunkLengths = GetChunkLengths(attachment.SourceFile.Size, Constants.MaxChunkDataLength);
                     var accessTicket = string.Empty;
+                    using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
                     for (int chunkIndex = 0; chunkIndex < chunkLengths.Count; chunkIndex++)
                     {
                         var isInterim = chunkIndex < (chunkLengths.Count - 1);
-                        var secretData = await this.PutSecretDataStreamAsync(
-                            secretId, content.ContentName, dataStream, isInterim, chunkLengths[chunkIndex], accessTicket);
-                        if (!"ok".Equals(secretData.Status) || secretData.Result == null)
+                        var size = chunkLengths[chunkIndex];
+                        var buffer = new byte[size];
+                        var readTotal = 0;
+                        while (readTotal < size)
+                        {
+                            var got = await dataStream.ReadAsync(buffer.AsMemory(readTotal, size - readTotal));
+                            if (got == 0)
+                            {
+                                break;
+                            }
+                            readTotal += got;
+                        }
+
+                        var chunkHashBytes = SHA256.HashData(buffer.AsSpan(0, readTotal));
+                        var chunkHash = Convert.ToHexString(chunkHashBytes).ToLowerInvariant();
+                        fileHasher.AppendData(buffer, 0, readTotal);
+
+                        using var chunkMemory = new MemoryStream(buffer, 0, readTotal, writable: false);
+                        var chunkResponse = await this.PutSecretDataStreamAsync(
+                            secretId, content.ContentName, chunkMemory, isInterim, readTotal, accessTicket, chunkHash);
+
+                        if (!"ok".Equals(chunkResponse.Status) || chunkResponse.Result == null)
                         {
                             attachment.Status = UploadStatus.Error;
-                            attachment.Error = $"'Attachment {attachment.SourceFile.Name}' upload failed.";
+                            attachment.Error = chunkResponse.Status == "chunk_hash_mismatch"
+                                ? $"Chunk {chunkIndex + 1}/{chunkLengths.Count} hash mismatch — upload aborted."
+                                : $"'Attachment {attachment.SourceFile.Name}' upload failed.";
                             break;
                         }
 
-                        accessTicket = secretData.Result.AccessTicket;
-                        attachment.ProgressPercents += 100.0f * ((float)chunkLengths[chunkIndex] / attachment.SourceFile.Size);
+                        accessTicket = chunkResponse.Result.AccessTicket;
+                        attachment.ProgressPercents += 100.0f * ((float)readTotal / attachment.SourceFile.Size);
                     }
 
                     if (attachment.Status == UploadStatus.Error)
                     {
-                        continue; // no-op, skip to next attachment
+                        continue;
+                    }
+
+                    var contentHash = Convert.ToHexString(fileHasher.GetHashAndReset()).ToLowerInvariant();
+                    var commitResponse = await this.CommitContentAsync(
+                        secretId, content.ContentName, contentHash, accessTicket);
+
+                    if (!"ok".Equals(commitResponse.Status))
+                    {
+                        attachment.Status = UploadStatus.Error;
+                        attachment.Error = commitResponse.Status == "hash_mismatch"
+                            ? "Whole-content hash mismatch on commit — please retry the upload."
+                            : $"Commit failed: {commitResponse.Error}";
+                        continue;
                     }
 
                     attachment.Status = UploadStatus.Success;
@@ -437,7 +474,7 @@ namespace SafeExchange.Client.Common
             return await client.SendAsync(httpRequestMessage);
         });
 
-        public async Task<BaseResponseObject<ContentCommitOutput>> CommitContentAsync(string secretId, string contentId, string contentHash, string accessTicket)
+        public async Task<BaseResponseObject<ContentCommitOutput>> CommitContentAsync(string secretId, string contentId, string contentHash, string? accessTicket)
             => await this.ProcessResponseAsync<ContentCommitOutput>(async () =>
         {
             var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/secret/{secretId}/content/{contentId}/commit")
