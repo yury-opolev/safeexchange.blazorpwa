@@ -85,32 +85,33 @@
                                                     <i class="bi bi-clipboard"></i>
                                                 </button>
                                             }
-                                            @switch (this.ResolveBadge(attachment))
-                                            {
-                                                case AttachmentBadgeKind.Verified:
-                                                    <i class="bi bi-shield-fill-check text-success" data-bs-toggle="tooltip" data-bs-placement="top" title="Integrity verified on download."></i>
-                                                    break;
-                                                case AttachmentBadgeKind.Legacy:
-                                                    <i class="bi bi-question-diamond text-secondary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Uploaded before the integrity feature — no reference hash is stored. Re-upload this attachment to enable verification."></i>
-                                                    break;
-                                                case AttachmentBadgeKind.Failed:
-                                                    <i class="bi bi-exclamation-diamond text-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Last download failed the integrity check. The file on disk may be partial or corrupt."></i>
-                                                    break;
-                                            }
                                         </div>
                                         <div class="d-flex align-items-center">
-                                            @switch (downloadItem.Status)
+                                            @if (downloadItem.Status == DownloadStatus.InProgress)
                                             {
-                                                case (DownloadStatus.InProgress):
-                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                                                    <span class="me-2">@($"{downloadItem.ProgressPercents:00}")%</span>
-                                                    break;
-                                                case (DownloadStatus.Success):
-                                                    <i class="bi bi-check-lg text-success me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Download complete."></i>
-                                                    break;
-                                                case (DownloadStatus.Error):
-                                                    <i class="bi bi-exclamation-triangle text-warning me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Download failed."></i>
-                                                    break;
+                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                <span class="me-2">@FormatPercent(downloadItem.ProgressPercents)</span>
+                                            }
+                                            else
+                                            {
+                                                @switch (this.ResolveBadge(attachment, downloadItem.Status))
+                                                {
+                                                    case AttachmentBadgeKind.Verified:
+                                                        <i class="bi bi-shield-fill-check text-success me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Integrity verified on download."></i>
+                                                        break;
+                                                    case AttachmentBadgeKind.Failed:
+                                                        <i class="bi bi-exclamation-diamond text-danger me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Last download failed the integrity check. The file on disk may be partial or corrupt."></i>
+                                                        break;
+                                                    case AttachmentBadgeKind.Legacy:
+                                                        <i class="bi bi-question-diamond text-secondary me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Uploaded before the integrity feature — no reference hash is stored. Re-upload this attachment to enable verification."></i>
+                                                        break;
+                                                    case AttachmentBadgeKind.LegacySuccess:
+                                                        <i class="bi bi-check-lg text-success me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Download complete."></i>
+                                                        break;
+                                                    case AttachmentBadgeKind.LegacyError:
+                                                        <i class="bi bi-exclamation-triangle text-warning me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Download failed."></i>
+                                                        break;
+                                                }
                                             }
                                             <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
                                                 <i class="bi bi-cloud-download"></i><span>&nbsp;Download</span>
@@ -293,7 +294,11 @@
 
     private List<DownloadModel> Downloads { get; set; } = new();
 
-    private enum AttachmentBadgeKind { None, Verified, Legacy, Failed }
+    // All states the single right-cluster badge can be in. The download-in-progress
+    // case is handled separately (spinner + percent) — this enum covers what the
+    // user sees at rest. The Legacy* variants exist only when content has no
+    // reference hash, so the badge doubles as the download-result indicator.
+    private enum AttachmentBadgeKind { None, Verified, Failed, Legacy, LegacySuccess, LegacyError }
 
     private enum AttachmentVerifyResult { Success, Failure }
 
@@ -309,11 +314,30 @@
         return hash.Length > 8 ? hash.Substring(0, 8) + "…" : hash;
     }
 
-    private AttachmentBadgeKind ResolveBadge(ContentMetadata content)
+    // Floats come out of the upload loop with decimals. Display with one decimal
+    // ("47.3%") and collapse an exact zero to "0%" so rows that haven't been
+    // touched aren't visually noisy.
+    private static string FormatPercent(float percent)
     {
-        if (string.IsNullOrEmpty(content.Hash))
+        if (percent <= 0)
         {
-            return AttachmentBadgeKind.Legacy;
+            return "0%";
+        }
+
+        return $"{percent:0.0}%";
+    }
+
+    private AttachmentBadgeKind ResolveBadge(ContentMetadata content, DownloadStatus status)
+    {
+        var isLegacy = string.IsNullOrEmpty(content.Hash);
+        if (isLegacy)
+        {
+            return status switch
+            {
+                DownloadStatus.Success => AttachmentBadgeKind.LegacySuccess,
+                DownloadStatus.Error => AttachmentBadgeKind.LegacyError,
+                _ => AttachmentBadgeKind.Legacy,
+            };
         }
 
         if (this.lastVerifyResults.TryGetValue(content.ContentName, out var lastResult))
