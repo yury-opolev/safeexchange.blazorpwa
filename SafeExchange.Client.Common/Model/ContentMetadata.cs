@@ -20,6 +20,7 @@ namespace SafeExchange.Client.Common.Model
             this.ContentType = source.ContentType;
             this.FileName = source.FileName;
             this.IsReady = source.IsReady;
+            this.Hash = source.Hash;
 
             this.Chunks = new List<ChunkMetadata>(source.Chunks.Count);
             this.Chunks.AddRange(source.Chunks.Select(c => new ChunkMetadata(c)));
@@ -32,6 +33,7 @@ namespace SafeExchange.Client.Common.Model
             this.ContentType = source.ContentType;
             this.FileName = source.FileName;
             this.IsReady = source.IsReady;
+            this.Hash = source.Hash;
 
             this.Chunks = new List<ChunkMetadata>(source.Chunks.Count);
             this.Chunks.AddRange(source.Chunks.Select(c => new ChunkMetadata(c)));
@@ -46,6 +48,8 @@ namespace SafeExchange.Client.Common.Model
         public string FileName { get; set; }
 
         public bool IsReady { get; set; }
+
+        public string? Hash { get; set; }
 
         public List<ChunkMetadata> Chunks { get; set; }
 

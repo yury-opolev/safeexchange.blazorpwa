@@ -19,6 +19,8 @@ namespace SafeExchange.Client.Common.Model
 
         public bool IsReady { get; set; }
 
+        public string? Hash { get; set; }
+
         public List<ChunkOutput> Chunks { get; set; }
     }
 }
