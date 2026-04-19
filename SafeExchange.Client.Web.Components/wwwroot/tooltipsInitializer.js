@@ -33,6 +33,18 @@ function addTooltipFor(element, initialText, clickText) {
     element.dataset.saexTooltipWired = "1";
 }
 
+// Plain hover-only Bootstrap tooltip — no click behaviour. Idempotent.
+// Use for elements whose purpose is to reveal the full text of a
+// truncated label on hover, where clicking should do nothing (or
+// bubble elsewhere).
+function addPlainTooltipFor(element) {
+    if (!element || element.dataset.saexTooltipWired === "1") {
+        return;
+    }
+    new bootstrap.Tooltip(element);
+    element.dataset.saexTooltipWired = "1";
+}
+
 function initClipboardTooltip(element, content, initialText, clickText) {
     const tooltip = new bootstrap.Tooltip(element)
     element.onclick = async () => {
@@ -41,4 +53,4 @@ function initClipboardTooltip(element, content, initialText, clickText) {
     };
 }
 
-export { addTooltips, addQuillClipboardTooltips, addTooltipFor };
+export { addTooltips, addQuillClipboardTooltips, addTooltipFor, addPlainTooltipFor };

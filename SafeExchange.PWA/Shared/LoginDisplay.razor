@@ -12,7 +12,7 @@
 
 <AuthorizeView>
     <Authorized>
-        <a class="nav-link" href="" @onclick:preventDefault id="userInfoDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <a class="nav-link" href="" @onclick:preventDefault id="userInfoDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-haspopup="true" aria-expanded="false">
             <img src="signed-in.svg" alt="User Info" width="32">
         </a>
         <div class="dropdown-menu" aria-labelledby="userInfoDropdown">
@@ -26,14 +26,12 @@
             <div class="dropdown-divider"></div>
             @if (this.Telemetry.IsEnabled)
             {
-                <div class="px-4 py-2">
-                    <small class="text-muted d-block">Session id</small>
-                    <div class="d-flex align-items-center gap-2">
-                        <code class="text-truncate flex-grow-1" title="@this.Telemetry.SessionOperationId">@this.Telemetry.SessionOperationId</code>
-                        <button @ref="this.copyButtonRef" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard" aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
-                            <i class="bi bi-clipboard"></i>
-                        </button>
-                    </div>
+                <div class="px-4 py-2 d-flex align-items-center gap-2">
+                    <small class="text-muted text-nowrap">Sess.Id</small>
+                    <code @ref="this.sessionIdRef" class="flex-grow-1 text-truncate" data-bs-toggle="tooltip" data-bs-placement="top" title="@this.Telemetry.SessionOperationId">@this.TruncatedSessionId</code>
+                    <button @ref="this.copyButtonRef" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard" aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
                 </div>
                 <div class="dropdown-divider"></div>
             }
@@ -51,6 +49,16 @@
 
 @code{
     private ElementReference copyButtonRef;
+    private ElementReference sessionIdRef;
+
+    private string TruncatedSessionId
+    {
+        get
+        {
+            var id = this.Telemetry.SessionOperationId;
+            return id.Length > 8 ? $"{id.Substring(0, 8)}..." : id;
+        }
+    }
 
     private void BeginSignIn(MouseEventArgs args)
     {
@@ -64,13 +72,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // The copy button only exists once the user is authenticated AND
-        // TelemetryService has finished fetching the backend config, so
-        // firstRender is too early. InitializeSingleTooltipAsync is
-        // idempotent — safe to call on every render.
+        // Both tooltips only have DOM refs once TelemetryService has
+        // returned IsEnabled true (authenticated + backend config
+        // fetched). The init helpers are idempotent — safe to call on
+        // every render.
         if (this.Telemetry.IsEnabled)
         {
             await this.TooltipsInitializerInstance.InitializeSingleTooltipAsync(this.copyButtonRef, "Copy to clipboard", "Copied");
+            await this.TooltipsInitializerInstance.InitializePlainTooltipAsync(this.sessionIdRef);
         }
     }
 

@@ -39,6 +39,14 @@ namespace SafeExchange.Client.Web.Components
             await module.InvokeVoidAsync("addTooltipFor", element, initialText, clickText);
         }
 
+        // Hover-only variant for elements whose tooltip simply reveals
+        // the full text of a truncated label. No click-swap behaviour.
+        public async Task InitializePlainTooltipAsync(ElementReference element)
+        {
+            var module = await moduleTask.Value;
+            await module.InvokeVoidAsync("addPlainTooltipFor", element);
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (moduleTask.IsValueCreated)
