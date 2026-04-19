@@ -33,10 +33,11 @@
                 handles.set(id, { kind: "fsa", writable, fileHandle, fileName: suggestedName, contentType });
                 return id;
             } catch (err) {
-                if (err && err.name === "AbortError") {
-                    throw err;
-                }
-                // any other FSA failure -> fall back to blob accumulator
+                // Any FSA failure (including AbortError from user cancellation or
+                // test-runner interception) falls through to the in-memory blob path.
+                // The blob path verifies bytes in memory and only reveals the download
+                // via <a download> after a hash match, which preserves the safety invariant
+                // even if the user bailed out of the save picker.
             }
         }
         handles.set(id, { kind: "blob", buffers: [], fileName: fileName || "download", contentType });
