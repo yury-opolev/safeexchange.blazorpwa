@@ -20,15 +20,14 @@
 
     async function startVerifiedSave(fileName, contentType) {
         const id = String(nextId++);
+        const suggestedName = fileName && fileName.length > 0 ? fileName : "download";
         if (typeof window.showSaveFilePicker === "function") {
             try {
-                const suggestedName = fileName || "download";
-                const ext = suggestedName.includes(".") ? "." + suggestedName.split(".").pop() : ".bin";
-                const pickerOptions = { suggestedName };
-                if (contentType) {
-                    pickerOptions.types = [{ description: suggestedName, accept: { [contentType]: [ext] } }];
-                }
-                const fileHandle = await window.showSaveFilePicker(pickerOptions);
+                // Only pass `suggestedName` — the `types` option would constrain
+                // the save-as file-type filter and has been observed to cause the
+                // picker to ignore the suggested name on some Chromium builds,
+                // surfacing a browser-generated name (looks GUID-ish) instead.
+                const fileHandle = await window.showSaveFilePicker({ suggestedName });
                 const writable = await fileHandle.createWritable();
                 handles.set(id, { kind: "fsa", writable, fileHandle, fileName: suggestedName, contentType });
                 return id;
@@ -40,7 +39,7 @@
                 // even if the user bailed out of the save picker.
             }
         }
-        handles.set(id, { kind: "blob", buffers: [], fileName: fileName || "download", contentType });
+        handles.set(id, { kind: "blob", buffers: [], fileName: suggestedName, contentType });
         return id;
     }
 

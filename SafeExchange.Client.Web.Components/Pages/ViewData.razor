@@ -73,14 +73,12 @@
                                     var attachment = this.Attachments[ai];
                                     var downloadItem = this.Downloads[ai];
                                     <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                                        <div>
+                                        <div class="d-flex align-items-center flex-wrap">
                                             <span id="@($"attachment-{ai}")">@attachment.FileName</span>
                                             <small class="my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
-                                        </div>
-                                        <div class="d-flex align-items-center">
                                             @if (!string.IsNullOrEmpty(attachment.Hash))
                                             {
-                                                <code class="me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="@attachment.Hash">@TruncateHash(attachment.Hash)</code>
+                                                <code class="ms-3 me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="@attachment.Hash">@TruncateHash(attachment.Hash)</code>
                                                 <button type="button" class="btn btn-sm btn-link p-0 me-2"
                                                         @onclick="@(async () => await this.Clipboard.WriteTextAsync(attachment.Hash ?? string.Empty))"
                                                         data-bs-toggle="tooltip" data-bs-placement="top" title="Copy hash">
@@ -90,22 +88,28 @@
                                             @switch (this.ResolveBadge(attachment))
                                             {
                                                 case AttachmentBadgeKind.Verified:
-                                                    <i class="bi bi-shield-fill-check text-success ms-1 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Integrity verified on download."></i>
+                                                    <i class="bi bi-shield-fill-check text-success" data-bs-toggle="tooltip" data-bs-placement="top" title="Integrity verified on download."></i>
                                                     break;
                                                 case AttachmentBadgeKind.Legacy:
-                                                    <i class="bi bi-question-diamond text-secondary ms-1 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Uploaded before the integrity feature — no reference hash is stored. Re-upload this attachment to enable verification."></i>
+                                                    <i class="bi bi-question-diamond text-secondary ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Uploaded before the integrity feature — no reference hash is stored. Re-upload this attachment to enable verification."></i>
                                                     break;
                                                 case AttachmentBadgeKind.Failed:
-                                                    <i class="bi bi-exclamation-diamond text-danger ms-1 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Last download failed the integrity check. The file on disk may be partial or corrupt."></i>
+                                                    <i class="bi bi-exclamation-diamond text-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Last download failed the integrity check. The file on disk may be partial or corrupt."></i>
                                                     break;
                                             }
                                         </div>
-                                        <div>
+                                        <div class="d-flex align-items-center">
                                             @switch (downloadItem.Status)
                                             {
                                                 case (DownloadStatus.InProgress):
-                                                    <span class="spinner-border spinner-border-sm" role="status"></span>
-                                                    <span>@($"{downloadItem.ProgressPercents:00}")%&nbsp;&nbsp;</span>
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                    <span class="me-2">@($"{downloadItem.ProgressPercents:00}")%</span>
+                                                    break;
+                                                case (DownloadStatus.Success):
+                                                    <i class="bi bi-check-lg text-success me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Download complete."></i>
+                                                    break;
+                                                case (DownloadStatus.Error):
+                                                    <i class="bi bi-exclamation-triangle text-warning me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Download failed."></i>
                                                     break;
                                             }
                                             <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
