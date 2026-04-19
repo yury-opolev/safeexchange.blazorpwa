@@ -24,17 +24,21 @@
                 <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settingsDialog"><i class="bi bi-gear"></i><span>&nbsp; Settings</span></button>
             </form>
             <div class="dropdown-divider"></div>
-            @if (this.Telemetry.IsEnabled)
-            {
-                <div class="px-4 py-2 d-flex align-items-center gap-2">
-                    <small class="text-muted text-nowrap">Sess.Id</small>
+            <div class="px-4 py-2 d-flex align-items-center gap-2">
+                <small class="text-muted text-nowrap">Sess.Id</small>
+                @if (this.Telemetry.IsEnabled)
+                {
                     <code @ref="this.sessionIdRef" class="flex-grow-1 text-truncate" data-bs-toggle="tooltip" data-bs-placement="top" title="@this.Telemetry.SessionOperationId">@this.TruncatedSessionId</code>
                     <button @ref="this.copyButtonRef" type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard" aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
                         <i class="bi bi-clipboard"></i>
                     </button>
-                </div>
-                <div class="dropdown-divider"></div>
-            }
+                }
+                else
+                {
+                    <small class="text-muted fst-italic flex-grow-1">...</small>
+                }
+            </div>
+            <div class="dropdown-divider"></div>
             <div class="px-4">
                 <button class="nav-link btn btn-link" @onclick="BeginSignOut">Sign out</button>
             </div>
@@ -47,6 +51,8 @@
     </NotAuthorized>
 </AuthorizeView>
 
+@implements IDisposable
+
 @code{
     private ElementReference copyButtonRef;
     private ElementReference sessionIdRef;
@@ -58,6 +64,24 @@
             var id = this.Telemetry.SessionOperationId;
             return id.Length > 8 ? $"{id.Substring(0, 8)}..." : id;
         }
+    }
+
+    protected override void OnInitialized()
+    {
+        // Re-render when the telemetry SDK flips to initialised so the
+        // session-id section and its tooltips appear without waiting
+        // for the user's next unrelated action.
+        this.Telemetry.StateChanged += this.OnTelemetryStateChanged;
+    }
+
+    public void Dispose()
+    {
+        this.Telemetry.StateChanged -= this.OnTelemetryStateChanged;
+    }
+
+    private void OnTelemetryStateChanged(object? sender, EventArgs e)
+    {
+        _ = this.InvokeAsync(this.StateHasChanged);
     }
 
     private void BeginSignIn(MouseEventArgs args)

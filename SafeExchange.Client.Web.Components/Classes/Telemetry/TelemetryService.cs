@@ -67,6 +67,17 @@ public sealed class TelemetryService : IAsyncDisposable
     public bool IsEnabled => this.sdkInitialized;
 
     /// <summary>
+    /// Fires whenever <see cref="IsEnabled"/> flips. Components that gate
+    /// UI on IsEnabled (LoginDisplay showing the session id) should
+    /// subscribe and call <c>StateHasChanged</c> so they re-render when
+    /// the async backend config fetch completes. Without this signal the
+    /// component only re-renders on the next unrelated user action, so
+    /// the dropdown appears empty on first open and attached tooltips
+    /// have no elements to bind to.
+    /// </summary>
+    public event EventHandler? StateChanged;
+
+    /// <summary>
     /// Per-session correlation identifier. Included as a custom property on
     /// every emitted event so a single user journey can be filtered across
     /// page views, exceptions, and traces.
@@ -256,6 +267,7 @@ public sealed class TelemetryService : IAsyncDisposable
                 .InvokeVoidAsync("saexTelemetry.initialize", payload.Result.ConnectionString)
                 .ConfigureAwait(false);
             this.sdkInitialized = true;
+            this.StateChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
