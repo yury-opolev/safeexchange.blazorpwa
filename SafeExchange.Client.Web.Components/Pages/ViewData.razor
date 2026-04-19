@@ -361,8 +361,12 @@
             return;
         }
 
-        await this.JSRuntime.InvokeVoidAsync("eval",
-            $"document.getElementById('verifyInput-{attachment.ContentName}').click()");
+        // The page's CSP is `script-src 'self' 'wasm-unsafe-eval'`, so using
+        // `eval` from JSInterop to click the hidden InputFile is a no-go.
+        // `saexDownload.clickFileInput(id)` is a statically-loaded helper
+        // that does the same thing without evaluating string JS.
+        await this.JSRuntime.InvokeVoidAsync("saexDownload.clickFileInput",
+            $"verifyInput-{attachment.ContentName}");
     }
 
     private async Task RunLocalVerifyAsync(ContentMetadata attachment, InputFileChangeEventArgs args)

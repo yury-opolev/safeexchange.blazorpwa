@@ -91,5 +91,17 @@
         }
     }
 
-    window.saexDownload = { startVerifiedSave, writeBlock, abort, finalize };
+    // Programmatically click a hidden <input type="file"> by element id.
+    // Used by the "Verify local file…" kebab action — Blazor's <InputFile>
+    // renders an <input>, and we want to open its native file-picker from
+    // a C# event handler without going through `eval`, which the page's
+    // CSP (script-src 'self' 'wasm-unsafe-eval') rightly blocks.
+    function clickFileInput(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.click();
+        }
+    }
+
+    window.saexDownload = { startVerifiedSave, writeBlock, abort, finalize, clickFileInput };
 })();
