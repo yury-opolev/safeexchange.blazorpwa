@@ -16,7 +16,9 @@
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
 @inject VerifiedDownloadHelper VerifiedDownload
+@inject LocalFileVerifier LocalFileVerifier
 @inject ClipboardService Clipboard
+@inject IJSRuntime JSRuntime
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
 @inject TelemetryService Telemetry
@@ -123,6 +125,23 @@
                                             <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
                                                 <i class="bi bi-cloud-download"></i><span>&nbsp;Download</span>
                                             </button>
+                                            <div class="dropdown d-inline-block ms-1">
+                                                <button type="button" class="btn btn-sm btn-link" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <button type="button"
+                                                                class="dropdown-item @(string.IsNullOrEmpty(attachment.Hash) ? "disabled" : string.Empty)"
+                                                                disabled="@string.IsNullOrEmpty(attachment.Hash)"
+                                                                @onclick="@(async () => await this.TriggerLocalVerifyClickAsync(attachment))">
+                                                            Verify local file…
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <InputFile id="@($"verifyInput-{attachment.ContentName}")" style="display:none"
+                                                       OnChange="@(async e => await this.RunLocalVerifyAsync(attachment, e))" />
                                         </div>
                                     </li>
                                 }
@@ -221,6 +240,18 @@
     </div>
 }
 
+@if (this.localVerifyMessage is not null)
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+        <div class="toast show @(this.localVerifySuccess ? "bg-success" : "bg-danger") text-white">
+            <div class="toast-body d-flex justify-content-between align-items-center">
+                <span>@this.localVerifyMessage</span>
+                <button type="button" class="btn-close btn-close-white ms-2" @onclick="@(() => this.localVerifyMessage = null)"></button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
 
     [CascadingParameter]
@@ -303,6 +334,37 @@
         }
 
         return AttachmentBadgeKind.None;
+    }
+
+    private string? localVerifyMessage;
+
+    private bool localVerifySuccess;
+
+    private async Task TriggerLocalVerifyClickAsync(ContentMetadata attachment)
+    {
+        if (string.IsNullOrEmpty(attachment.Hash))
+        {
+            return;
+        }
+
+        await this.JSRuntime.InvokeVoidAsync("eval",
+            $"document.getElementById('verifyInput-{attachment.ContentName}').click()");
+    }
+
+    private async Task RunLocalVerifyAsync(ContentMetadata attachment, InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file is null)
+        {
+            return;
+        }
+
+        var computed = await this.LocalFileVerifier.ComputeHashAsync(file);
+        this.localVerifySuccess = string.Equals(computed, attachment.Hash, StringComparison.OrdinalIgnoreCase);
+        this.localVerifyMessage = this.localVerifySuccess
+            ? $"\u2713 {file.Name} matches this attachment."
+            : $"\u2717 {file.Name} does NOT match. Computed: {(computed.Length > 12 ? computed.Substring(0, 12) + "…" : computed)}";
+        this.StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()
