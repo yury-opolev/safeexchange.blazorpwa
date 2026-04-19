@@ -62,10 +62,16 @@ namespace SafeExchange.Client.Web.Components.Helpers
                     int read;
                     while ((read = await stream.Result.ReadAsync(buffer).ConfigureAwait(false)) > 0)
                     {
-                        var segment = new ArraySegment<byte>(buffer, 0, read);
                         chunkHasher.AppendData(buffer, 0, read);
                         fileHasher.AppendData(buffer, 0, read);
-                        await this.jsRuntime.InvokeVoidAsync("saexDownload.writeBlock", handle, segment);
+
+                        // Blazor WASM marshals byte[] (but NOT ArraySegment<byte>) to a JS
+                        // Uint8Array. An ArraySegment comes through as a JSON array of numbers,
+                        // which the Blob constructor then stringifies as "65,116,…" instead of
+                        // the raw bytes. Allocate a right-sized slice so the JS side receives
+                        // a Uint8Array of exactly `read` bytes.
+                        var slice = read == buffer.Length ? buffer : buffer[..read];
+                        await this.jsRuntime.InvokeVoidAsync("saexDownload.writeBlock", handle, slice);
                         totalRead += read;
                         progress?.Report(new VerifiedDownloadProgress(totalRead, totalSize, chunkIndex, content.Chunks.Count));
                     }
