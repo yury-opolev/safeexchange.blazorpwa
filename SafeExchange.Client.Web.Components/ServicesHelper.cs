@@ -36,6 +36,7 @@ namespace SafeExchange.Client.Web.Components
             builder.Services.AddSingleton<StateContainer>();
 
             builder.Services.AddScoped<ApiAuthorizationMessageHandler>();
+            builder.Services.AddScoped<SaexSessionIdMessageHandler>();
             var apiConfiguration = builder.Configuration.GetSection("BackendApi");
             if (string.IsNullOrEmpty(apiConfiguration["BaseAddress"]))
             {
@@ -49,6 +50,7 @@ namespace SafeExchange.Client.Web.Components
                     client.Timeout = TimeSpan.FromMinutes(3);
                 })
                 .AddHttpMessageHandler<ApiAuthorizationMessageHandler>()
+                .AddHttpMessageHandler<SaexSessionIdMessageHandler>()
                 .AddPolicyHandler(DefaultRetryPolicy)
                 .SetHandlerLifetime(TimeSpan.FromMinutes(10));
 
