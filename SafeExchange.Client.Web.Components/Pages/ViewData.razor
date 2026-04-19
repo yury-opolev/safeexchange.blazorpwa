@@ -15,6 +15,7 @@
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
+@inject VerifiedDownloadHelper VerifiedDownload
 @inject ClipboardService Clipboard
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
@@ -190,6 +191,34 @@
             </div>
         </p>
     </EditForm>
+}
+
+@if (this.integrityFailure.HasValue)
+{
+    <div class="modal d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.4);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-diamond"></i>&nbsp; Integrity check failed</h5>
+                </div>
+                <div class="modal-body">
+                    <p>The download of <strong>@this.integrityFailure.Value.content.FileName</strong> could not be verified against the reference hash stored with this attachment.</p>
+                    <p class="text-muted small">The file at the chosen location may be partial or corrupt — please delete it.</p>
+                    @if (this.integrityFailure.Value.result.FailedAtChunk.HasValue && this.integrityFailure.Value.result.FailedAtChunk.Value >= 0)
+                    {
+                        <p class="text-muted small">Failed at chunk @(this.integrityFailure.Value.result.FailedAtChunk.Value + 1)/@this.integrityFailure.Value.result.ChunkCount.</p>
+                    }
+                    @if (!string.IsNullOrEmpty(this.integrityFailure.Value.result.Error))
+                    {
+                        <p class="text-muted small font-monospace">@this.integrityFailure.Value.result.Error</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="@(() => this.integrityFailure = null)">Dismiss</button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
@@ -411,7 +440,54 @@
         return $"addrequest?subject={this.ObjectName}&permission={permissions}";
     }
 
+    private (ContentMetadata content, VerifiedDownloadResult result)? integrityFailure;
+
     private async Task DownloadAttachmentAsync(ContentMetadata attachment)
+    {
+        // Legacy attachments (no reference hash) fall back to the pre-integrity flow.
+        if (string.IsNullOrEmpty(attachment.Hash))
+        {
+            await this.LegacyDownloadAsync(attachment);
+            return;
+        }
+
+        var downloadItem = this.Downloads.First(d => d.Attachment.Equals(attachment));
+        try
+        {
+            downloadItem.Status = DownloadStatus.InProgress;
+            downloadItem.ProgressPercents = 0.0f;
+            this.StateHasChanged();
+
+            var result = await this.VerifiedDownload.DownloadAsync(
+                this.compoundModel.Metadata.ObjectName,
+                attachment);
+
+            if (result.IsSuccess)
+            {
+                this.lastVerifyResults[attachment.ContentName] = AttachmentVerifyResult.Success;
+                downloadItem.Status = DownloadStatus.Success;
+                downloadItem.ProgressPercents = 100.0f;
+            }
+            else
+            {
+                this.lastVerifyResults[attachment.ContentName] = AttachmentVerifyResult.Failure;
+                this.integrityFailure = (attachment, result);
+                downloadItem.Status = DownloadStatus.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            this.lastVerifyResults[attachment.ContentName] = AttachmentVerifyResult.Failure;
+            this.integrityFailure = (attachment, VerifiedDownloadResult.Failed(-1, attachment.Chunks.Count, ex.Message));
+            downloadItem.Status = DownloadStatus.Error;
+        }
+        finally
+        {
+            this.StateHasChanged();
+        }
+    }
+
+    private async Task LegacyDownloadAsync(ContentMetadata attachment)
     {
         var downloadItem = this.Downloads.First(d => d.Attachment.Equals(attachment));
         try
