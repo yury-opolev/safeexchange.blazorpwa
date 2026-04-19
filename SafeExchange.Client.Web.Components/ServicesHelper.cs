@@ -35,6 +35,11 @@ namespace SafeExchange.Client.Web.Components
         {
             builder.Services.AddSingleton<StateContainer>();
 
+            // Singleton so the UI scope and the IHttpClientFactory's handler
+            // scope both see the same session id. Scoped produced two
+            // different GUIDs in Blazor WASM — the UI showed one, the
+            // HTTP header carried another.
+            builder.Services.AddSingleton<SessionCorrelation>();
             builder.Services.AddScoped<ApiAuthorizationMessageHandler>();
             builder.Services.AddScoped<SaexSessionIdMessageHandler>();
             var apiConfiguration = builder.Configuration.GetSection("BackendApi");

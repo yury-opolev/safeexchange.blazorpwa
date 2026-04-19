@@ -38,8 +38,8 @@ public sealed class TelemetryService : IAsyncDisposable
     private readonly IJSRuntime jsRuntime;
     private readonly AuthenticationStateProvider authStateProvider;
     private readonly IHttpClientFactory httpClientFactory;
+    private readonly SessionCorrelation correlation;
     private readonly ILogger<TelemetryService> log;
-    private readonly string sessionOperationId;
 
     private bool sdkInitialized;
     private bool currentlyAuthenticated;
@@ -49,13 +49,14 @@ public sealed class TelemetryService : IAsyncDisposable
         IJSRuntime jsRuntime,
         AuthenticationStateProvider authStateProvider,
         IHttpClientFactory httpClientFactory,
+        SessionCorrelation correlation,
         ILogger<TelemetryService> log)
     {
         this.jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
         this.authStateProvider = authStateProvider ?? throw new ArgumentNullException(nameof(authStateProvider));
         this.httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        this.correlation = correlation ?? throw new ArgumentNullException(nameof(correlation));
         this.log = log ?? throw new ArgumentNullException(nameof(log));
-        this.sessionOperationId = Guid.NewGuid().ToString("n");
     }
 
     /// <summary>
@@ -82,7 +83,7 @@ public sealed class TelemetryService : IAsyncDisposable
     /// every emitted event so a single user journey can be filtered across
     /// page views, exceptions, and traces.
     /// </summary>
-    public string SessionOperationId => this.sessionOperationId;
+    public string SessionOperationId => this.correlation.SessionId;
 
     public ValueTask InitializeAsync()
     {
@@ -279,7 +280,7 @@ public sealed class TelemetryService : IAsyncDisposable
     private IDictionary<string, string> WithSessionCorrelation(IDictionary<string, string>? source)
     {
         var merged = source is null ? new Dictionary<string, string>() : new Dictionary<string, string>(source);
-        merged["saex.sessionId"] = this.sessionOperationId;
+        merged["saex.sessionId"] = this.correlation.SessionId;
         return merged;
     }
 
