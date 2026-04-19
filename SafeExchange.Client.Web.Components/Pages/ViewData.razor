@@ -15,6 +15,7 @@
 @inject StateContainer StateContainer
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
+@inject ClipboardService Clipboard
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
 @inject TelemetryService Telemetry
@@ -72,6 +73,29 @@
                                         <div>
                                             <span id="@($"attachment-{ai}")">@attachment.FileName</span>
                                             <small class="my-0">&nbsp;&nbsp; Size: @attachment.GetLengthDescription()</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(attachment.Hash))
+                                            {
+                                                <code class="me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="@attachment.Hash">@TruncateHash(attachment.Hash)</code>
+                                                <button type="button" class="btn btn-sm btn-link p-0 me-2"
+                                                        @onclick="@(async () => await this.Clipboard.WriteTextAsync(attachment.Hash ?? string.Empty))"
+                                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Copy hash">
+                                                    <i class="bi bi-clipboard"></i>
+                                                </button>
+                                            }
+                                            @switch (this.ResolveBadge(attachment))
+                                            {
+                                                case AttachmentBadgeKind.Verified:
+                                                    <i class="bi bi-shield-fill-check text-success ms-1 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Integrity verified on download."></i>
+                                                    break;
+                                                case AttachmentBadgeKind.Legacy:
+                                                    <i class="bi bi-question-diamond text-secondary ms-1 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Uploaded before the integrity feature — no reference hash is stored. Re-upload this attachment to enable verification."></i>
+                                                    break;
+                                                case AttachmentBadgeKind.Failed:
+                                                    <i class="bi bi-exclamation-diamond text-danger ms-1 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Last download failed the integrity check. The file on disk may be partial or corrupt."></i>
+                                                    break;
+                                            }
                                         </div>
                                         <div>
                                             @switch (downloadItem.Status)
@@ -218,6 +242,39 @@
     private List<ContentMetadata> Attachments { get; set; } = new();
 
     private List<DownloadModel> Downloads { get; set; } = new();
+
+    private enum AttachmentBadgeKind { None, Verified, Legacy, Failed }
+
+    private enum AttachmentVerifyResult { Success, Failure }
+
+    private readonly Dictionary<string, AttachmentVerifyResult> lastVerifyResults = new();
+
+    private static string TruncateHash(string? hash)
+    {
+        if (string.IsNullOrEmpty(hash))
+        {
+            return string.Empty;
+        }
+
+        return hash.Length > 8 ? hash.Substring(0, 8) + "…" : hash;
+    }
+
+    private AttachmentBadgeKind ResolveBadge(ContentMetadata content)
+    {
+        if (string.IsNullOrEmpty(content.Hash))
+        {
+            return AttachmentBadgeKind.Legacy;
+        }
+
+        if (this.lastVerifyResults.TryGetValue(content.ContentName, out var lastResult))
+        {
+            return lastResult == AttachmentVerifyResult.Success
+                ? AttachmentBadgeKind.Verified
+                : AttachmentBadgeKind.Failed;
+        }
+
+        return AttachmentBadgeKind.None;
+    }
 
     protected override async Task OnInitializedAsync()
     {
