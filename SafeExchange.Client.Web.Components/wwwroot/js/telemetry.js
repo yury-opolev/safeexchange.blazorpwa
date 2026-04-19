@@ -72,21 +72,17 @@ window.saexTelemetry = (() => {
             initialized = true;
         },
 
-        setAuthenticated: (isAuth, userId) => {
+        setAuthenticated: (isAuth) => {
+            // We deliberately do NOT call setAuthenticatedUserContext — that
+            // would stamp ai.user.authUserId (the AAD oid) on every event
+            // and persist it in a cookie. saex.sessionId is enough for our
+            // within-session correlation, and we treat any server-side user
+            // attribution as the backend's job (where claims already flow
+            // through TokenFilterMiddleware). See docs/telemetry/.
             if (!initialized) {
                 return;
             }
             authenticated = isAuth;
-            if (isAuth) {
-                if (userId) {
-                    // We pass an opaque oid rather than UPN/email to avoid
-                    // leaking PII into telemetry. See
-                    // docs/telemetry/security-considerations.md.
-                    appInsights.setAuthenticatedUserContext(userId, undefined, true);
-                }
-            } else {
-                appInsights.clearAuthenticatedUserContext();
-            }
         },
 
         trackEvent: (name, properties) => {

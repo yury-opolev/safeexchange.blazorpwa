@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -206,7 +205,7 @@ public sealed class TelemetryService : IAsyncDisposable
         {
             if (this.sdkInitialized)
             {
-                await this.SafeInvokeAsync("saexTelemetry.setAuthenticated", false, (string?)null).ConfigureAwait(false);
+                await this.SafeInvokeAsync("saexTelemetry.setAuthenticated", false).ConfigureAwait(false);
             }
             return;
         }
@@ -226,17 +225,10 @@ public sealed class TelemetryService : IAsyncDisposable
             return;
         }
 
-        string? opaqueId = null;
-        if (user is not null)
-        {
-            // Prefer the AAD oid claim — tenant-specific, opaque, and not
-            // a human-readable identifier. Never pass UPN/email to the SDK.
-            opaqueId = user.FindFirst("oid")?.Value
-                       ?? user.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
-                       ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        }
-
-        await this.SafeInvokeAsync("saexTelemetry.setAuthenticated", true, opaqueId).ConfigureAwait(false);
+        // No user identifier flows to the SDK — saex.sessionId is enough for
+        // within-session correlation, and we do not want ai.user.authUserId
+        // (the oid) or ai.user.id (the SDK's ~1-year cookie) to persist.
+        await this.SafeInvokeAsync("saexTelemetry.setAuthenticated", true).ConfigureAwait(false);
 
         if (transitionedToAuthenticated)
         {

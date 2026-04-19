@@ -89,8 +89,13 @@
         Navigation.NavigateToLogin(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath);
     }
 
-    private void BeginSignOut(MouseEventArgs args)
+    private async Task BeginSignOut(MouseEventArgs args)
     {
+        // Emit + flush before navigating — the page unloads almost
+        // immediately after, so without a flush the event often never
+        // leaves the browser.
+        await this.Telemetry.TrackEventAsync("SignedOut");
+        await this.Telemetry.FlushAsync();
         Navigation.NavigateToLogout(OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
     }
 
