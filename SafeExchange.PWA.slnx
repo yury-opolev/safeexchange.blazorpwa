@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SafeExchange.Client.Common/SafeExchange.Client.Common.csproj" />
+  <Project Path="SafeExchange.Client.Web.Components/SafeExchange.Client.Web.Components.csproj" />
+  <Project Path="SafeExchange.PWA/SafeExchange.PWA.csproj" />
+</Solution>
