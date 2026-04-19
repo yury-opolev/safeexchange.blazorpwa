@@ -45,6 +45,14 @@ function addPlainTooltipFor(element) {
     element.dataset.saexTooltipWired = "1";
 }
 
+// Initialise every `[data-bs-toggle="tooltip"]` on the page as a plain
+// hover-only Bootstrap tooltip. Idempotent — existing wired elements
+// are skipped. Safe to call from OnAfterRenderAsync on every render.
+function initAllPlainTooltips() {
+    var list = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    list.forEach(addPlainTooltipFor);
+}
+
 function initClipboardTooltip(element, content, initialText, clickText) {
     const tooltip = new bootstrap.Tooltip(element)
     element.onclick = async () => {
@@ -53,4 +61,4 @@ function initClipboardTooltip(element, content, initialText, clickText) {
     };
 }
 
-export { addTooltips, addQuillClipboardTooltips, addTooltipFor, addPlainTooltipFor };
+export { addTooltips, addQuillClipboardTooltips, addTooltipFor, addPlainTooltipFor, initAllPlainTooltips };

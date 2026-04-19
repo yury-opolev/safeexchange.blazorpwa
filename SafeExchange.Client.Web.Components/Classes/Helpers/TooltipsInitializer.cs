@@ -47,6 +47,17 @@ namespace SafeExchange.Client.Web.Components
             await module.InvokeVoidAsync("addPlainTooltipFor", element);
         }
 
+        // Bulk-init every `[data-bs-toggle="tooltip"]` on the page as a
+        // plain hover-only Bootstrap tooltip. Idempotent — safe to call
+        // from OnAfterRenderAsync on every render. Use for pages that
+        // render a variable number of tooltip-carrying elements (lists,
+        // tables) where per-element ElementReference wiring is awkward.
+        public async Task InitializeAllPlainTooltipsAsync()
+        {
+            var module = await moduleTask.Value;
+            await module.InvokeVoidAsync("initAllPlainTooltips");
+        }
+
         public async ValueTask DisposeAsync()
         {
             if (moduleTask.IsValueCreated)

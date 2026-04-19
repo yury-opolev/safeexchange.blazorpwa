@@ -103,23 +103,9 @@
                                         <div>
                                             @switch (downloadItem.Status)
                                             {
-                                                case (DownloadStatus.NotStarted):
-                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                                    break;
-
                                                 case (DownloadStatus.InProgress):
                                                     <span class="spinner-border spinner-border-sm" role="status"></span>
                                                     <span>@($"{downloadItem.ProgressPercents:00}")%&nbsp;&nbsp;</span>
-                                                    break;
-
-                                                case (DownloadStatus.Success):
-                                                    <i class="bi bi-check-lg text-success"></i>
-                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                                                    break;
-
-                                                case (DownloadStatus.Error):
-                                                    <i class="bi bi-exclamation-triangle text-warning"></i>
-                                                    <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
                                                     break;
                                             }
                                             <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
@@ -381,6 +367,14 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Wire every `[data-bs-toggle="tooltip"]` on the page as a plain
+        // hover-only Bootstrap tooltip. The JS helper is idempotent per
+        // element (marks DOM nodes after first wiring) so repeat calls
+        // on subsequent renders are cheap and only touch new nodes —
+        // e.g. the attachment-row integrity badges and the copy-hash
+        // button that appear once the secret payload arrives.
+        await TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
+
         if (!this.initializeTooltips)
         {
             return;
