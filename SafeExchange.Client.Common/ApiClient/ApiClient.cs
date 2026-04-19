@@ -22,6 +22,8 @@ namespace SafeExchange.Client.Common
 
         public static readonly string ApiVersion = "v2";
 
+        public const string ChunkHashHeaderName = "X-SafeExchange-Chunk-Hash";
+
         private readonly HttpClient client;
 
         private readonly JsonSerializerOptions jsonOptions;
@@ -403,7 +405,7 @@ namespace SafeExchange.Client.Common
 
         #region secret data stream
          
-        public async Task<BaseResponseObject<ChunkCreationOutput>> PutSecretDataStreamAsync(string secretId, string contentId, Stream dataStream, bool isInterimChunk = false, int uploadSize = 0, string? accessTicket = null)
+        public async Task<BaseResponseObject<ChunkCreationOutput>> PutSecretDataStreamAsync(string secretId, string contentId, Stream dataStream, bool isInterimChunk = false, int uploadSize = 0, string? accessTicket = null, string? chunkHash = null)
             => await this.ProcessResponseAsync<ChunkCreationOutput>(async () =>
         {
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, $"{ApiVersion}/secret/{secretId}/content/{contentId}/chunk");
@@ -422,6 +424,26 @@ namespace SafeExchange.Client.Common
                 httpRequestMessage.Content = new StreamContent(dataStream);
             }
 
+            if (!string.IsNullOrEmpty(accessTicket))
+            {
+                httpRequestMessage.Headers.Add("X-SafeExchange-Ticket", accessTicket);
+            }
+
+            if (!string.IsNullOrEmpty(chunkHash))
+            {
+                httpRequestMessage.Headers.Add(ChunkHashHeaderName, chunkHash);
+            }
+
+            return await client.SendAsync(httpRequestMessage);
+        });
+
+        public async Task<BaseResponseObject<ContentCommitOutput>> CommitContentAsync(string secretId, string contentId, string contentHash, string accessTicket)
+            => await this.ProcessResponseAsync<ContentCommitOutput>(async () =>
+        {
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/secret/{secretId}/content/{contentId}/commit")
+            {
+                Content = JsonContent.Create(new { hash = contentHash }, mediaType: null),
+            };
             if (!string.IsNullOrEmpty(accessTicket))
             {
                 httpRequestMessage.Headers.Add("X-SafeExchange-Ticket", accessTicket);
