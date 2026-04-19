@@ -350,6 +350,11 @@
         this.localVerifyMessage = this.localVerifySuccess
             ? $"\u2713 {file.Name} matches this attachment."
             : $"\u2717 {file.Name} does NOT match. Computed: {(computed.Length > 12 ? computed.Substring(0, 12) + "…" : computed)}";
+        await this.Telemetry.TrackEventAsync("AttachmentLocalVerified", new Dictionary<string, string>
+        {
+            ["attachmentId"] = attachment.ContentName,
+            ["result"] = this.localVerifySuccess ? "match" : "mismatch",
+        });
         this.StateHasChanged();
     }
 
@@ -523,12 +528,25 @@
                 this.lastVerifyResults[attachment.ContentName] = AttachmentVerifyResult.Success;
                 downloadItem.Status = DownloadStatus.Success;
                 downloadItem.ProgressPercents = 100.0f;
+                await this.Telemetry.TrackEventAsync("AttachmentVerified", new Dictionary<string, string>
+                {
+                    ["attachmentId"] = attachment.ContentName,
+                    ["sizeBucket"] = SizeBucket(this.TotalAttachmentBytes(attachment)),
+                });
             }
             else
             {
                 this.lastVerifyResults[attachment.ContentName] = AttachmentVerifyResult.Failure;
                 this.integrityFailure = (attachment, result);
                 downloadItem.Status = DownloadStatus.Error;
+                await this.Telemetry.TrackEventAsync("AttachmentVerifyFailed", new Dictionary<string, string>
+                {
+                    ["attachmentId"] = attachment.ContentName,
+                    ["sizeBucket"] = SizeBucket(this.TotalAttachmentBytes(attachment)),
+                    ["failedAt"] = result.FailedAtChunk.HasValue && result.FailedAtChunk.Value >= 0
+                        ? $"chunk:{result.FailedAtChunk.Value}"
+                        : "wholeContent",
+                });
             }
         }
         catch (Exception ex)
@@ -536,11 +554,44 @@
             this.lastVerifyResults[attachment.ContentName] = AttachmentVerifyResult.Failure;
             this.integrityFailure = (attachment, VerifiedDownloadResult.Failed(-1, attachment.Chunks.Count, ex.Message));
             downloadItem.Status = DownloadStatus.Error;
+            await this.Telemetry.TrackEventAsync("AttachmentVerifyFailed", new Dictionary<string, string>
+            {
+                ["attachmentId"] = attachment.ContentName,
+                ["sizeBucket"] = SizeBucket(this.TotalAttachmentBytes(attachment)),
+                ["failedAt"] = "exception",
+            });
         }
         finally
         {
             this.StateHasChanged();
         }
+    }
+
+    private static string SizeBucket(long bytes)
+    {
+        if (bytes < 1L * 1024 * 1024)
+        {
+            return "<1M";
+        }
+        if (bytes < 10L * 1024 * 1024)
+        {
+            return "1-10M";
+        }
+        if (bytes < 100L * 1024 * 1024)
+        {
+            return "10-100M";
+        }
+        return ">100M";
+    }
+
+    private long TotalAttachmentBytes(ContentMetadata attachment)
+    {
+        var total = 0L;
+        foreach (var chunk in attachment.Chunks)
+        {
+            total += chunk.Length;
+        }
+        return total;
     }
 
     private async Task LegacyDownloadAsync(ContentMetadata attachment)
