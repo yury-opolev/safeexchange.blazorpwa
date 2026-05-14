@@ -9,5 +9,7 @@ namespace SafeExchange.Client.Common.Model
     public class MetadataCreationInput
     {
         public ExpirationSettingsInput ExpirationSettings { get; set; }
+
+        public bool? AuditEnabled { get; set; }
     }
 }
