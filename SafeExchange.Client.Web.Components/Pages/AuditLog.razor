@@ -32,6 +32,11 @@
 {
     <p><span class="spinner-border spinner-border-sm" role="status"></span>&nbsp; Loading audit log…</p>
 }
+else if (this.loadFailed)
+{
+    <!-- No body content: the Notification alert above already explains the failure.
+         Avoid the "not enabled" copy in this state so users aren't misled. -->
+}
 else if (!this.auditEnabled)
 {
     <div class="alert alert-secondary" role="alert">
@@ -167,6 +172,10 @@ else
 
     private bool loading;
 
+    private bool loadFailed;
+
+    private int loadGeneration;
+
     private bool auditEnabled;
 
     private string? nextContinuation;
@@ -220,12 +229,25 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
+        // No `data-bs-toggle="tooltip"` elements on this page (hash codes use the
+        // native browser tooltip via `title=`). Only wire Bootstrap tooltips on
+        // the first render in case the page is reused later — avoid a JS-interop
+        // call on every re-render (filter toggle, row expand) for no gain.
+        if (firstRender)
+        {
+            await TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
+        }
     }
 
     private async Task LoadFirstPageAsync()
     {
+        // Generational guard: rapid Apply/Reset/Raw-toggle clicks can issue
+        // overlapping first-page fetches. Only the most-recent invocation's
+        // response is allowed to write back to component state.
+        var gen = ++this.loadGeneration;
+
         this.loaded = false;
+        this.loadFailed = false;
         this.allEvents.Clear();
         this.expanded.Clear();
         this.nextContinuation = null;
@@ -239,6 +261,12 @@ else
             continuation: null,
             raw: this.rawReads);
 
+        if (gen != this.loadGeneration)
+        {
+            // A newer invocation superseded this one; drop the result.
+            return;
+        }
+
         if (!"ok".Equals(resp.Status))
         {
             this.Notification = new NotificationData
@@ -247,7 +275,7 @@ else
                 Status = resp.Status,
                 Message = $"Cannot load audit log: {(resp.Error ?? "Unknown exception.")}.",
             };
-            this.auditEnabled = false;
+            this.loadFailed = true;
             this.loaded = true;
             await this.Telemetry.TrackEventAsync("AuditLogLoadFailed", new Dictionary<string, string>
             {
@@ -271,6 +299,8 @@ else
         {
             return;
         }
+
+        var gen = this.loadGeneration;
         this.loading = true;
         try
         {
@@ -282,6 +312,12 @@ else
                 pageSize: 100,
                 continuation: this.nextContinuation,
                 raw: this.rawReads);
+
+            if (gen != this.loadGeneration)
+            {
+                // A first-page reload superseded this paging request.
+                return;
+            }
 
             if (!"ok".Equals(resp.Status))
             {
@@ -417,13 +453,160 @@ else
                 {
                     return $"{ev.ContentId} · {ev.ChunkIds.Count} chunks";
                 }
-                return $"{ev.ContentId ?? string.Empty}";
-            case "ContentWritten":
-                return $"{ev.ContentId ?? string.Empty}";
-            case "ContentCommitted":
                 return ev.ContentId ?? string.Empty;
+            case "ContentWritten":
+                return ev.ContentId ?? string.Empty;
+            case "ContentCommitted":
+                return ContentCommittedSummary(ev) ?? (ev.ContentId ?? string.Empty);
+            case "SecretCreated":
+                return SecretCreatedSummary(ev) ?? string.Empty;
+            case "SecretMetadataUpdated":
+                return SecretMetadataUpdatedSummary(ev) ?? string.Empty;
+            case "SecretDeleted":
+                return "(deleted)";
+            case "PermissionGranted":
+            case "PermissionRevoked":
+                return PermissionDiffSummary(ev) ?? string.Empty;
+            case "AccessRequested":
+            case "AccessRequestApproved":
+            case "AccessRequestDenied":
+                return AccessRequestSummary(ev) ?? string.Empty;
             default:
                 return string.Empty;
         }
+    }
+
+    private static string? SecretCreatedSummary(SecretAuditEventOutput ev)
+    {
+        if (ev.Payload is not { } p)
+        {
+            return null;
+        }
+        var parts = new List<string>();
+        if (p.TryGetProperty("tags", out var tags) && tags.ValueKind == JsonValueKind.Array)
+        {
+            parts.Add($"{tags.GetArrayLength()} tag(s)");
+        }
+        if (p.TryGetProperty("auditEnabled", out var ae) && ae.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            parts.Add($"auditEnabled: {ae.GetBoolean().ToString().ToLowerInvariant()}");
+        }
+        return parts.Count == 0 ? null : string.Join(" · ", parts);
+    }
+
+    private static string? SecretMetadataUpdatedSummary(SecretAuditEventOutput ev)
+    {
+        if (ev.Payload is not { } p
+            || !p.TryGetProperty("changes", out var changes)
+            || changes.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+        var fields = new List<string>();
+        foreach (var prop in changes.EnumerateObject())
+        {
+            fields.Add(prop.Name);
+        }
+        if (fields.Count == 0)
+        {
+            return null;
+        }
+        return $"changed: {string.Join(", ", fields)}";
+    }
+
+    private static string? ContentCommittedSummary(SecretAuditEventOutput ev)
+    {
+        if (ev.Payload is not { } p)
+        {
+            return null;
+        }
+        var fileName = p.TryGetProperty("fileName", out var fn) && fn.ValueKind == JsonValueKind.String
+            ? fn.GetString()
+            : null;
+        var cid = p.TryGetProperty("contentId", out var c) && c.ValueKind == JsonValueKind.String
+            ? c.GetString()
+            : ev.ContentId;
+        if (!string.IsNullOrEmpty(fileName))
+        {
+            return string.IsNullOrEmpty(cid) ? fileName : $"{fileName} ({cid})";
+        }
+        return cid;
+    }
+
+    private static string? PermissionDiffSummary(SecretAuditEventOutput ev)
+    {
+        if (ev.Payload is not { } p)
+        {
+            return null;
+        }
+        string? targetName = null;
+        if (p.TryGetProperty("target", out var t) && t.ValueKind == JsonValueKind.Object)
+        {
+            if (t.TryGetProperty("subjectName", out var n) && n.ValueKind == JsonValueKind.String)
+            {
+                targetName = n.GetString();
+            }
+            else if (t.TryGetProperty("subjectId", out var i) && i.ValueKind == JsonValueKind.String)
+            {
+                targetName = i.GetString();
+            }
+        }
+        var flags = new List<string>();
+        if (p.TryGetProperty("permissions", out var perms) && perms.ValueKind == JsonValueKind.Object)
+        {
+            if (perms.TryGetProperty("to", out var to) && to.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in to.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind == JsonValueKind.True)
+                    {
+                        flags.Add(prop.Name.Replace("can", string.Empty));
+                    }
+                }
+            }
+        }
+        if (targetName is null && flags.Count == 0)
+        {
+            return null;
+        }
+        var flagStr = flags.Count == 0 ? string.Empty : string.Join(",", flags);
+        return string.IsNullOrEmpty(flagStr) ? targetName : $"{targetName} → {flagStr}";
+    }
+
+    private static string? AccessRequestSummary(SecretAuditEventOutput ev)
+    {
+        if (ev.Payload is not { } p)
+        {
+            return null;
+        }
+        string? requestorName = null;
+        if (p.TryGetProperty("requestor", out var r) && r.ValueKind == JsonValueKind.Object)
+        {
+            if (r.TryGetProperty("subjectName", out var n) && n.ValueKind == JsonValueKind.String)
+            {
+                requestorName = n.GetString();
+            }
+            else if (r.TryGetProperty("subjectId", out var i) && i.ValueKind == JsonValueKind.String)
+            {
+                requestorName = i.GetString();
+            }
+        }
+        var flags = new List<string>();
+        if (p.TryGetProperty("requestedPermissions", out var rp) && rp.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var prop in rp.EnumerateObject())
+            {
+                if (prop.Value.ValueKind == JsonValueKind.True)
+                {
+                    flags.Add(prop.Name.Replace("can", string.Empty));
+                }
+            }
+        }
+        if (requestorName is null && flags.Count == 0)
+        {
+            return null;
+        }
+        var flagStr = flags.Count == 0 ? string.Empty : string.Join(",", flags);
+        return string.IsNullOrEmpty(flagStr) ? requestorName : $"{requestorName}: {flagStr}";
     }
 }
