@@ -1,0 +1,31 @@
+.audit-filter-bar .form-label-sm {
+    font-size: 0.8rem;
+}
+
+.audit-row {
+    cursor: default;
+}
+
+.audit-row .audit-caret {
+    width: 1rem;
+}
+
+.audit-row .audit-time {
+    font-variant-numeric: tabular-nums;
+    min-width: 11.5rem;
+}
+
+.audit-row .audit-actor {
+    min-width: 10rem;
+    max-width: 16rem;
+}
+
+.audit-payload {
+    max-height: 18rem;
+    overflow: auto;
+    font-size: 0.85rem;
+}
+
+.audit-hash code {
+    font-size: 0.85rem;
+}

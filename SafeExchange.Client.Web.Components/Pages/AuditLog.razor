@@ -1,0 +1,429 @@
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Configuration
+@using Microsoft.JSInterop;
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Model
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json
+
+@inject NavigationManager NavManager
+@inject ApiClient apiClient
+@inject StateContainer StateContainer
+@inject ClipboardService Clipboard
+@inject TooltipsInitializer TooltipsInitializerInstance
+@inject TelemetryService Telemetry
+
+@if (this.Notification != null)
+{
+    <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
+        <strong>@(this.Notification.Status ?? string.Empty)</strong>&nbsp; @(this.Notification.Message ?? string.Empty)
+        <button type="button" class="btn-close" @onclick="DismissNotification" aria-label="Close"></button>
+    </div>
+}
+
+<p>
+    <button class="btn btn-link p-0" type="button" @onclick="@(() => NavManager.NavigateTo($"viewdata/{this.ObjectName}"))">
+        <i class="bi bi-arrow-left"></i>&nbsp;Back to secret
+    </button>
+</p>
+
+@if (!this.loaded)
+{
+    <p><span class="spinner-border spinner-border-sm" role="status"></span>&nbsp; Loading audit log…</p>
+}
+else if (!this.auditEnabled)
+{
+    <div class="alert alert-secondary" role="alert">
+        Audit was not enabled when this secret was created. There is no audit log to display.
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body audit-filter-bar">
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-3">
+                    <label for="audit-from" class="form-label form-label-sm mb-0">From (UTC)</label>
+                    <InputDate id="audit-from" class="form-control form-control-sm" Type="InputDateType.DateTimeLocal" @bind-Value="this.filterFrom" />
+                </div>
+                <div class="col-sm-3">
+                    <label for="audit-to" class="form-label form-label-sm mb-0">To (UTC)</label>
+                    <InputDate id="audit-to" class="form-control form-control-sm" Type="InputDateType.DateTimeLocal" @bind-Value="this.filterTo" />
+                </div>
+                <div class="col-sm-3">
+                    <label for="audit-actor" class="form-label form-label-sm mb-0">Actor contains</label>
+                    <input id="audit-actor" class="form-control form-control-sm" type="text" @bind="this.filterActor" @bind:event="oninput" />
+                </div>
+                <div class="col-sm-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" type="button" @onclick="ApplyServerFiltersAsync">Apply</button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" @onclick="ResetFiltersAsync">Reset</button>
+                </div>
+            </div>
+            <div class="row g-2 mt-2">
+                <div class="col-12 d-flex align-items-center flex-wrap">
+                    <span class="me-2 text-muted small">Show types:</span>
+                    @foreach (var et in this.knownEventTypes)
+                    {
+                        var label = et;
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="@($"et-{label}")"
+                                   checked="@this.eventTypeFilters[label]"
+                                   @onchange="@(e => this.OnToggleEventType(label, (bool)e.Value!))" />
+                            <label class="form-check-label small" for="@($"et-{label}")">@label</label>
+                        </div>
+                    }
+                    <div class="form-check form-switch ms-3">
+                        <input class="form-check-input" type="checkbox" id="audit-raw"
+                               checked="@this.rawReads"
+                               @onchange="@(e => this.OnToggleRaw((bool)e.Value!))" />
+                        <label class="form-check-label small" for="audit-raw">Raw chunk reads</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (this.visibleEvents.Count == 0)
+    {
+        <p class="text-muted">No events match the current filters.</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var ev in this.visibleEvents)
+            {
+                var rowKey = ev.SequenceNumber.ToString();
+                var isOpen = this.expanded.Contains(rowKey);
+                <li class="list-group-item audit-row">
+                    <div class="d-flex align-items-center flex-wrap gap-2" role="button" @onclick="@(() => this.ToggleRow(rowKey))">
+                        <i class="bi @(isOpen ? "bi-chevron-down" : "bi-chevron-right") audit-caret"></i>
+                        <span class="audit-time text-muted">@FormatTime(ev)</span>
+                        <span class="badge @BadgeClassForType(ev.EventType)">@ev.EventType</span>
+                        <span class="audit-actor text-truncate">@(string.IsNullOrEmpty(ev.Actor.SubjectName) ? ev.Actor.SubjectId : ev.Actor.SubjectName)</span>
+                        <span class="audit-summary text-truncate flex-grow-1">@SummariseEvent(ev)</span>
+                    </div>
+                    @if (isOpen)
+                    {
+                        <div class="audit-detail mt-2">
+                            <div class="row gx-3">
+                                <div class="col-md-8">
+                                    <div class="text-muted small">Payload</div>
+                                    <pre class="audit-payload bg-body-tertiary p-2 mb-2"><code>@PrettyPayload(ev)</code></pre>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-muted small">Sequence</div>
+                                    <div class="audit-seq mb-2">@FormatSeq(ev)</div>
+                                    <div class="text-muted small">Hash</div>
+                                    <div class="audit-hash mb-1">
+                                        <code title="@ev.Hash">@Truncate(ev.Hash)</code>
+                                        <button type="button" class="btn btn-sm btn-link p-0 ms-1" @onclick:stopPropagation @onclick="@(async () => await Clipboard.WriteTextAsync(ev.Hash))" title="Copy">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <div class="text-muted small">Prev hash</div>
+                                    <div class="audit-hash">
+                                        @if (string.IsNullOrEmpty(ev.PrevHash))
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                        else
+                                        {
+                                            <code title="@ev.PrevHash">@Truncate(ev.PrevHash)</code>
+                                            <button type="button" class="btn btn-sm btn-link p-0 ms-1" @onclick:stopPropagation @onclick="@(async () => await Clipboard.WriteTextAsync(ev.PrevHash))" title="Copy">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+
+        @if (!string.IsNullOrEmpty(this.nextContinuation))
+        {
+            <p class="text-center mt-3">
+                <button class="btn btn-outline-primary" type="button" disabled="@this.loading" @onclick="LoadMoreAsync">
+                    @if (this.loading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    <span>&nbsp;Load older</span>
+                </button>
+            </p>
+        }
+    }
+}
+
+@code {
+
+    [Parameter]
+    public string ObjectName { get; set; }
+
+    private bool loaded;
+
+    private bool loading;
+
+    private bool auditEnabled;
+
+    private string? nextContinuation;
+
+    private bool rawReads;
+
+    private DateTime? filterFrom;
+
+    private DateTime? filterTo;
+
+    private string filterActor = string.Empty;
+
+    private readonly List<SecretAuditEventOutput> allEvents = new();
+
+    private List<SecretAuditEventOutput> visibleEvents = new();
+
+    private readonly HashSet<string> expanded = new();
+
+    private NotificationData? Notification;
+
+    private readonly string[] knownEventTypes = new[]
+    {
+        "SecretCreated", "SecretMetadataUpdated", "SecretDeleted",
+        "PermissionGranted", "PermissionRevoked",
+        "ContentRead", "ContentWritten", "ContentCommitted",
+        "AccessRequested", "AccessRequestApproved", "AccessRequestDenied",
+    };
+
+    private Dictionary<string, bool> eventTypeFilters = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.IsInProgress = false;
+        this.StateContainer.TakeNotification();
+
+        this.ObjectName ??= string.Empty;
+        this.StateContainer.SetCurrentPageHeader($"Audit log — '{this.ObjectName}'");
+
+        foreach (var t in this.knownEventTypes)
+        {
+            this.eventTypeFilters[t] = true;
+        }
+
+        await this.LoadFirstPageAsync();
+
+        await this.Telemetry.TrackEventAsync("AuditLogViewed", new Dictionary<string, string>
+        {
+            ["name"] = this.ObjectName,
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
+    }
+
+    private async Task LoadFirstPageAsync()
+    {
+        this.loaded = false;
+        this.allEvents.Clear();
+        this.expanded.Clear();
+        this.nextContinuation = null;
+
+        var resp = await this.apiClient.GetSecretAuditAsync(
+            this.ObjectName,
+            direction: "desc",
+            from: this.filterFrom,
+            to: this.filterTo,
+            pageSize: 100,
+            continuation: null,
+            raw: this.rawReads);
+
+        if (!"ok".Equals(resp.Status))
+        {
+            this.Notification = new NotificationData
+            {
+                Type = NotificationType.Warning,
+                Status = resp.Status,
+                Message = $"Cannot load audit log: {(resp.Error ?? "Unknown exception.")}.",
+            };
+            this.auditEnabled = false;
+            this.loaded = true;
+            await this.Telemetry.TrackEventAsync("AuditLogLoadFailed", new Dictionary<string, string>
+            {
+                ["name"] = this.ObjectName,
+                ["status"] = resp.Status ?? string.Empty,
+            });
+            return;
+        }
+
+        var page = resp.Result ?? new SecretAuditPageOutput();
+        this.auditEnabled = page.AuditEnabled;
+        this.allEvents.AddRange(page.Events);
+        this.nextContinuation = page.NextContinuation;
+        this.RecomputeVisible();
+        this.loaded = true;
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (string.IsNullOrEmpty(this.nextContinuation))
+        {
+            return;
+        }
+        this.loading = true;
+        try
+        {
+            var resp = await this.apiClient.GetSecretAuditAsync(
+                this.ObjectName,
+                direction: "desc",
+                from: this.filterFrom,
+                to: this.filterTo,
+                pageSize: 100,
+                continuation: this.nextContinuation,
+                raw: this.rawReads);
+
+            if (!"ok".Equals(resp.Status))
+            {
+                this.Notification = new NotificationData
+                {
+                    Type = NotificationType.Warning,
+                    Status = resp.Status,
+                    Message = $"Cannot load older events: {(resp.Error ?? "Unknown exception.")}.",
+                };
+                return;
+            }
+
+            var page = resp.Result ?? new SecretAuditPageOutput();
+            this.allEvents.AddRange(page.Events);
+            this.nextContinuation = page.NextContinuation;
+            this.RecomputeVisible();
+        }
+        finally
+        {
+            this.loading = false;
+        }
+    }
+
+    private async Task ApplyServerFiltersAsync() => await this.LoadFirstPageAsync();
+
+    private async Task ResetFiltersAsync()
+    {
+        this.filterFrom = null;
+        this.filterTo = null;
+        this.filterActor = string.Empty;
+        foreach (var t in this.knownEventTypes)
+        {
+            this.eventTypeFilters[t] = true;
+        }
+        this.rawReads = false;
+        await this.LoadFirstPageAsync();
+    }
+
+    private void OnToggleEventType(string type, bool value)
+    {
+        this.eventTypeFilters[type] = value;
+        this.RecomputeVisible();
+    }
+
+    private async Task OnToggleRaw(bool value)
+    {
+        this.rawReads = value;
+        await this.LoadFirstPageAsync();
+    }
+
+    private void ToggleRow(string key)
+    {
+        if (!this.expanded.Remove(key))
+        {
+            this.expanded.Add(key);
+        }
+    }
+
+    private void RecomputeVisible()
+    {
+        IEnumerable<SecretAuditEventOutput> q = this.allEvents;
+        q = q.Where(e => this.eventTypeFilters.TryGetValue(e.EventType, out var on) ? on : true);
+        if (!string.IsNullOrWhiteSpace(this.filterActor))
+        {
+            var needle = this.filterActor.Trim();
+            q = q.Where(e =>
+                (e.Actor.SubjectName?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (e.Actor.SubjectId?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+        this.visibleEvents = q.ToList();
+    }
+
+    private void DismissNotification()
+    {
+        this.Notification = null;
+    }
+
+    private static string FormatTime(SecretAuditEventOutput ev)
+    {
+        var ts = ev.FirstAt ?? ev.OccurredAt;
+        return ts.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ssZ");
+    }
+
+    private static string BadgeClassForType(string type) => type switch
+    {
+        "SecretCreated" or "SecretMetadataUpdated" or "SecretDeleted" => "text-bg-secondary",
+        "PermissionGranted" or "PermissionRevoked" => "text-bg-primary",
+        "ContentRead" or "ContentWritten" or "ContentCommitted" => "text-bg-info",
+        "AccessRequested" or "AccessRequestApproved" or "AccessRequestDenied" => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+
+    private static string FormatSeq(SecretAuditEventOutput ev)
+    {
+        if (ev.SequenceFrom.HasValue && ev.SequenceTo.HasValue && ev.SequenceFrom != ev.SequenceTo)
+        {
+            return $"{ev.SequenceFrom}–{ev.SequenceTo}";
+        }
+        return ev.SequenceNumber.ToString();
+    }
+
+    private static string Truncate(string s)
+    {
+        if (string.IsNullOrEmpty(s))
+        {
+            return string.Empty;
+        }
+        return s.Length > 12 ? s.Substring(0, 12) + "…" : s;
+    }
+
+    private static string PrettyPayload(SecretAuditEventOutput ev)
+    {
+        if (ev.Payload is null)
+        {
+            return "{}";
+        }
+        try
+        {
+            return JsonSerializer.Serialize(ev.Payload, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch
+        {
+            return ev.Payload.ToString() ?? "{}";
+        }
+    }
+
+    private static string SummariseEvent(SecretAuditEventOutput ev)
+    {
+        switch (ev.EventType)
+        {
+            case "ContentRead":
+                if (ev.ChunkIds is { Count: > 0 })
+                {
+                    return $"{ev.ContentId} · {ev.ChunkIds.Count} chunks";
+                }
+                return $"{ev.ContentId ?? string.Empty}";
+            case "ContentWritten":
+                return $"{ev.ContentId ?? string.Empty}";
+            case "ContentCommitted":
+                return ev.ContentId ?? string.Empty;
+            default:
+                return string.Empty;
+        }
+    }
+}
