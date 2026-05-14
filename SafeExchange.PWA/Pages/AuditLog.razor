@@ -1,0 +1,12 @@
+@page "/auditlog/{objectName}"
+
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+<SafeExchange.Client.Web.Components.Pages.AuditLog ObjectName=@this.ObjectName />
+
+@code {
+    [Parameter]
+    public string ObjectName { get; set; }
+}
