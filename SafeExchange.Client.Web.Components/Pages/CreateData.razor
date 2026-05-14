@@ -208,6 +208,20 @@
     </p>
 
     <p>
+        <div class="row align-items-center">
+            <div class="col-sm-4">
+                <div class="form-check form-switch">
+                    <InputCheckbox class="form-check-input" type="checkbox" id="auditEnabledSwitch" disabled="@this.StateContainer.IsInProgress" @bind-Value="this.compoundModel.Metadata.AuditEnabled" />
+                    <label class="form-check-label" for="auditEnabledSwitch">Enable audit log</label>
+                </div>
+            </div>
+            <div class="col-sm">
+                <small class="text-muted">Records every meaningful action on this secret. This choice cannot be changed later.</small>
+            </div>
+        </div>
+    </p>
+
+    <p>
         <strong>Grant access to:</strong>
     </p>
 
