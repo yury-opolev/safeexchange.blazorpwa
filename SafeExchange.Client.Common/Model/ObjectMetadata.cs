@@ -21,6 +21,8 @@ namespace SafeExchange.Client.Common.Model
             this.Content.AddRange(source.Content.Select(c => new ContentMetadata(c)));
 
             this.ExpirationMetadata = new ExpirationMetadata(source.ExpirationMetadata);
+
+            this.AuditEnabled = source.AuditEnabled;
         }
 
         public ObjectMetadata(ObjectMetadataOutput source)
@@ -31,6 +33,8 @@ namespace SafeExchange.Client.Common.Model
             this.Content.AddRange(source.Content.Select(c => new ContentMetadata(c)));
 
             this.ExpirationMetadata = new ExpirationMetadata(source.ExpirationSettings);
+
+            this.AuditEnabled = source.AuditEnabled;
         }
 
         private static List<ContentMetadata> CreateContent()
@@ -56,9 +60,14 @@ namespace SafeExchange.Client.Common.Model
 
         public ExpirationMetadata ExpirationMetadata { get; set; }
 
+        // Default true so freshly-constructed metadata (the new-secret form path)
+        // opts new secrets into auditing unless the user unchecks the checkbox.
+        public bool AuditEnabled { get; set; } = true;
+
         public MetadataCreationInput ToCreationDto() => new MetadataCreationInput()
         {
-            ExpirationSettings = this.ExpirationMetadata.ToDto()
+            ExpirationSettings = this.ExpirationMetadata.ToDto(),
+            AuditEnabled = this.AuditEnabled,
         };
 
         public MetadataUpdateInput ToUpdateDto() => new MetadataUpdateInput()
