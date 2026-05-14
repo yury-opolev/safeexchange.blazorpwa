@@ -405,6 +405,46 @@ namespace SafeExchange.Client.Common
             return await client.DeleteAsync($"{ApiVersion}/secret/{secretId}");
         });
 
+        public async Task<BaseResponseObject<SecretAuditPageOutput>> GetSecretAuditAsync(
+            string secretId,
+            string? direction = null,
+            DateTime? from = null,
+            DateTime? to = null,
+            int? pageSize = null,
+            string? continuation = null,
+            bool raw = false)
+            => await this.ProcessResponseAsync<SecretAuditPageOutput>(async () =>
+        {
+            var query = new List<string>();
+            if (!string.IsNullOrEmpty(direction))
+            {
+                query.Add($"direction={Uri.EscapeDataString(direction)}");
+            }
+            if (from.HasValue)
+            {
+                query.Add($"from={Uri.EscapeDataString(from.Value.ToUniversalTime().ToString("O"))}");
+            }
+            if (to.HasValue)
+            {
+                query.Add($"to={Uri.EscapeDataString(to.Value.ToUniversalTime().ToString("O"))}");
+            }
+            if (pageSize.HasValue)
+            {
+                query.Add($"pageSize={pageSize.Value}");
+            }
+            if (!string.IsNullOrEmpty(continuation))
+            {
+                query.Add($"continuation={Uri.EscapeDataString(continuation)}");
+            }
+            if (raw)
+            {
+                query.Add("raw=true");
+            }
+
+            var qs = query.Count == 0 ? string.Empty : "?" + string.Join("&", query);
+            return await client.GetAsync($"{ApiVersion}/secret/{secretId}/audit{qs}");
+        });
+
         #endregion secret metadata
 
         #region secret content metadata
