@@ -14,5 +14,7 @@ namespace SafeExchange.Client.Common.Model
         public List<ContentMetadataOutput> Content { get; set; }
 
         public ExpirationSettingsOutput ExpirationSettings { get; set; }
+
+        public bool AuditEnabled { get; set; }
     }
 }
