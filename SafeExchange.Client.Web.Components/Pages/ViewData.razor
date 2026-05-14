@@ -194,12 +194,27 @@
                         }
                         <span>&nbsp;Refresh</span>
                     </button>
+                    @if (this.compoundModel.Metadata.AuditEnabled)
+                    {
+                        <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="ViewAuditLog">
+                            <i class="bi bi-clipboard-data"></i><span>&nbsp;Audit log</span>
+                        </button>
+                    }
                     <button class="btn btn-outline-primary" type="button" disabled="@(!this.CanEditObject() || this.StateContainer.IsInProgress)" @onclick="EditObject">
                         <i class="bi bi-pencil"></i><span>&nbsp;Edit</span>
                     </button>
                 </div>
             </div>
         </p>
+
+        @if (this.compoundModel.Metadata.AuditEnabled)
+        {
+            <p class="text-center">
+                <span class="badge text-bg-info" data-bs-toggle="tooltip" data-bs-placement="top" title="Audit logging is enabled for this secret.">
+                    <i class="bi bi-clipboard-data"></i>&nbsp;Audited
+                </span>
+            </p>
+        }
     </EditForm>
 }
 
@@ -460,6 +475,11 @@
     private void EditObject()
     {
         NavManager.NavigateTo($"editdata/{this.ObjectName}");
+    }
+
+    private void ViewAuditLog()
+    {
+        NavManager.NavigateTo($"auditlog/{this.ObjectName}");
     }
 
     private async Task FetchSecretAsync(string objectName)
