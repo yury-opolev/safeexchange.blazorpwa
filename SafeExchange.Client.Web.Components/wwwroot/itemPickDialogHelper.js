@@ -4,4 +4,11 @@ function showModal(element) {
     modal.show();
 }
 
-export { showModal };
+function hideModal(element) {
+    var modal = bootstrap.Modal.getInstance(element);
+    if (modal) {
+        modal.hide();
+    }
+}
+
+export { showModal, hideModal };

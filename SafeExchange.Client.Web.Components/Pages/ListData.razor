@@ -1,11 +1,13 @@
 ﻿@using SafeExchange.Client.Common
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Helpers
 @using SafeExchange.Client.Web.Components.Model
 @using SafeExchange.Client.Web.Components.Shared
 
 @inject NavigationManager NavigationManager
 @inject StateContainer StateContainer
+@inject TelemetryService Telemetry
 @inject ApiClient apiClient
 
 @if (this.Notification != null)
@@ -55,7 +57,7 @@
         }
     </ul>
 
-    <GiveUpDialog @ref="this.giveUpDialog" ObjectName="@this.giveUpTargetName" OnConfirmed="this.OnGiveUpConfirmedAsync" />
+    <GiveUpDialog @ref="this.giveUpDialog" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 
     @if (this.SecretsPermissions.Count == 0)
     {
@@ -73,7 +75,7 @@
 
     private GiveUpDialog giveUpDialog;
 
-    private string giveUpTargetName = string.Empty;
+    private string lastGiveUpTarget = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -151,16 +153,21 @@
 
     private async Task OpenGiveUpDialogAsync(string objectName)
     {
-        this.giveUpTargetName = objectName;
-        this.StateHasChanged();
-        await this.giveUpDialog.ShowAsync();
+        this.lastGiveUpTarget = objectName;
+        await this.giveUpDialog.ShowAsync(objectName);
     }
 
     private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
     {
-        var message = result?.WasOrphaned == true && result.ExpireAt.HasValue
-            ? $"You gave up access to '{this.giveUpTargetName}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
-            : $"You gave up access to '{this.giveUpTargetName}'.";
+        var wasOrphaned = result?.WasOrphaned == true;
+
+        // ListData refetches in place rather than navigating away — different shape
+        // than ViewData/EditData (where GiveUpFlowHelper handles SetNextNotification
+        // + NavigateTo). The telemetry call here mirrors the helper so all three
+        // entry points emit the same GiveUpAccess event.
+        var message = wasOrphaned && result!.ExpireAt.HasValue
+            ? $"You gave up access to '{this.lastGiveUpTarget}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
+            : $"You gave up access to '{this.lastGiveUpTarget}'.";
 
         this.Notification = new NotificationData
         {
@@ -168,6 +175,12 @@
             Status = "ok",
             Message = message
         };
+
+        await this.Telemetry.TrackEventAsync("GiveUpAccess", new Dictionary<string, string>
+        {
+            ["name"] = this.lastGiveUpTarget ?? string.Empty,
+            ["orphaned"] = wasOrphaned.ToString()
+        });
 
         await this.FetchSecretNamesAsync();
     }

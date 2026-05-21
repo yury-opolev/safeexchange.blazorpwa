@@ -5,6 +5,7 @@
 @using System.Text.RegularExpressions;
 @using System.Text
 @using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Helpers
 @using SafeExchange.Client.Web.Components.Model
 @using SafeExchange.Client.Web.Components.Shared
 @using System.IO
@@ -454,7 +455,7 @@
         </p>
     </EditForm>
 
-    <GiveUpDialog @ref="this.giveUpDialog" ObjectName="@this.ObjectName" OnConfirmed="this.OnGiveUpConfirmedAsync" />
+    <GiveUpDialog @ref="this.giveUpDialog" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 }
 
 @code {
@@ -854,8 +855,8 @@
                 if (!"ok".Equals(accessReply.Status))
                 {
                     // PATCH gates separately on GrantAccess (when Add is non-empty) and
-                    // RevokeAccess (when Remove is non-empty); on 403 we don't know which
-                    // permission set was missing, so report the superset.
+                    // RevokeAccess (when Remove is non-empty). Report only the permission
+                    // sets actually needed for the operations in this batch.
                     var hadAdds = addedPermissionItems.Count > 0;
                     var hadRemoves = deletedPermissionItems.Count > 0;
                     if (hadAdds && hadRemoves)
@@ -864,7 +865,7 @@
                     }
                     else if (hadRemoves)
                     {
-                        missingAccess = "Read,Write,GrantAccess,RevokeAccess";
+                        missingAccess = "Read,Write,RevokeAccess";
                     }
                     else
                     {
@@ -1067,28 +1068,12 @@
 
     private async Task OpenGiveUpDialogAsync()
     {
-        await this.giveUpDialog.ShowAsync();
+        await this.giveUpDialog.ShowAsync(this.ObjectName);
     }
 
     private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
     {
-        var message = result?.WasOrphaned == true && result.ExpireAt.HasValue
-            ? $"You gave up access to '{this.ObjectName}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
-            : $"You gave up access to '{this.ObjectName}'.";
-
-        this.StateContainer.SetNextNotification(new NotificationData
-        {
-            Type = NotificationType.Success,
-            Status = "ok",
-            Message = message
-        });
-
-        await this.Telemetry.TrackEventAsync("GiveUpAccess", new Dictionary<string, string>
-        {
-            ["name"] = this.ObjectName ?? string.Empty,
-            ["orphaned"] = (result?.WasOrphaned == true).ToString()
-        });
-
-        NavManager.NavigateTo("listdata");
+        await GiveUpFlowHelper.AfterGiveUpAsync(
+            this.ObjectName, result, this.StateContainer, this.Telemetry, NavManager);
     }
 }

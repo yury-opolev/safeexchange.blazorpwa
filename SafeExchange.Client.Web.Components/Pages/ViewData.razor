@@ -211,7 +211,7 @@
             </div>
         </p>
 
-        <GiveUpDialog @ref="this.giveUpDialog" ObjectName="@this.ObjectName" OnConfirmed="this.OnGiveUpConfirmedAsync" />
+        <GiveUpDialog @ref="this.giveUpDialog" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 
         @if (this.compoundModel.Metadata.AuditEnabled)
         {
@@ -492,29 +492,13 @@
 
     private async Task OpenGiveUpDialogAsync()
     {
-        await this.giveUpDialog.ShowAsync();
+        await this.giveUpDialog.ShowAsync(this.ObjectName);
     }
 
     private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
     {
-        var message = result?.WasOrphaned == true && result.ExpireAt.HasValue
-            ? $"You gave up access to '{this.ObjectName}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
-            : $"You gave up access to '{this.ObjectName}'.";
-
-        this.StateContainer.SetNextNotification(new NotificationData
-        {
-            Type = NotificationType.Success,
-            Status = "ok",
-            Message = message
-        });
-
-        await this.Telemetry.TrackEventAsync("GiveUpAccess", new Dictionary<string, string>
-        {
-            ["name"] = this.ObjectName ?? string.Empty,
-            ["orphaned"] = (result?.WasOrphaned == true).ToString()
-        });
-
-        NavManager.NavigateTo("listdata");
+        await GiveUpFlowHelper.AfterGiveUpAsync(
+            this.ObjectName, result, this.StateContainer, this.Telemetry, NavManager);
     }
 
     private async Task FetchSecretAsync(string objectName)
