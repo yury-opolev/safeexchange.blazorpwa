@@ -6,6 +6,7 @@
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
 @using SafeExchange.Client.Web.Components.Helpers
+@using SafeExchange.Client.Web.Components.Shared
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Text
 @using System.IO
@@ -203,9 +204,14 @@
                     <button class="btn btn-outline-primary" type="button" disabled="@(!this.CanEditObject() || this.StateContainer.IsInProgress)" @onclick="EditObject">
                         <i class="bi bi-pencil"></i><span>&nbsp;Edit</span>
                     </button>
+                    <button class="btn btn-outline-warning" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="OpenGiveUpDialogAsync">
+                        <i class="bi bi-box-arrow-right"></i><span>&nbsp;Give up</span>
+                    </button>
                 </div>
             </div>
         </p>
+
+        <GiveUpDialog @ref="this.giveUpDialog" ObjectName="@this.ObjectName" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 
         @if (this.compoundModel.Metadata.AuditEnabled)
         {
@@ -480,6 +486,35 @@
     private void ViewAuditLog()
     {
         NavManager.NavigateTo($"auditlog/{this.ObjectName}");
+    }
+
+    private GiveUpDialog giveUpDialog;
+
+    private async Task OpenGiveUpDialogAsync()
+    {
+        await this.giveUpDialog.ShowAsync();
+    }
+
+    private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
+    {
+        var message = result?.WasOrphaned == true && result.ExpireAt.HasValue
+            ? $"You gave up access to '{this.ObjectName}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
+            : $"You gave up access to '{this.ObjectName}'.";
+
+        this.StateContainer.SetNextNotification(new NotificationData
+        {
+            Type = NotificationType.Success,
+            Status = "ok",
+            Message = message
+        });
+
+        await this.Telemetry.TrackEventAsync("GiveUpAccess", new Dictionary<string, string>
+        {
+            ["name"] = this.ObjectName ?? string.Empty,
+            ["orphaned"] = (result?.WasOrphaned == true).ToString()
+        });
+
+        NavManager.NavigateTo("listdata");
     }
 
     private async Task FetchSecretAsync(string objectName)

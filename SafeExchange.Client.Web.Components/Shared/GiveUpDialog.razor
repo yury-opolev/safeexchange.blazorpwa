@@ -1,0 +1,191 @@
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components.Model
+
+@inject ApiClient apiClient
+@inject ItemPickDialogHelper itemPickDialogHelper
+
+<div class="modal fade" @ref="this.modalDialog" id="giveUpDialog" tabindex="-1" role="dialog" aria-labelledby="giveUpModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <p class="modal-title" id="giveUpModalLabel"><strong>Give up access</strong></p>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" disabled="@this.IsInProgress"></button>
+            </div>
+            <div class="modal-body">
+                @if (this.IsInProgress && this.preview is null)
+                {
+                    <div class="d-flex justify-content-center py-2">
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(this.errorMessage))
+                {
+                    <div class="alert alert-warning" role="alert">
+                        @this.errorMessage
+                    </div>
+                }
+                else if (this.preview is { HasDirectRow: false })
+                {
+                    <p>You don't have a direct permission on <strong>@this.ObjectName</strong> to give up.</p>
+                }
+                else if (this.preview is { WouldOrphan: true })
+                {
+                    <div class="alert alert-danger d-flex align-items-start mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                        <div>
+                            <p class="mb-1"><strong>Nobody else has access to this secret.</strong></p>
+                            <p class="mb-0">
+                                If you give up your access, <strong>@this.ObjectName</strong> will become
+                                orphaned and is scheduled to be permanently deleted on
+                                <strong>@(this.preview.ProspectiveExpireAt?.ToString("yyyy-MM-dd HH:mm 'UTC'"))</strong>.
+                            </p>
+                        </div>
+                    </div>
+                    <p class="mb-0">This cannot be undone. Are you sure you want to proceed?</p>
+                }
+                else if (this.preview is not null)
+                {
+                    <p>You are about to give up your access to <strong>@this.ObjectName</strong>.</p>
+                    <p class="text-muted mb-0">Other users still have access, so the secret will remain in place.</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled="@this.IsInProgress" @onclick="this.OnCancel">Cancel</button>
+                <button type="button"
+                        class="btn @(this.preview is { WouldOrphan: true } ? "btn-danger" : "btn-warning")"
+                        disabled="@(!this.CanConfirm())"
+                        data-bs-dismiss="modal"
+                        @onclick="this.OnConfirm">
+                    @if (this.IsInProgress && this.preview is not null)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-box-arrow-right"></i>
+                    }
+                    <span>&nbsp;Give up</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string ObjectName { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<GiveUpResultOutput> OnConfirmed { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelled { get; set; }
+
+    private ElementReference modalDialog;
+
+    private GiveUpPreviewOutput? preview;
+
+    private string errorMessage = string.Empty;
+
+    private bool IsInProgress { get; set; }
+
+    /// <summary>
+    /// Open the dialog and trigger a preview against the configured ObjectName.
+    /// The modal is shown immediately (so the user sees a spinner while the
+    /// preview lands) and the preview / error state determines the body.
+    /// </summary>
+    public async Task ShowAsync()
+    {
+        this.preview = null;
+        this.errorMessage = string.Empty;
+        this.IsInProgress = true;
+        this.StateHasChanged();
+
+        await this.itemPickDialogHelper.ShowModalAsync(this.modalDialog);
+
+        try
+        {
+            var response = await this.apiClient.GetGiveUpPreviewAsync(this.ObjectName);
+            if ("ok".Equals(response.Status))
+            {
+                this.preview = response.Result;
+            }
+            else if ("no_content".Equals(response.Status))
+            {
+                // Feature flag UseAccessGiveUp is off on this environment, or the secret has gone.
+                this.errorMessage = "The give-up feature is not currently available.";
+            }
+            else
+            {
+                this.errorMessage = response.Error ?? "Failed to load give-up preview.";
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception ex)
+        {
+            this.errorMessage = $"Could not load preview: {ex.Message}";
+        }
+        finally
+        {
+            this.IsInProgress = false;
+            this.StateHasChanged();
+        }
+    }
+
+    private bool CanConfirm()
+    {
+        if (this.IsInProgress)
+        {
+            return false;
+        }
+        return this.preview is { HasDirectRow: true };
+    }
+
+    private async Task OnConfirm()
+    {
+        if (string.IsNullOrEmpty(this.ObjectName) || this.preview is null)
+        {
+            return;
+        }
+
+        this.IsInProgress = true;
+        this.StateHasChanged();
+
+        try
+        {
+            var response = await this.apiClient.GiveUpAccessAsync(this.ObjectName);
+            if ("ok".Equals(response.Status))
+            {
+                await this.OnConfirmed.InvokeAsync(response.Result);
+            }
+            else
+            {
+                this.errorMessage = response.Error ?? "Give-up failed.";
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        catch (Exception ex)
+        {
+            this.errorMessage = $"Give-up failed: {ex.Message}";
+        }
+        finally
+        {
+            this.IsInProgress = false;
+            this.StateHasChanged();
+        }
+    }
+
+    private async Task OnCancel()
+    {
+        await this.OnCancelled.InvokeAsync();
+    }
+}

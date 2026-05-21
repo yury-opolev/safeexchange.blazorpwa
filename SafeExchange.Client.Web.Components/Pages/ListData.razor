@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
+@using SafeExchange.Client.Web.Components.Shared
 
 @inject NavigationManager NavigationManager
 @inject StateContainer StateContainer
@@ -38,10 +39,23 @@
                         <i class="bi bi-pencil"></i>
                         <span>&nbsp; Edit</span>
                     </button>
+                    <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" disabled="@this.StateContainer.IsInProgress">
+                        <span class="visually-hidden">More actions</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item" type="button" @onclick="@(e => this.OpenGiveUpDialogAsync(secretPermissions.ObjectName))">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>&nbsp;Give up access</span>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
             </li>
         }
     </ul>
+
+    <GiveUpDialog @ref="this.giveUpDialog" ObjectName="@this.giveUpTargetName" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 
     @if (this.SecretsPermissions.Count == 0)
     {
@@ -56,6 +70,10 @@
     private NotificationData Notification;
 
     private List<SubjectPermissions> SecretsPermissions;
+
+    private GiveUpDialog giveUpDialog;
+
+    private string giveUpTargetName = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,5 +147,28 @@
     public void DismissNotification()
     {
         this.Notification = null;
+    }
+
+    private async Task OpenGiveUpDialogAsync(string objectName)
+    {
+        this.giveUpTargetName = objectName;
+        this.StateHasChanged();
+        await this.giveUpDialog.ShowAsync();
+    }
+
+    private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
+    {
+        var message = result?.WasOrphaned == true && result.ExpireAt.HasValue
+            ? $"You gave up access to '{this.giveUpTargetName}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
+            : $"You gave up access to '{this.giveUpTargetName}'.";
+
+        this.Notification = new NotificationData
+        {
+            Type = NotificationType.Success,
+            Status = "ok",
+            Message = message
+        };
+
+        await this.FetchSecretNamesAsync();
     }
 }

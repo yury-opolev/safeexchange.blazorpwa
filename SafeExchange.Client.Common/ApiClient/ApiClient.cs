@@ -367,6 +367,29 @@ namespace SafeExchange.Client.Common
             return await client.SendAsync(httpRequestMessage);
         });
 
+        public async Task<BaseResponseObject<string>> UpdateAccessAsync(string secretId, AccessUpdateInput input)
+            => await this.ProcessResponseAsync<string>(async () =>
+        {
+            var httpRequestMessage = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiVersion}/access/{secretId}")
+            {
+                Content = JsonContent.Create(input, mediaType: null)
+            };
+
+            return await client.SendAsync(httpRequestMessage);
+        });
+
+        public async Task<BaseResponseObject<GiveUpPreviewOutput>> GetGiveUpPreviewAsync(string secretId)
+            => await this.ProcessResponseAsync<GiveUpPreviewOutput>(async () =>
+        {
+            return await client.GetAsync($"{ApiVersion}/access-giveup/{secretId}");
+        });
+
+        public async Task<BaseResponseObject<GiveUpResultOutput>> GiveUpAccessAsync(string secretId)
+            => await this.ProcessResponseAsync<GiveUpResultOutput>(async () =>
+        {
+            return await client.DeleteAsync($"{ApiVersion}/access-giveup/{secretId}");
+        });
+
         #endregion permissions
 
         #region secret metadata

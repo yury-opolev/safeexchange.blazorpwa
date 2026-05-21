@@ -6,6 +6,7 @@
 @using System.Text
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
+@using SafeExchange.Client.Web.Components.Shared
 @using System.IO
 @using System.Threading
 
@@ -445,9 +446,15 @@
                     }
                     <span>&nbsp;Delete</span>
                 </button>
+                <button type="button" class="btn btn-outline-warning mx-2" disabled="@this.StateContainer.IsInProgress" @onclick="OpenGiveUpDialogAsync">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>&nbsp;Give up</span>
+                </button>
             </div>
         </p>
     </EditForm>
+
+    <GiveUpDialog @ref="this.giveUpDialog" ObjectName="@this.ObjectName" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 }
 
 @code {
@@ -821,16 +828,6 @@
                 deletedPermissionItems.Add(this.compoundModel.Permissions[deletedIndex]);
             }
 
-            if (deletedPermissionItems.Count > 0)
-            {
-                var accessReply = await apiClient.RevokeAccessAsync(
-                    this.compoundModel.Metadata.ObjectName, deletedPermissionItems.Select(sp => sp.ToDto()).ToList());
-                if (!"ok".Equals(accessReply.Status))
-                {
-                    missingAccess = "Read,Write,GrantAccess,RevokeAccess";
-                }
-            }
-
             var addedPermissionItems = new List<SubjectPermissions>();
             for (int index = this.FixedAccessItemCount; index < this.compoundModel.Permissions.Count; index++)
             {
@@ -840,13 +837,39 @@
                 }
             }
 
-            if (addedPermissionItems.Count > 0)
+            // Single atomic PATCH for both grants and revocations so the orphan-detection
+            // rule sees the post-change state, not an intermediate one (the legacy
+            // DELETE-then-POST flow could expose a transient unowned state and incorrectly
+            // schedule the secret for purge).
+            if (deletedPermissionItems.Count > 0 || addedPermissionItems.Count > 0)
             {
-                var accessReply = await apiClient.GrantAccessAsync(
-                    this.compoundModel.Metadata.ObjectName, addedPermissionItems.Select(sp => sp.ToDto()).ToList());
+                var updateInput = new AccessUpdateInput
+                {
+                    Add = addedPermissionItems.Select(sp => sp.ToDto()).ToList(),
+                    Remove = deletedPermissionItems.Select(sp => sp.ToDto()).ToList()
+                };
+
+                var accessReply = await apiClient.UpdateAccessAsync(
+                    this.compoundModel.Metadata.ObjectName, updateInput);
                 if (!"ok".Equals(accessReply.Status))
                 {
-                    missingAccess = string.IsNullOrEmpty(missingAccess) ? "Read,Write,GrantAccess" : missingAccess;
+                    // PATCH gates separately on GrantAccess (when Add is non-empty) and
+                    // RevokeAccess (when Remove is non-empty); on 403 we don't know which
+                    // permission set was missing, so report the superset.
+                    var hadAdds = addedPermissionItems.Count > 0;
+                    var hadRemoves = deletedPermissionItems.Count > 0;
+                    if (hadAdds && hadRemoves)
+                    {
+                        missingAccess = "Read,Write,GrantAccess,RevokeAccess";
+                    }
+                    else if (hadRemoves)
+                    {
+                        missingAccess = "Read,Write,GrantAccess,RevokeAccess";
+                    }
+                    else
+                    {
+                        missingAccess = "Read,Write,GrantAccess";
+                    }
                 }
             }
 
@@ -1038,5 +1061,34 @@
     {
         permissions.SubjectName = value;
         permissions.SubjectId = value;
+    }
+
+    private GiveUpDialog giveUpDialog;
+
+    private async Task OpenGiveUpDialogAsync()
+    {
+        await this.giveUpDialog.ShowAsync();
+    }
+
+    private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
+    {
+        var message = result?.WasOrphaned == true && result.ExpireAt.HasValue
+            ? $"You gave up access to '{this.ObjectName}'. Nobody else has access; the secret is scheduled to be deleted on {result.ExpireAt.Value:yyyy-MM-dd HH:mm 'UTC'}."
+            : $"You gave up access to '{this.ObjectName}'.";
+
+        this.StateContainer.SetNextNotification(new NotificationData
+        {
+            Type = NotificationType.Success,
+            Status = "ok",
+            Message = message
+        });
+
+        await this.Telemetry.TrackEventAsync("GiveUpAccess", new Dictionary<string, string>
+        {
+            ["name"] = this.ObjectName ?? string.Empty,
+            ["orphaned"] = (result?.WasOrphaned == true).ToString()
+        });
+
+        NavManager.NavigateTo("listdata");
     }
 }
