@@ -1,4 +1,5 @@
 ﻿@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Helpers
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Helpers
@@ -52,6 +53,22 @@
                             </button>
                         </li>
                     </ul>
+                    <button type="button" class="btn btn-outline-primary" title="@(this.IsPinned(secretPermissions.ObjectName) ? "Unpin" : "Pin")"
+                            disabled="@(this.togglingNames.Contains(secretPermissions.ObjectName) || this.StateContainer.IsInProgress)"
+                            @onclick="() => this.TogglePinAsync(secretPermissions.ObjectName)">
+                        @if (this.togglingNames.Contains(secretPermissions.ObjectName))
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else if (this.IsPinned(secretPermissions.ObjectName))
+                        {
+                            <i class="bi bi-star-fill"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-star"></i>
+                        }
+                    </button>
                 </div>
             </li>
         }
@@ -77,6 +94,51 @@
 
     private string lastGiveUpTarget = string.Empty;
 
+    private readonly HashSet<string> togglingNames = new();
+
+    private bool IsPinned(string objectName) => this.StateContainer.PinnedSecretNames.Contains(objectName);
+
+    private async Task FetchPinnedSecretsAsync()
+    {
+        try
+        {
+            var response = await apiClient.ListPinnedSecretsAsync();
+            if ("ok".Equals(response.Status) || "no_content".Equals(response.Status))
+            {
+                var items = response.Result ?? new List<PinnedSecretOutput>();
+                this.StateContainer.PinnedSecretNames = new HashSet<string>(items.Select(p => p.SecretName));
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    private async Task TogglePinAsync(string objectName)
+    {
+        var newValue = !this.IsPinned(objectName);
+        this.togglingNames.Add(objectName);
+        try
+        {
+            var result = await PinnedSecretsHelper.SwitchSecretPinAsync(
+                this.apiClient, this.StateContainer.PinnedSecretNames, objectName, newValue);
+            if (!result.Succeeded)
+            {
+                this.Notification = new NotificationData
+                {
+                    Type = NotificationType.Warning,
+                    Status = result.Status,
+                    Message = result.Error
+                };
+            }
+        }
+        finally
+        {
+            this.togglingNames.Remove(objectName);
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         this.StateContainer.IsInProgress = false;
@@ -84,6 +146,7 @@
 
         this.StateContainer.SetCurrentPageHeader($"My secrets");
         await this.FetchSecretNamesAsync();
+        await this.FetchPinnedSecretsAsync();
     }
 
     private string GetViewUri(string objectName)
