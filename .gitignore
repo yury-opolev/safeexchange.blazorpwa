@@ -270,3 +270,4 @@ __pycache__/
 
 # Superpowers brainstorm scratch files
 .superpowers/
+deployment/*.log
