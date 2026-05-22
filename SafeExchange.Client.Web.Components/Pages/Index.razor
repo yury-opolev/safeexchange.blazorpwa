@@ -1,8 +1,12 @@
-﻿@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Helpers
+@using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
 @inject NavigationManager NavigationManager
 @inject StateContainer StateContainer
+@inject ApiClient apiClient
 
 @if (this.Notification != null)
 {
@@ -50,11 +54,71 @@
 
 </EditForm>
 
+@if (this.pinnedSecrets is not null && this.pinnedSecrets.Count > 0)
+{
+    <hr />
+    <p class="d-flex align-items-center">
+        <strong>Pinned</strong>
+        <span class="badge text-bg-secondary ms-2">@this.pinnedSecrets.Count</span>
+        @if (this.isFetchingPinned)
+        {
+            <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
+        }
+    </p>
+    <ul class="list-group list-group-flush">
+        @foreach (var pin in this.pinnedSecrets)
+        {
+            var current = pin;
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap @(current.State == PinnedSecretState.Live ? string.Empty : "text-muted")">
+                <div>
+                    @switch (current.State)
+                    {
+                        case PinnedSecretState.Live:
+                            <a href="viewdata/@current.SecretName" class="text-decoration-none">@current.SecretName</a>
+                            @if (current.Tags.Count > 0)
+                            {
+                                <small class="ms-2">@string.Join(", ", current.Tags)</small>
+                            }
+                            break;
+                        case PinnedSecretState.AccessLost:
+                            <span>@current.SecretName</span>
+                            <small class="text-warning ms-2"><i class="bi bi-exclamation-triangle"></i> no access</small>
+                            <a href="addrequest?subject=@current.SecretName&permission=Read" class="ms-2 small">Request access</a>
+                            break;
+                        case PinnedSecretState.Deleted:
+                            <span class="text-decoration-line-through">@current.SecretName</span>
+                            <small class="text-danger ms-2"><i class="bi bi-x-circle"></i> deleted</small>
+                            break;
+                    }
+                </div>
+                <button type="button" class="btn btn-link text-primary" title="Unpin"
+                        disabled="@this.togglingNames.Contains(current.SecretName)"
+                        @onclick="() => this.UnpinAsync(current.SecretName)">
+                    @if (this.togglingNames.Contains(current.SecretName))
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-star-fill"></i>
+                    }
+                </button>
+            </li>
+        }
+    </ul>
+}
+
 @code {
 
     private NotificationData Notification;
 
     private SearchInput searchInput;
+
+    private List<PinnedSecret> pinnedSecrets;
+
+    private bool isFetchingPinned;
+
+    private readonly HashSet<string> togglingNames = new();
 
     protected override void OnInitialized()
     {
@@ -64,11 +128,74 @@
         this.searchInput = new SearchInput();
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        await this.FetchPinnedSecretsAsync();
+    }
+
+    private async Task FetchPinnedSecretsAsync()
+    {
+        this.isFetchingPinned = true;
+        try
+        {
+            var response = await this.apiClient.ListPinnedSecretsAsync();
+            if ("ok".Equals(response.Status) || "no_content".Equals(response.Status))
+            {
+                var items = response.Result ?? new List<PinnedSecretOutput>();
+                this.pinnedSecrets = items.Select(x => new PinnedSecret(x)).ToList();
+                this.StateContainer.PinnedSecretNames = new HashSet<string>(this.pinnedSecrets.Select(p => p.SecretName));
+            }
+            else
+            {
+                this.Notification = new NotificationData
+                {
+                    Type = NotificationType.Warning,
+                    Status = response.Status,
+                    Message = response.Error
+                };
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+        finally
+        {
+            this.isFetchingPinned = false;
+        }
+    }
+
+    private async Task UnpinAsync(string secretName)
+    {
+        this.togglingNames.Add(secretName);
+        try
+        {
+            var result = await PinnedSecretsHelper.SwitchSecretPinAsync(
+                this.apiClient, this.StateContainer.PinnedSecretNames, secretName, false);
+            if (result.Succeeded)
+            {
+                this.pinnedSecrets?.RemoveAll(p => p.SecretName.Equals(secretName));
+            }
+            else
+            {
+                this.Notification = new NotificationData
+                {
+                    Type = NotificationType.Warning,
+                    Status = result.Status,
+                    Message = result.Error
+                };
+            }
+        }
+        finally
+        {
+            this.togglingNames.Remove(secretName);
+        }
+    }
+
     public void ViewObject()
     {
         if (string.IsNullOrEmpty(this.searchInput.SearchString))
         {
-            //...
             return;
         }
 
