@@ -629,6 +629,36 @@ namespace SafeExchange.Client.Common
 
         #endregion pinned groups
 
+        #region pinned secrets
+
+        public async Task<BaseResponseObject<List<PinnedSecretOutput>>> ListPinnedSecretsAsync()
+            => await this.ProcessResponseAsync<List<PinnedSecretOutput>>(async () =>
+            {
+                return await client.GetAsync($"{ApiVersion}/pinnedsecrets-list");
+            });
+
+        public async Task<BaseResponseObject<PinnedSecretOutput>> GetPinnedSecretAsync(string secretId)
+            => await this.ProcessResponseAsync<PinnedSecretOutput>(async () =>
+            {
+                return await client.GetAsync($"{ApiVersion}/pinnedsecrets/{secretId}");
+            });
+
+        public async Task<BaseResponseObject<PinnedSecretOutput>> PutPinnedSecretAsync(string secretId)
+            => await this.ProcessResponseAsync<PinnedSecretOutput>(async () =>
+            {
+                // PUT carries no body — the secret name is fully in the URL path.
+                var httpRequestMessage = new HttpRequestMessage(HttpMethod.Put, $"{ApiVersion}/pinnedsecrets/{secretId}");
+                return await client.SendAsync(httpRequestMessage);
+            });
+
+        public async Task<BaseResponseObject<string>> DeletePinnedSecretAsync(string secretId)
+            => await this.ProcessResponseAsync<string>(async () =>
+            {
+                return await client.DeleteAsync($"{ApiVersion}/pinnedsecrets/{secretId}");
+            });
+
+        #endregion pinned secrets
+
         #region search
 
         public async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput input)
