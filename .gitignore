@@ -267,3 +267,6 @@ __pycache__/
 *.pyc
 # Playwright MCP cache
 .playwright-mcp/
+
+# Superpowers brainstorm scratch files
+.superpowers/
