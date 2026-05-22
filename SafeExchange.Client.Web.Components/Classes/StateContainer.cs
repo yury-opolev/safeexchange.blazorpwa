@@ -62,7 +62,7 @@ namespace SafeExchange.Client.Web.Components
 
         // Names of secrets the current user has pinned. Source of truth for star
         // state across Home / My Secrets / View. Mutated through PinnedSecretsHelper.
-        public HashSet<string> PinnedSecretNames { get; set; } = new HashSet<string>();
+        public HashSet<string> PinnedSecretNames { get; set; } = [];
 
         private ILogger logger;
 

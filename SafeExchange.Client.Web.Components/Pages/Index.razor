@@ -143,10 +143,14 @@
             {
                 var items = response.Result ?? new List<PinnedSecretOutput>();
                 this.pinnedSecrets = items.Select(x => new PinnedSecret(x)).ToList();
-                this.StateContainer.PinnedSecretNames = new HashSet<string>(this.pinnedSecrets.Select(p => p.SecretName));
+                // Mutate the shared set in place (rather than reassigning) so the
+                // canonical instance is never orphaned for other readers.
+                this.StateContainer.PinnedSecretNames.Clear();
+                this.StateContainer.PinnedSecretNames.UnionWith(this.pinnedSecrets.Select(p => p.SecretName));
             }
-            else
+            else if (this.Notification is null)
             {
+                // Don't clobber a navigation notification taken in OnInitialized.
                 this.Notification = new NotificationData
                 {
                     Type = NotificationType.Warning,

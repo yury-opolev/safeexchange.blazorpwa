@@ -110,7 +110,9 @@ Reuse the exact pinned-groups visual (`ItemSearchDialog`):
 - pinned → `<i class="bi bi-star-fill"></i>`
 - in progress → `<span class="spinner-border spinner-border-sm" role="status"></span>`
 
-Rendered as a `btn btn-link` (text-primary). Optimistic toggle with spinner; reverts on error.
+Rendered as a `btn btn-link` (text-primary). The toggle awaits the server call
+with the spinner shown during the request, then flips state on success or shows
+a warning notification on failure (pessimistic — no flicker, nothing to revert).
 
 ## Surfaces
 

@@ -102,11 +102,12 @@
     {
         try
         {
-            var response = await apiClient.ListPinnedSecretsAsync();
+            var response = await this.apiClient.ListPinnedSecretsAsync();
             if ("ok".Equals(response.Status) || "no_content".Equals(response.Status))
             {
                 var items = response.Result ?? new List<PinnedSecretOutput>();
-                this.StateContainer.PinnedSecretNames = new HashSet<string>(items.Select(p => p.SecretName));
+                this.StateContainer.PinnedSecretNames.Clear();
+                this.StateContainer.PinnedSecretNames.UnionWith(items.Select(p => p.SecretName));
             }
         }
         catch (AccessTokenNotAvailableException exception)

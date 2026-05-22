@@ -533,6 +533,13 @@
             {
                 this.StateContainer.PinnedSecretNames.Add(this.ObjectName);
             }
+            else
+            {
+                // Reconcile the shared set both ways: if a prior list fetch seeded
+                // this name but the server now reports it un-pinned, drop it so other
+                // surfaces (My Secrets) don't show a stale filled star.
+                this.StateContainer.PinnedSecretNames.Remove(this.ObjectName);
+            }
         }
         catch (AccessTokenNotAvailableException exception)
         {
