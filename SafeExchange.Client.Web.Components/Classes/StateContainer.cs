@@ -60,6 +60,10 @@ namespace SafeExchange.Client.Web.Components
 
         public List<PinnedGroup> PinnedGroups { get; set; } = [];
 
+        // Names of secrets the current user has pinned. Source of truth for star
+        // state across Home / My Secrets / View. Mutated through PinnedSecretsHelper.
+        public HashSet<string> PinnedSecretNames { get; set; } = new HashSet<string>();
+
         private ILogger logger;
 
         public StateContainer(ILogger<StateContainer> logger)
