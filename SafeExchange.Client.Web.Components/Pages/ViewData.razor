@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Options
 @using Microsoft.JSInterop;
 @using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Helpers
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
 @using SafeExchange.Client.Web.Components.Helpers
@@ -194,6 +195,22 @@
                             <i class="bi bi-arrow-clockwise"></i>
                         }
                         <span>&nbsp;Refresh</span>
+                    </button>
+                    <button class="btn btn-outline-primary" type="button" title="@(this.isPinned ? "Unpin" : "Pin")"
+                            disabled="@(this.isTogglingPin || this.StateContainer.IsInProgress)" @onclick="TogglePinAsync">
+                        @if (this.isTogglingPin)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else if (this.isPinned)
+                        {
+                            <i class="bi bi-star-fill"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-star"></i>
+                        }
+                        <span>&nbsp;@(this.isPinned ? "Pinned" : "Pin")</span>
                     </button>
                     @if (this.compoundModel.Metadata.AuditEnabled)
                     {
@@ -421,6 +438,7 @@
 
         this.authenticationState = await this.AuthenticationStateTask;
         await this.FetchData();
+        await this.FetchPinStateAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -499,6 +517,55 @@
     {
         await GiveUpFlowHelper.AfterGiveUpAsync(
             this.ObjectName, result, this.StateContainer, this.Telemetry, NavManager);
+    }
+
+    private bool isPinned;
+
+    private bool isTogglingPin;
+
+    private async Task FetchPinStateAsync()
+    {
+        try
+        {
+            var response = await this.apiClient.GetPinnedSecretAsync(this.ObjectName);
+            this.isPinned = "ok".Equals(response.Status) && response.Result is not null;
+            if (this.isPinned)
+            {
+                this.StateContainer.PinnedSecretNames.Add(this.ObjectName);
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    private async Task TogglePinAsync()
+    {
+        var newValue = !this.isPinned;
+        this.isTogglingPin = true;
+        try
+        {
+            var result = await PinnedSecretsHelper.SwitchSecretPinAsync(
+                this.apiClient, this.StateContainer.PinnedSecretNames, this.ObjectName, newValue);
+            if (result.Succeeded)
+            {
+                this.isPinned = newValue;
+            }
+            else
+            {
+                this.Notification = new NotificationData
+                {
+                    Type = NotificationType.Warning,
+                    Status = result.Status,
+                    Message = result.Error
+                };
+            }
+        }
+        finally
+        {
+            this.isTogglingPin = false;
+        }
     }
 
     private async Task FetchSecretAsync(string objectName)
