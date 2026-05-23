@@ -105,55 +105,64 @@ public sealed class TelemetryService : IAsyncDisposable
         }));
     }
 
-    public async ValueTask TrackEventAsync(string name, IDictionary<string, string>? properties = null)
+    // Track* methods are intentionally NOT awaited internally: telemetry must
+    // never sit in an awaited critical path and delay a UI operation. They kick
+    // off the JS interop fire-and-forget and return a completed ValueTask, so
+    // existing `await Telemetry.Track...` call sites complete instantly.
+    // SafeInvokeAsync swallows all exceptions, so the discarded task is safe.
+    public ValueTask TrackEventAsync(string name, IDictionary<string, string>? properties = null)
     {
         if (!this.sdkInitialized)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         var merged = this.WithSessionCorrelation(properties);
-        await this.SafeInvokeAsync("saexTelemetry.trackEvent", name, merged).ConfigureAwait(false);
+        _ = this.SafeInvokeAsync("saexTelemetry.trackEvent", name, merged);
+        return ValueTask.CompletedTask;
     }
 
-    public async ValueTask TrackExceptionAsync(Exception exception, IDictionary<string, string>? properties = null)
+    public ValueTask TrackExceptionAsync(Exception exception, IDictionary<string, string>? properties = null)
     {
         if (!this.sdkInitialized || exception is null)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         var merged = this.WithSessionCorrelation(properties);
-        await this.SafeInvokeAsync(
+        _ = this.SafeInvokeAsync(
             "saexTelemetry.trackException",
             exception.Message,
             exception.StackTrace ?? string.Empty,
-            merged).ConfigureAwait(false);
+            merged);
+        return ValueTask.CompletedTask;
     }
 
-    public async ValueTask TrackTraceAsync(string message, LogSeverityLevel severity, IDictionary<string, string>? properties = null)
+    public ValueTask TrackTraceAsync(string message, LogSeverityLevel severity, IDictionary<string, string>? properties = null)
     {
         if (!this.sdkInitialized)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         var merged = this.WithSessionCorrelation(properties);
-        await this.SafeInvokeAsync(
+        _ = this.SafeInvokeAsync(
             "saexTelemetry.trackTrace",
             message,
             (int)severity,
-            merged).ConfigureAwait(false);
+            merged);
+        return ValueTask.CompletedTask;
     }
 
-    public async ValueTask TrackPageViewAsync(string name, string uri)
+    public ValueTask TrackPageViewAsync(string name, string uri)
     {
         if (!this.sdkInitialized)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
-        await this.SafeInvokeAsync("saexTelemetry.trackPageView", name, uri).ConfigureAwait(false);
+        _ = this.SafeInvokeAsync("saexTelemetry.trackPageView", name, uri);
+        return ValueTask.CompletedTask;
     }
 
     public async ValueTask FlushAsync()
