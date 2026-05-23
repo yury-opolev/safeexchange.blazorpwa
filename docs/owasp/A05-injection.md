@@ -60,6 +60,8 @@
 
 **Assumptions:** If the backend enforces HTML sanitization server-side with an allowlist sanitizer, severity drops to High/Medium. No evidence of such sanitization in this client-only repo; scoring reflects worst case. If a strict CSP is already set at the hosting layer, exfiltration via `fetch()` is blocked, dropping severity to High.
 
+**Update (2026-05-23 — resolved server-side):** The backend *does* sanitize, unconditionally, on every main-content upload — `SafeExchange.Core/Functions/SafeExchangeSecretStream.cs` `UploadMainContentAsync` runs `Ganss.Xss.HtmlSanitizer` with the same allowlist the client used, and `IsMain` content can never take the unsanitized hashed-blob path. Since the API is reachable directly (a client-side sanitize is bypassable and therefore not a real boundary), the **redundant client-side** sanitization was removed: it re-parsed multi-MB inline-image HTML on the single Blazor WASM UI thread on every view (~14 s for large images; effectively hung iOS Safari). Stored-XSS is now enforced server-side at write time. Recommendations #3 (`richTextEditor.js` `innerHTML`), #4 (strict CSP), and #5 (token storage) remain **open** as defense-in-depth.
+
 ---
 
 ## [P1] [HIGH] DOM XSS in custom Quill `CopyableBlot` via `innerHTML = value`
