@@ -52,7 +52,10 @@
                 <div @ref="this.quillElement" id="main_content" class="ql-editor @(this.StateContainer.IsInProgress ? "ql-blank" : string.Empty)" data-placeholder="Loading...">
                     @if (!this.StateContainer.IsInProgress)
                     {
-                        @((MarkupString)MainDataSanitizer.Sanitize(this.compoundModel.MainData))
+                        @* Content is sanitized server-side on upload (SafeExchangeSecretStream.UploadMainContentAsync),
+                           so we render the stored, already-sanitized HTML directly. Re-sanitizing here parsed the whole
+                           multi-MB inline-image HTML on the WASM UI thread on every view (~14s for large images). *@
+                        @((MarkupString)this.compoundModel.MainData)
                     }
                 </div>
             </div>
