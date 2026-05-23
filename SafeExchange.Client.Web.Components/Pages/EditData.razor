@@ -785,8 +785,9 @@
             }
 
             var newMainContent = this.compoundModel.Metadata.Content.First(c => c.IsMain);
-            // No client-side sanitize: the backend sanitizes main content on upload
-            // (SafeExchangeSecretStream.UploadMainContentAsync) with the same allow-list.
+            // Sanitize on write as defense-in-depth (the backend also sanitizes on
+            // upload). Not done on the view path, which renders stored content directly.
+            this.compoundModel.MainData = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
             using (var dataStream = new MemoryStream())
             {
                 using (var writer = new StreamWriter(dataStream, leaveOpen: true))

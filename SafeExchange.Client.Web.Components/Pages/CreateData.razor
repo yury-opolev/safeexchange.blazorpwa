@@ -557,8 +557,10 @@
             timer.Elapsed += (_, _) => InvokeAsync(() => StateHasChanged());
             timer.Start();
 
-            // No client-side sanitize: the backend sanitizes main content on upload
-            // (SafeExchangeSecretStream.UploadMainContentAsync) with the same allow-list.
+            // Sanitize on write as defense-in-depth (the backend also sanitizes on
+            // upload). Not done on the view path, which renders stored content directly.
+            this.compoundModel.MainData = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
+
             var result = await apiClient.CreateFromCompoundModelAsync(this.compoundModel, this.Attachments);
             if (!"ok".Equals(result.Status))
             {
