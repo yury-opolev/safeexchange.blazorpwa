@@ -27,11 +27,29 @@
             var secretPermissions = this.SecretsPermissions[i];
             var objectUri = this.GetViewUri(secretPermissions.ObjectName);
             <li class="list-group-item list-item-hover-border d-flex justify-content-between align-items-center flex-wrap">
-                <div>
-                    <CopyableContent Data="@objectUri">
-                        <span>@secretPermissions.ObjectName</span>
-                    </CopyableContent>
-                    <small class="my-0">@secretPermissions.PermissionsString</small>
+                <div class="d-flex align-items-center">
+                    <button type="button" class="btn btn-link text-primary px-2" title="@(this.IsPinned(secretPermissions.ObjectName) ? "Unpin" : "Pin")"
+                            disabled="@(this.togglingNames.Contains(secretPermissions.ObjectName) || this.StateContainer.IsInProgress)"
+                            @onclick="() => this.TogglePinAsync(secretPermissions.ObjectName)">
+                        @if (this.togglingNames.Contains(secretPermissions.ObjectName))
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else if (this.IsPinned(secretPermissions.ObjectName))
+                        {
+                            <i class="bi bi-star-fill"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-star"></i>
+                        }
+                    </button>
+                    <div>
+                        <CopyableContent Data="@objectUri">
+                            <span>@secretPermissions.ObjectName</span>
+                        </CopyableContent>
+                        <small class="my-0">@secretPermissions.PermissionsString</small>
+                    </div>
                 </div>
                 <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">
                     <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.ViewObject(secretPermissions.ObjectName))">
@@ -53,22 +71,6 @@
                             </button>
                         </li>
                     </ul>
-                    <button type="button" class="btn btn-outline-primary" title="@(this.IsPinned(secretPermissions.ObjectName) ? "Unpin" : "Pin")"
-                            disabled="@(this.togglingNames.Contains(secretPermissions.ObjectName) || this.StateContainer.IsInProgress)"
-                            @onclick="() => this.TogglePinAsync(secretPermissions.ObjectName)">
-                        @if (this.togglingNames.Contains(secretPermissions.ObjectName))
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                        }
-                        else if (this.IsPinned(secretPermissions.ObjectName))
-                        {
-                            <i class="bi bi-star-fill"></i>
-                        }
-                        else
-                        {
-                            <i class="bi bi-star"></i>
-                        }
-                    </button>
                 </div>
             </li>
         }

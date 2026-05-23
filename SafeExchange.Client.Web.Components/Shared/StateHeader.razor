@@ -12,6 +12,16 @@
 <span>
     @StateContainerInstance.CurrentPageHeader
 </span>
+@if (!string.IsNullOrEmpty(this.StateContainerInstance.HeaderBadgeText))
+{
+    <span class="badge text-bg-info ms-2" title="@this.StateContainerInstance.HeaderBadgeTooltip">
+        @if (!string.IsNullOrEmpty(this.StateContainerInstance.HeaderBadgeIcon))
+        {
+            <i class="bi @this.StateContainerInstance.HeaderBadgeIcon"></i><span>&nbsp;</span>
+        }
+        @this.StateContainerInstance.HeaderBadgeText
+    </span>
+}
 
 @code{
     protected override void OnInitialized()

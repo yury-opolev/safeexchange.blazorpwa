@@ -36,6 +36,9 @@ namespace SafeExchange.Client.Common.Model
 
         public List<string> Tags { get; set; } = new List<string>();
 
+        public string PermissionsString
+            => PermissionsConverter.ToPermissionString(this.CanRead, this.CanWrite, this.CanGrantAccess, this.CanRevokeAccess);
+
         public PinnedSecretState State
         {
             get

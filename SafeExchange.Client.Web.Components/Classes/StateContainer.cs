@@ -21,6 +21,15 @@ namespace SafeExchange.Client.Web.Components
 
         public NotificationData Notification { get; private set; }
 
+        // Optional badge shown in the top-row header next to the page title.
+        // Reset on every SetCurrentPageHeader so it never leaks across navigation;
+        // a page that wants it sets it after setting its header.
+        public string? HeaderBadgeText { get; private set; }
+
+        public string? HeaderBadgeIcon { get; private set; }
+
+        public string? HeaderBadgeTooltip { get; private set; }
+
         public event Action OnChange;
 
         private bool isInProgress = false;
@@ -86,6 +95,25 @@ namespace SafeExchange.Client.Web.Components
         public void SetCurrentPageHeader(string pageHeader)
         {
             CurrentPageHeader = pageHeader;
+            this.HeaderBadgeText = null;
+            this.HeaderBadgeIcon = null;
+            this.HeaderBadgeTooltip = null;
+            NotifyStateChanged();
+        }
+
+        public void SetHeaderBadge(string text, string? icon = null, string? tooltip = null)
+        {
+            this.HeaderBadgeText = text;
+            this.HeaderBadgeIcon = icon;
+            this.HeaderBadgeTooltip = tooltip;
+            NotifyStateChanged();
+        }
+
+        public void ClearHeaderBadge()
+        {
+            this.HeaderBadgeText = null;
+            this.HeaderBadgeIcon = null;
+            this.HeaderBadgeTooltip = null;
             NotifyStateChanged();
         }
 

@@ -46,5 +46,27 @@ namespace SafeExchange.Client.Common.Tests
 
             Assert.That(model.State, Is.EqualTo(PinnedSecretState.Deleted));
         }
+
+        [Test]
+        public void PermissionsString_ReflectsFlags()
+        {
+            var model = new PinnedSecret(new PinnedSecretOutput
+            {
+                SecretName = "s4", Exists = true, CanRead = true, CanWrite = true
+            });
+
+            Assert.That(model.PermissionsString, Is.EqualTo("Read,Write"));
+        }
+
+        [Test]
+        public void PermissionsString_Empty_WhenNoFlags()
+        {
+            var model = new PinnedSecret(new PinnedSecretOutput
+            {
+                SecretName = "s5", Exists = true, CanRead = false
+            });
+
+            Assert.That(model.PermissionsString, Is.EqualTo(string.Empty));
+        }
     }
 }

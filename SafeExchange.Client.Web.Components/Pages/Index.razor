@@ -69,7 +69,7 @@
         @foreach (var pin in this.pinnedSecrets)
         {
             var current = pin;
-            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap @(current.State == PinnedSecretState.Live ? string.Empty : "text-muted")">
+            <li class="list-group-item list-item-hover-border d-flex justify-content-between align-items-center flex-wrap @(current.State == PinnedSecretState.Live ? string.Empty : "text-muted")">
                 <div>
                     @switch (current.State)
                     {
@@ -79,6 +79,7 @@
                             {
                                 <small class="ms-2">@string.Join(", ", current.Tags)</small>
                             }
+                            <div><small class="my-0">@current.PermissionsString</small></div>
                             break;
                         case PinnedSecretState.AccessLost:
                             <span>@current.SecretName</span>
