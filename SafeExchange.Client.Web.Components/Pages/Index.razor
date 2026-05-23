@@ -120,6 +120,9 @@
 
     private readonly HashSet<string> togglingNames = new();
 
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationStateTask { get; set; }
+
     protected override void OnInitialized()
     {
         this.StateContainer.IsInProgress = false;
@@ -130,7 +133,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await this.FetchPinnedSecretsAsync();
+        // Home is an anonymous page (no [Authorize]). Only fetch pinned secrets
+        // when the user is signed in — otherwise the API call triggers an
+        // AccessTokenNotAvailableException that surfaces as a spurious warning.
+        var authState = await this.AuthenticationStateTask;
+        if (authState.User?.Identity?.IsAuthenticated == true)
+        {
+            await this.FetchPinnedSecretsAsync();
+        }
     }
 
     private async Task FetchPinnedSecretsAsync()
