@@ -7,6 +7,7 @@
 @inject NavigationManager NavigationManager
 @inject StateContainer StateContainer
 @inject ApiClient apiClient
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 @if (this.Notification != null)
 {
@@ -59,7 +60,7 @@
     <hr />
     <p class="d-flex align-items-center">
         <strong>Pinned</strong>
-        <span class="badge text-bg-secondary ms-2">@this.pinnedSecrets.Count</span>
+        <span class="badge rounded-pill text-bg-secondary ms-2">@this.pinnedSecrets.Count</span>
         @if (this.isFetchingPinned)
         {
             <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
@@ -92,7 +93,7 @@
                             break;
                     }
                 </div>
-                <button type="button" class="btn btn-link text-primary" title="Unpin"
+                <button type="button" class="btn btn-link text-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Unpin"
                         disabled="@this.togglingNames.Contains(current.SecretName)"
                         @onclick="() => this.UnpinAsync(current.SecretName)">
                     @if (this.togglingNames.Contains(current.SecretName))
@@ -142,6 +143,11 @@
         {
             await this.FetchPinnedSecretsAsync();
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await this.TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
     }
 
     private async Task FetchPinnedSecretsAsync()

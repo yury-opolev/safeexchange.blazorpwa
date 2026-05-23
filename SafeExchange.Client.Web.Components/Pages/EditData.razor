@@ -447,15 +447,9 @@
                     }
                     <span>&nbsp;Delete</span>
                 </button>
-                <button type="button" class="btn btn-outline-warning mx-2" disabled="@this.StateContainer.IsInProgress" @onclick="OpenGiveUpDialogAsync">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span>&nbsp;Give up</span>
-                </button>
             </div>
         </p>
     </EditForm>
-
-    <GiveUpDialog @ref="this.giveUpDialog" OnConfirmed="this.OnGiveUpConfirmedAsync" />
 }
 
 @code {
@@ -1064,16 +1058,4 @@
         permissions.SubjectId = value;
     }
 
-    private GiveUpDialog giveUpDialog;
-
-    private async Task OpenGiveUpDialogAsync()
-    {
-        await this.giveUpDialog.ShowAsync(this.ObjectName);
-    }
-
-    private async Task OnGiveUpConfirmedAsync(GiveUpResultOutput result)
-    {
-        await GiveUpFlowHelper.AfterGiveUpAsync(
-            this.ObjectName, result, this.StateContainer, this.Telemetry, NavManager);
-    }
 }

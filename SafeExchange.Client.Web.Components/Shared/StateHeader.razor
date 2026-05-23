@@ -1,4 +1,5 @@
 ﻿@inject StateContainer StateContainerInstance
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 @implements IDisposable
 
@@ -14,7 +15,7 @@
 </span>
 @if (!string.IsNullOrEmpty(this.StateContainerInstance.HeaderBadgeText))
 {
-    <span class="badge text-bg-info ms-2" title="@this.StateContainerInstance.HeaderBadgeTooltip">
+    <span class="badge text-bg-info ms-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="@this.StateContainerInstance.HeaderBadgeTooltip">
         @if (!string.IsNullOrEmpty(this.StateContainerInstance.HeaderBadgeIcon))
         {
             <i class="bi @this.StateContainerInstance.HeaderBadgeIcon"></i><span>&nbsp;</span>
@@ -27,6 +28,13 @@
     protected override void OnInitialized()
     {
         StateContainerInstance.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Wire the header badge (e.g. "Audited") as a hover-only Bootstrap
+        // tooltip. Idempotent — only newly-rendered badges get wired.
+        await this.TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
     }
 
     public void Dispose()

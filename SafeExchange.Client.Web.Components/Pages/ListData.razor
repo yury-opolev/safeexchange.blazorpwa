@@ -10,6 +10,7 @@
 @inject StateContainer StateContainer
 @inject TelemetryService Telemetry
 @inject ApiClient apiClient
+@inject TooltipsInitializer TooltipsInitializerInstance
 
 @if (this.Notification != null)
 {
@@ -28,7 +29,7 @@
             var objectUri = this.GetViewUri(secretPermissions.ObjectName);
             <li class="list-group-item list-item-hover-border d-flex justify-content-between align-items-center flex-wrap">
                 <div class="d-flex align-items-center">
-                    <button type="button" class="btn btn-link text-primary px-2" title="@(this.IsPinned(secretPermissions.ObjectName) ? "Unpin" : "Pin")"
+                    <button type="button" class="btn btn-link text-primary px-2 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Pin / unpin secret"
                             disabled="@(this.togglingNames.Contains(secretPermissions.ObjectName) || this.StateContainer.IsInProgress)"
                             @onclick="() => this.TogglePinAsync(secretPermissions.ObjectName)">
                         @if (this.togglingNames.Contains(secretPermissions.ObjectName))
@@ -150,6 +151,11 @@
         this.StateContainer.SetCurrentPageHeader($"My secrets");
         await this.FetchSecretNamesAsync();
         await this.FetchPinnedSecretsAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await this.TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
     }
 
     private string GetViewUri(string objectName)

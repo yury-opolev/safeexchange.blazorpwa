@@ -183,8 +183,8 @@
         </div>
 
         <p>
-            <div class="d-flex mt-3 justify-content-center align-items-center position-relative">
-                <button type="button" class="btn btn-link text-primary position-absolute start-0" title="@(this.isPinned ? "Unpin" : "Pin")"
+            <div class="d-flex mt-3 justify-content-center align-items-center">
+                <button type="button" class="btn btn-link text-primary me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Pin / unpin secret"
                         disabled="@(this.isTogglingPin || this.StateContainer.IsInProgress)" @onclick="TogglePinAsync">
                     @if (this.isTogglingPin)
                     {
