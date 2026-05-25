@@ -84,8 +84,10 @@
                             break;
                         case PinnedSecretState.AccessLost:
                             <span>@current.SecretName</span>
-                            <small class="text-warning ms-2"><i class="bi bi-exclamation-triangle"></i> no access</small>
-                            <a href="addrequest?subject=@current.SecretName&permission=Read" class="ms-2 small">Request access</a>
+                            <div>
+                                <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> no access</small>
+                                <a href="addrequest?subject=@current.SecretName&permission=Read" class="ms-2 small">Request access</a>
+                            </div>
                             break;
                         case PinnedSecretState.Deleted:
                             <span class="text-decoration-line-through">@current.SecretName</span>
