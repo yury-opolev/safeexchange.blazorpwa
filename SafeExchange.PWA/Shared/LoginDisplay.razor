@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Options
 @using SafeExchange.Client.Web.Components
 @using SafeExchange.Client.Web.Components.Helpers
+@using System.Reflection
 
 @inject NavigationManager Navigation
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
@@ -39,6 +40,11 @@
                 }
             </div>
             <div class="dropdown-divider"></div>
+            <div class="px-4 py-2 d-flex align-items-center gap-2">
+                <small class="text-muted text-nowrap">Version</small>
+                <code class="flex-grow-1 text-truncate" title="@ClientVersion">@ClientVersion</code>
+            </div>
+            <div class="dropdown-divider"></div>
             <div class="px-4">
                 <button class="nav-link btn btn-link" @onclick="BeginSignOut">Sign out</button>
             </div>
@@ -54,6 +60,13 @@
 @implements IDisposable
 
 @code{
+    // Stamped at build time by the StampClientVersion target in SafeExchange.PWA.csproj
+    // (git short SHA + UTC build date), so this reflects exactly what's deployed.
+    private static readonly string ClientVersion =
+        Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? "unknown";
+
     private ElementReference copyButtonRef;
     private ElementReference sessionIdRef;
 
