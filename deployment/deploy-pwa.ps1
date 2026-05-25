@@ -260,6 +260,45 @@ if (Test-Path $swAssets) {
     Write-Warning "$swAssets not found — skipping SRI patch. Non-PWA publish?"
 }
 
+# ──────────────────────────────────────────────────────────────────
+# Stamp the build date into version.json
+# ──────────────────────────────────────────────────────────────────
+# version.json ships a hand-maintained semantic version; the build date
+# is stamped here at deploy time so the client can show "vX.Y.Z" with a
+# build-date tooltip. Same service-worker integrity caveat as
+# appsettings.json above — recompute and patch its hash so SW install
+# stays green.
+$publishVersionJson = Join-Path $publishDir 'version.json'
+if (Test-Path $publishVersionJson) {
+    $versionInfo = Get-Content -LiteralPath $publishVersionJson -Raw | ConvertFrom-Json
+    $versionInfo.buildDate = [System.DateTime]::UtcNow.ToString('yyyy-MM-dd')
+    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $publishVersionJson -NoNewline
+    Write-Host "Stamped version.json: v$($versionInfo.version) ($($versionInfo.buildDate))" -ForegroundColor DarkGray
+
+    $versionBytes = [System.IO.File]::ReadAllBytes($publishVersionJson)
+    $sha256v = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $versionHashBytes = $sha256v.ComputeHash($versionBytes)
+    } finally {
+        $sha256v.Dispose()
+    }
+    $versionIntegrity = 'sha256-' + [Convert]::ToBase64String($versionHashBytes)
+
+    if (Test-Path $swAssets) {
+        $swVersionContent = Get-Content -LiteralPath $swAssets -Raw
+        $versionPattern = '(?s)("hash":\s*")sha256-[^"]+(",\s*"url":\s*"version\.json")'
+        $swVersionUpdated = [regex]::Replace($swVersionContent, $versionPattern, ('${1}' + $versionIntegrity + '${2}'))
+        if ($swVersionUpdated -eq $swVersionContent) {
+            Write-Warning "Could not locate version.json entry in $swAssets; SW install may fail SRI."
+        } else {
+            Set-Content -LiteralPath $swAssets -Value $swVersionUpdated -NoNewline
+            Write-Host "  SW integrity patched (version.json): $versionIntegrity" -ForegroundColor DarkGray
+        }
+    }
+} else {
+    Write-Warning "Published version.json not found at $publishVersionJson — version display will be empty."
+}
+
 if ($WhatIf) {
     Write-Host ""
     Write-Host "What-if: skipping upload and cache purge. Nothing was uploaded." -ForegroundColor Yellow
