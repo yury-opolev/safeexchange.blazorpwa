@@ -159,7 +159,11 @@
                                             </span>
                                         </div>
                                         <div class="btn-group px-4 attachment-row-last" role="group" aria-label="Attachment button">
-                                            @if (this.IsAttachmentDeleted(attachment))
+                                            @if (this.inlineImageContentNames.Contains(attachment.ContentName))
+                                            {
+                                                <span class="text-muted small d-inline-flex align-items-center" data-bs-toggle="tooltip" data-bs-placement="top" title="This image is part of the note — remove it from the note to delete it."><i class="bi bi-card-image"></i>&nbsp;In note</span>
+                                            }
+                                            else if (this.IsAttachmentDeleted(attachment))
                                             {
                                                 <button id="@($"undelete-existing-attachment-{ai}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.UndeleteExistingAttachment(attachment))" aria-label="Undo remove attachment" aria-labelledby="@($"undelete-existing-attachment-{ai} existing-attachment-{ai}")"><span class="bi bi-arrow-counterclockwise"></span></button>
                                             }
@@ -612,6 +616,107 @@
         this.editContext.NotifyFieldChanged(fieldIdentifier);
     }
 
+    // images-as-attachments spike: matches a stored inline-image reference
+    // <img ... data-saex-attachment="X" ...> so it can be rehydrated for editing.
+    private static readonly Regex EditAttachmentRefImgRegex =
+        new(@"<img\b[^>]*\bdata-saex-attachment\s*=\s*""(?<cn>[^""]+)""[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    // Content names of attachments referenced inline by the note at load time. These
+    // are note-managed (created when an image is pasted): the attachment list hides
+    // their delete button, and on save any that are no longer referenced (the image
+    // was removed from the note) are garbage-collected. See TryUpdateSecretAsync.
+    private HashSet<string> inlineImageContentNames = new();
+
+    private static HashSet<string> ExtractReferencedContentNames(string html)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        if (string.IsNullOrEmpty(html))
+        {
+            return names;
+        }
+
+        foreach (Match match in EditAttachmentRefImgRegex.Matches(html))
+        {
+            names.Add(match.Groups["cn"].Value);
+        }
+
+        return names;
+    }
+
+    private async Task<string> ResolveReferenceImagesForEditAsync(string html)
+    {
+        if (string.IsNullOrEmpty(html))
+        {
+            return html ?? string.Empty;
+        }
+
+        var matches = EditAttachmentRefImgRegex.Matches(html);
+        if (matches.Count == 0)
+        {
+            return html;
+        }
+
+        var dataUris = new Dictionary<string, string>();
+        foreach (Match match in matches)
+        {
+            var contentName = match.Groups["cn"].Value;
+            if (dataUris.ContainsKey(contentName))
+            {
+                continue;
+            }
+
+            var attachment = this.compoundModel.Metadata.Content
+                .FirstOrDefault(c => !c.IsMain && string.Equals(c.ContentName, contentName, StringComparison.Ordinal));
+            if (attachment is null)
+            {
+                continue;
+            }
+
+            var dataUri = await this.FetchImageDataUriAsync(attachment);
+            if (dataUri is not null)
+            {
+                dataUris[contentName] = dataUri;
+            }
+        }
+
+        return EditAttachmentRefImgRegex.Replace(html, m =>
+        {
+            var contentName = m.Groups["cn"].Value;
+            if (dataUris.TryGetValue(contentName, out var dataUri))
+            {
+                // Inject the resolved src right after "<img", keeping the stored
+                // geometry/alignment attributes so the editor shows it as authored.
+                return Regex.Replace(m.Value, "^<img", $"<img src=\"{dataUri}\"", RegexOptions.IgnoreCase);
+            }
+
+            return m.Value;
+        });
+    }
+
+    private async Task<string?> FetchImageDataUriAsync(ContentMetadata attachment)
+    {
+        try
+        {
+            var streamResponse = await this.apiClient.GetContentDataStreamAsync(
+                this.compoundModel.Metadata.ObjectName, attachment.ContentName);
+            if (!"ok".Equals(streamResponse.Status) || streamResponse.Result is null)
+            {
+                return null;
+            }
+
+            using var memory = new MemoryStream();
+            await streamResponse.Result.CopyToAsync(memory);
+            var base64 = Convert.ToBase64String(memory.ToArray());
+            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "image/*" : attachment.ContentType;
+            return $"data:{contentType};base64,{base64}";
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+            return null;
+        }
+    }
+
     private void AddPermissionItem()
     {
         this.compoundModel.Permissions.Add(new SubjectPermissions()
@@ -716,6 +821,15 @@
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
 
+            // Remember which attachments are inline images (referenced by the stored
+            // note) so the UI marks them note-managed and save can GC removed ones.
+            this.inlineImageContentNames = ExtractReferencedContentNames(this.compoundModel.MainData);
+
+            // images-as-attachments spike: turn stored <img data-saex-attachment="X">
+            // references back into base64 <img> so they render and stay editable
+            // (resize/align) in Quill. They are extracted back to references on save.
+            this.compoundModel.MainData = await this.ResolveReferenceImagesForEditAsync(this.compoundModel.MainData);
+
             await this.quillEditor.SetTextAsync(string.Empty);
             await this.quillEditor.SetHtmlAsync(this.compoundModel.MainData);
 
@@ -788,6 +902,16 @@
             // Sanitize on write as defense-in-depth (the backend also sanitizes on
             // upload). Not done on the view path, which renders stored content directly.
             this.compoundModel.MainData = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
+            // images-as-attachments spike: extract any base64 <img> in the note to
+            // attachment references (existing references are left as-is, no re-upload).
+            this.compoundModel.MainData = await this.apiClient.ExtractInlineImagesAsync(
+                this.compoundModel.Metadata.ObjectName, this.compoundModel.MainData);
+
+            // Which inline images survive in the note after this save. Any attachment
+            // that was referenced at load but isn't here now had its image removed from
+            // the note, so it is garbage-collected below.
+            var referencedNow = ExtractReferencedContentNames(this.compoundModel.MainData);
+
             using (var dataStream = new MemoryStream())
             {
                 using (var writer = new StreamWriter(dataStream, leaveOpen: true))
@@ -812,6 +936,15 @@
                 if (!"ok".Equals(contentDeletionResult.Status))
                 {
                     // no-op
+                }
+            }
+
+            // Garbage-collect inline images that were removed from the note this save.
+            foreach (var contentName in this.inlineImageContentNames)
+            {
+                if (!referencedNow.Contains(contentName))
+                {
+                    await apiClient.DeleteContentMetadataAsync(this.compoundModel.Metadata.ObjectName, contentName);
                 }
             }
 

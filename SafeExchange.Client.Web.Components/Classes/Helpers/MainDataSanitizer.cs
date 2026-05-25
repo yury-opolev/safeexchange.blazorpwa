@@ -35,6 +35,16 @@ public static class MainDataSanitizer
         instance.AllowedAttributes.Add("data-bs-toggle");
         instance.AllowedAttributes.Add("data-bs-placement");
         instance.AllowedAttributes.Add("title");
+
+        // images-as-attachments spike: let inline images keep their geometry/alignment
+        // (blotFormatter2 writes width/style) and the attachment reference marker, so
+        // these survive the save-side sanitize. style values are themselves CSS-sanitized
+        // by HtmlSanitizer's allowed-CSS-property list.
+        instance.AllowedAttributes.Add("style");
+        instance.AllowedAttributes.Add("width");
+        instance.AllowedAttributes.Add("height");
+        instance.AllowedAttributes.Add("alt");
+        instance.AllowedAttributes.Add("data-saex-attachment");
         return instance;
     }
 }
