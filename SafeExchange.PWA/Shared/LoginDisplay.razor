@@ -3,13 +3,14 @@
 @using Microsoft.Extensions.Options
 @using SafeExchange.Client.Web.Components
 @using SafeExchange.Client.Web.Components.Helpers
-@using System.Reflection
+@using System.Net.Http.Json
 
 @inject NavigationManager Navigation
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject ClipboardService Clipboard
 @inject TelemetryService Telemetry
 @inject TooltipsInitializer TooltipsInitializerInstance
+@inject HttpClient Http
 
 <AuthorizeView>
     <Authorized>
@@ -40,11 +41,14 @@
                 }
             </div>
             <div class="dropdown-divider"></div>
-            <div class="px-4 py-2 d-flex align-items-center gap-2">
-                <small class="text-muted text-nowrap">Version</small>
-                <code class="flex-grow-1 text-truncate" title="@ClientVersion">@ClientVersion</code>
-            </div>
-            <div class="dropdown-divider"></div>
+            @if (!string.IsNullOrEmpty(this.versionLabel))
+            {
+                <div class="px-4 py-2 d-flex align-items-center gap-2">
+                    <small class="text-muted text-nowrap">Version</small>
+                    <span class="flex-grow-1 text-truncate" data-bs-toggle="tooltip" data-bs-placement="top" title="@this.versionTooltip">@this.versionLabel</span>
+                </div>
+                <div class="dropdown-divider"></div>
+            }
             <div class="px-4">
                 <button class="nav-link btn btn-link" @onclick="BeginSignOut">Sign out</button>
             </div>
@@ -60,12 +64,11 @@
 @implements IDisposable
 
 @code{
-    // Stamped at build time by the StampClientVersion target in SafeExchange.PWA.csproj
-    // (git short SHA + UTC build date), so this reflects exactly what's deployed.
-    private static readonly string ClientVersion =
-        Assembly.GetExecutingAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-        ?? "unknown";
+    // Filled from version.json (hand-maintained semantic version + deploy-stamped
+    // build date). Empty until the fetch in OnInitializedAsync completes, which
+    // also keeps the version row hidden if version.json can't be read.
+    private string versionLabel = string.Empty;
+    private string versionTooltip = string.Empty;
 
     private ElementReference copyButtonRef;
     private ElementReference sessionIdRef;
@@ -85,6 +88,28 @@
         // session-id section and its tooltips appear without waiting
         // for the user's next unrelated action.
         this.Telemetry.StateChanged += this.OnTelemetryStateChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // version.json carries a hand-maintained semantic version; the build date
+        // is stamped into it at deploy time (deploy-pwa.ps1). Non-critical — if it
+        // can't be read, the version row simply stays hidden.
+        try
+        {
+            var info = await this.Http.GetFromJsonAsync<VersionInfo>("version.json");
+            if (info is { Version.Length: > 0 })
+            {
+                this.versionLabel = $"v{info.Version}";
+                this.versionTooltip = string.IsNullOrWhiteSpace(info.BuildDate)
+                    ? this.versionLabel
+                    : $"{this.versionLabel} · {info.BuildDate}";
+            }
+        }
+        catch
+        {
+            // Leave the version row hidden.
+        }
     }
 
     public void Dispose()
@@ -123,10 +148,20 @@
             await this.TooltipsInitializerInstance.InitializeSingleTooltipAsync(this.copyButtonRef, "Copy to clipboard", "Copied");
             await this.TooltipsInitializerInstance.InitializePlainTooltipAsync(this.sessionIdRef);
         }
+
+        if (!string.IsNullOrEmpty(this.versionLabel))
+        {
+            // initAllPlainTooltips only touches elements present in the DOM and is
+            // idempotent, so this wires the version tooltip whether or not the
+            // telemetry session tooltips above were initialised.
+            await this.TooltipsInitializerInstance.InitializeAllPlainTooltipsAsync();
+        }
     }
 
     private async Task CopySessionIdAsync()
     {
         await this.Clipboard.WriteTextAsync(this.Telemetry.SessionOperationId);
     }
+
+    private sealed record VersionInfo(string Version, string BuildDate);
 }
