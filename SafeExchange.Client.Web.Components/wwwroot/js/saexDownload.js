@@ -105,3 +105,36 @@
 
     window.saexDownload = { startVerifiedSave, writeBlock, abort, finalize, clickFileInput };
 })();
+
+// saexImages — render inline images via blob: object URLs instead of data: URIs.
+//
+// A multi-MB image as a `data:` URI is a huge base64 string copied through the
+// WASM heap + DOM; iOS Safari/WKWebView refuses to paint large/dynamically-injected
+// ones (blank-with-border). A blob: URL is a tiny handle to one native binary copy
+// the browser decodes lazily — no size/memory wall. CSP already allows blob: in img-src.
+//
+// Lifecycle: createObjectUrl pins the bytes until revokeObjectUrl is called (or the
+// document unloads). ViewData revokes on re-resolve and on dispose.
+(function () {
+    // base64 (string) -> blob: URL. We pass base64 rather than a byte[] because the
+    // .NET->JS interop serializes byte[] as base64 anyway; decoding here avoids any
+    // ambiguity and keeps a single tiny handle in the DOM.
+    function createObjectUrl(base64, contentType) {
+        const binary = atob(base64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = contentType ? new Blob([bytes], { type: contentType }) : new Blob([bytes]);
+        return URL.createObjectURL(blob);
+    }
+
+    function revokeObjectUrl(url) {
+        if (url && url.indexOf("blob:") === 0) {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    window.saexImages = { createObjectUrl, revokeObjectUrl };
+})();
