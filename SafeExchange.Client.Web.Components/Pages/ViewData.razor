@@ -10,6 +10,7 @@
 @using SafeExchange.Client.Web.Components.Shared
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Text
+@using System.Text.RegularExpressions
 @using System.IO
 
 @inject NavigationManager NavManager
@@ -55,7 +56,7 @@
                         @* Content is sanitized server-side on upload (SafeExchangeSecretStream.UploadMainContentAsync),
                            so we render the stored, already-sanitized HTML directly. Re-sanitizing here parsed the whole
                            multi-MB inline-image HTML on the WASM UI thread on every view (~14s for large images). *@
-                        @((MarkupString)this.compoundModel.MainData)
+                        @((MarkupString)this.renderedMainData)
                     }
                 </div>
             </div>
@@ -118,6 +119,12 @@
                                                         break;
                                                 }
                                             }
+                                            @if (attachment.IsImage && !this.inlineReferencedContentNames.Contains(attachment.ContentName) && !this.imagePreviews.ContainsKey(attachment.ContentName))
+                                            {
+                                                <button class="btn btn-outline-secondary me-1" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.LoadImagePreviewAsync(attachment))">
+                                                    <i class="bi bi-image"></i><span>&nbsp;Preview</span>
+                                                </button>
+                                            }
                                             <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || DownloadStatus.InProgress.Equals(downloadItem.Status))" @onclick="@(e => this.DownloadAttachmentAsync(attachment))">
                                                 <i class="bi bi-cloud-download"></i><span>&nbsp;Download</span>
                                             </button>
@@ -139,6 +146,12 @@
                                             <InputFile id="@($"verifyInput-{attachment.ContentName}")" style="display:none"
                                                        OnChange="@(async e => await this.RunLocalVerifyAsync(attachment, e))" />
                                         </div>
+                                        @if (attachment.IsImage && this.imagePreviews.TryGetValue(attachment.ContentName, out var previewSrc))
+                                        {
+                                            <div class="w-100 mt-2">
+                                                <img src="@previewSrc" alt="@attachment.FileName" class="rounded border" style="max-height: 220px; max-width: 100%;" />
+                                            </div>
+                                        }
                                     </li>
                                 }
                             </ul>
@@ -471,6 +484,7 @@
     private async Task FetchData()
     {
         await this.FetchSecretAsync(this.ObjectName);
+        await this.ResolveInlineImagesAsync();
     }
 
     private bool CanEditObject()
@@ -577,6 +591,163 @@
         }
     }
 
+    // images-as-attachments spike: lazily-loaded base64 previews for image
+    // attachments, keyed by content name. Loaded on demand (Preview button) so
+    // the view stays instant and large images aren't fetched unless requested.
+    private readonly Dictionary<string, string> imagePreviews = new();
+
+    // The note HTML actually rendered: the stored MainData with any inline
+    // [[image:filename]] tokens swapped for <img> data URIs. Kept separate from
+    // compoundModel.MainData so the stored note stays a tiny token, not bytes.
+    private string renderedMainData = string.Empty;
+
+    // Inline-image data URIs resolved for the current note, keyed by content name.
+    private readonly Dictionary<string, string> inlineImageDataUris = new();
+
+    // Matches a WYSIWYG inline-image reference: <img ... data-saex-attachment="X" ...>.
+    // The stored note keeps only this marker (no bytes); the image is fetched and its
+    // src injected here at view time, preserving any width/style/align attributes.
+    private static readonly Regex AttachmentRefImgRegex =
+        new(@"<img\b[^>]*\bdata-saex-attachment\s*=\s*""(?<cn>[^""]+)""[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    // Shown in place of an inline image whose attachment can no longer be resolved
+    // (e.g. it was garbage-collected). Keeps the note readable instead of leaving a
+    // blank gap where the image was.
+    private const string UnavailableImagePlaceholder =
+        "<span class=\"d-inline-flex align-items-center text-muted border rounded px-2 py-1 my-1\" style=\"gap:.35rem;\"><i class=\"bi bi-image\"></i> Image unavailable</span>";
+
+    // Content names of attachments referenced inline by the note. Their image is
+    // already shown in the main content, so the attachments list skips the Preview
+    // button for them.
+    private HashSet<string> inlineReferencedContentNames = new();
+
+    private static HashSet<string> ExtractReferencedContentNames(string html)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        if (string.IsNullOrEmpty(html))
+        {
+            return names;
+        }
+
+        foreach (Match match in AttachmentRefImgRegex.Matches(html))
+        {
+            names.Add(match.Groups["cn"].Value);
+        }
+
+        return names;
+    }
+
+    private async Task LoadImagePreviewAsync(ContentMetadata attachment)
+    {
+        if (this.imagePreviews.ContainsKey(attachment.ContentName))
+        {
+            return;
+        }
+
+        var dataUri = await this.FetchImageDataUriAsync(attachment);
+        if (dataUri is not null)
+        {
+            this.imagePreviews[attachment.ContentName] = dataUri;
+        }
+
+        this.StateHasChanged();
+    }
+
+    // Fetches an image attachment through the existing authenticated content
+    // endpoint and returns it as a base64 data URI (or null on failure). Shared
+    // by the Preview button and inline-token resolution so both go through the
+    // same auth/decrypt path — there is no public URL for an attachment.
+    private async Task<string?> FetchImageDataUriAsync(ContentMetadata attachment)
+    {
+        try
+        {
+            var streamResponse = await this.apiClient.GetContentDataStreamAsync(
+                this.compoundModel.Metadata.ObjectName, attachment.ContentName);
+            if (!"ok".Equals(streamResponse.Status) || streamResponse.Result is null)
+            {
+                return null;
+            }
+
+            using var memory = new MemoryStream();
+            await streamResponse.Result.CopyToAsync(memory);
+            var base64 = Convert.ToBase64String(memory.ToArray());
+            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "image/*" : attachment.ContentType;
+            return $"data:{contentType};base64,{base64}";
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+            return null;
+        }
+    }
+
+    // Resolves [[image:filename]] tokens in the stored note to inline <img>
+    // elements. Each referenced image attachment is fetched once via the
+    // authenticated path; the token is then replaced with a data-URI <img>.
+    // Unresolved tokens (missing/renamed attachment) are left as-is. This is a
+    // cheap string replace — it does NOT re-parse or re-sanitize the note, which
+    // is why the view stays fast even for large stored content.
+    private async Task ResolveInlineImagesAsync()
+    {
+        // Resolve against the sanitized note so the rendered output (which we then
+        // inject image data URIs into) matches the sanitized version shown initially.
+        var html = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
+        if (string.IsNullOrEmpty(html))
+        {
+            return;
+        }
+
+        var refMatches = AttachmentRefImgRegex.Matches(html);
+        if (refMatches.Count == 0)
+        {
+            return;
+        }
+
+        var attachments = this.compoundModel.Metadata.Content
+            .Where(c => !c.IsMain)
+            .ToList();
+
+        // <img data-saex-attachment="contentName"> -> fetch each attachment once,
+        // keyed by content name.
+        foreach (Match match in refMatches)
+        {
+            var contentName = match.Groups["cn"].Value;
+            if (this.inlineImageDataUris.ContainsKey(contentName))
+            {
+                continue;
+            }
+
+            var attachment = attachments
+                .FirstOrDefault(a => string.Equals(a.ContentName, contentName, StringComparison.Ordinal));
+            if (attachment is null)
+            {
+                continue;
+            }
+
+            var dataUri = await this.FetchImageDataUriAsync(attachment);
+            if (dataUri is not null)
+            {
+                this.inlineImageDataUris[contentName] = dataUri;
+            }
+        }
+
+        this.renderedMainData = AttachmentRefImgRegex.Replace(html, m =>
+        {
+            var contentName = m.Groups["cn"].Value;
+            if (this.inlineImageDataUris.TryGetValue(contentName, out var dataUri))
+            {
+                // Inject the resolved src right after "<img", keeping every stored
+                // attribute (width/style/align/class) so the image renders as authored.
+                return Regex.Replace(m.Value, "^<img", $"<img src=\"{dataUri}\"", RegexOptions.IgnoreCase);
+            }
+
+            // The referenced attachment is gone — show a placeholder, not a blank gap.
+            return UnavailableImagePlaceholder;
+        });
+
+        this.StateHasChanged();
+    }
+
     private async Task FetchSecretAsync(string objectName)
     {
         this.StateContainer.IsInProgress = true;
@@ -620,6 +791,14 @@
             this.compoundModel.Metadata = compoundModelResult.Result.Metadata;
             this.compoundModel.Permissions = compoundModelResult.Result.Permissions;
             this.compoundModel.MainData = compoundModelResult.Result.MainData;
+
+            // Re-sanitize on the view path as defense-in-depth. This was previously
+            // skipped for performance (multi-MB inline base64 was slow to re-parse),
+            // but inline images are now tiny references, so it is cheap again. We
+            // sanitize the stored note BEFORE ResolveInlineImagesAsync injects the
+            // image data URIs, so the large base64 is never run through the sanitizer.
+            this.renderedMainData = MainDataSanitizer.Sanitize(this.compoundModel.MainData);
+            this.inlineReferencedContentNames = ExtractReferencedContentNames(this.compoundModel.MainData);
 
             // Surface the "Audited" status as a badge in the top-row header,
             // next to the page title, rather than a pill at the bottom of the page.

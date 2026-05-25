@@ -13,6 +13,8 @@ namespace SafeExchange.Client.Common.Model
 
         public bool IsMain { get; set; }
 
+        public bool IsImage { get; set; }
+
         public string ContentType { get; set; }
 
         public string FileName { get; set; }

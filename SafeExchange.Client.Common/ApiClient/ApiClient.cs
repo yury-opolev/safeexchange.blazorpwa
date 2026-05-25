@@ -15,6 +15,7 @@ namespace SafeExchange.Client.Common
     using System.Security.Cryptography;
     using System.Text;
     using System.Text.Json;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
     public class ApiClient
@@ -167,6 +168,10 @@ namespace SafeExchange.Client.Common
                 };
             }
 
+            // images-as-attachments spike: replace any base64 <img> in the note with
+            // lightweight attachment references before the note is stored.
+            input.MainData = await this.ExtractInlineImagesAsync(input.Metadata.ObjectName, input.MainData);
+
             var content = new ContentMetadata(secretMetadata.Result.Content.First(c => c.IsMain));
             using (var dataStream = new MemoryStream())
             {
@@ -217,10 +222,14 @@ namespace SafeExchange.Client.Common
                     attachment.Status = UploadStatus.InProgress;
                     attachment.ProgressPercents = 0.0f;
 
+                    var resolvedContentType = String.IsNullOrWhiteSpace(attachment.SourceFile.ContentType) ? "application/octet-stream" : attachment.SourceFile.ContentType;
                     var contentInput = new ContentMetadataCreationInput()
                     {
-                        ContentType = String.IsNullOrWhiteSpace(attachment.SourceFile.ContentType) ? "application/octet-stream" : attachment.SourceFile.ContentType,
-                        FileName = attachment.SourceFile.Name
+                        ContentType = resolvedContentType,
+                        FileName = attachment.SourceFile.Name,
+                        // Images-as-attachments: flag image uploads so the UI renders a
+                        // thumbnail preview instead of a plain file row.
+                        IsImage = resolvedContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
                     };
 
                     var createdContent = await this.CreateContentMetadataAsync(secretId, contentInput);
@@ -303,6 +312,158 @@ namespace SafeExchange.Client.Common
                 }
             }
         }
+
+        private static readonly Regex InlineImgTagRegex =
+            new(@"<img\b[^>]*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex InlineImgDataSrcRegex =
+            new("src\\s*=\\s*\"data:(?<ct>[^;\"]+);base64,(?<b64>[^\"]*)\"", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex InlineImgHasRefRegex =
+            new("data-saex-attachment\\s*=", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        // images-as-attachments spike: turn base64 <img> in a note into lightweight
+        // attachment references so the stored note stays small. Newly pasted images
+        // are uploaded as IsImage attachments and their data: src is swapped for
+        // data-saex-attachment="<contentName>". An <img> already carrying that marker
+        // (a reference re-loaded into the editor) just has the heavy data: src dropped,
+        // so re-saving never duplicates it. Geometry/alignment attributes are left intact.
+        public async Task<string> ExtractInlineImagesAsync(string secretId, string html)
+        {
+            if (string.IsNullOrEmpty(html))
+            {
+                return html ?? string.Empty;
+            }
+
+            var matches = InlineImgTagRegex.Matches(html);
+            if (matches.Count == 0)
+            {
+                return html;
+            }
+
+            var builder = new StringBuilder();
+            var lastIndex = 0;
+            var counter = 0;
+            foreach (Match match in matches)
+            {
+                builder.Append(html, lastIndex, match.Index - lastIndex);
+                lastIndex = match.Index + match.Length;
+
+                var tag = match.Value;
+                var dataSrc = InlineImgDataSrcRegex.Match(tag);
+                if (!dataSrc.Success)
+                {
+                    // No base64 src (external URL, or a reference whose src was already
+                    // stripped) — leave the tag untouched.
+                    builder.Append(tag);
+                    continue;
+                }
+
+                if (InlineImgHasRefRegex.IsMatch(tag))
+                {
+                    // Existing reference re-loaded for editing: drop the heavy data: src,
+                    // keep the marker. No re-upload.
+                    builder.Append(InlineImgDataSrcRegex.Replace(tag, string.Empty));
+                    continue;
+                }
+
+                counter++;
+                var contentType = dataSrc.Groups["ct"].Value;
+                byte[] bytes;
+                try
+                {
+                    bytes = Convert.FromBase64String(dataSrc.Groups["b64"].Value);
+                }
+                catch (FormatException)
+                {
+                    builder.Append(tag);
+                    continue;
+                }
+
+                var fileName = $"inline-image-{DateTime.UtcNow:yyyyMMddHHmmss}-{counter}{ExtensionForContentType(contentType)}";
+                var contentName = await this.UploadInlineImageAsync(secretId, bytes, contentType, fileName);
+                if (string.IsNullOrEmpty(contentName))
+                {
+                    // Upload failed — keep the inline data so the image isn't lost.
+                    builder.Append(tag);
+                    continue;
+                }
+
+                builder.Append(InlineImgDataSrcRegex.Replace(tag, $"data-saex-attachment=\"{contentName}\""));
+            }
+
+            builder.Append(html, lastIndex, html.Length - lastIndex);
+            return builder.ToString();
+        }
+
+        // Uploads in-memory image bytes as an IsImage attachment (create metadata ->
+        // chunked upload -> commit) and returns the created ContentName, or null on
+        // failure. Mirrors UploadAttachmentsAsync but for a byte[] source.
+        public async Task<string> UploadInlineImageAsync(string secretId, byte[] data, string contentType, string fileName)
+        {
+            var resolvedContentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType;
+            var contentInput = new ContentMetadataCreationInput()
+            {
+                ContentType = resolvedContentType,
+                FileName = fileName,
+                IsImage = resolvedContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            };
+
+            var createdContent = await this.CreateContentMetadataAsync(secretId, contentInput);
+            if (!"ok".Equals(createdContent.Status) || createdContent.Result == null)
+            {
+                return null;
+            }
+
+            var content = new ContentMetadata(createdContent.Result);
+            var chunkLengths = GetChunkLengths(data.Length, Constants.MaxChunkDataLength);
+            var accessTicket = string.Empty;
+            using var fileHasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+            var offset = 0;
+            for (int chunkIndex = 0; chunkIndex < chunkLengths.Count; chunkIndex++)
+            {
+                var isInterim = chunkIndex < (chunkLengths.Count - 1);
+                var size = chunkLengths[chunkIndex];
+
+                var chunkHashBytes = SHA256.HashData(data.AsSpan(offset, size));
+                var chunkHash = Convert.ToHexString(chunkHashBytes).ToLowerInvariant();
+                fileHasher.AppendData(data, offset, size);
+
+                using var chunkMemory = new MemoryStream(data, offset, size, writable: false);
+                var chunkResponse = await this.PutSecretDataStreamAsync(
+                    secretId, content.ContentName, chunkMemory, isInterim, size, accessTicket, chunkHash);
+                if (!"ok".Equals(chunkResponse.Status) || chunkResponse.Result == null)
+                {
+                    return null;
+                }
+
+                accessTicket = chunkResponse.Result.AccessTicket;
+                offset += size;
+            }
+
+            var contentHash = Convert.ToHexString(fileHasher.GetHashAndReset()).ToLowerInvariant();
+            var commitResponse = await this.CommitContentAsync(secretId, content.ContentName, contentHash, accessTicket);
+            if (!"ok".Equals(commitResponse.Status))
+            {
+                return null;
+            }
+
+            return content.ContentName;
+        }
+
+        private static string ExtensionForContentType(string contentType)
+            => contentType.ToLowerInvariant() switch
+            {
+                "image/png" => ".png",
+                "image/jpeg" => ".jpg",
+                "image/jpg" => ".jpg",
+                "image/gif" => ".gif",
+                "image/webp" => ".webp",
+                "image/bmp" => ".bmp",
+                "image/svg+xml" => ".svg",
+                _ => ".img"
+            };
 
         #endregion compound operations
 

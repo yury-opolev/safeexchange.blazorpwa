@@ -83,6 +83,35 @@ Quill.register(CopyableBlot, true);
 
 Quill.register('modules/blotFormatter2', QuillBlotFormatter2.default);
 
+// images-as-attachments spike: preserve image attributes through Quill's model.
+// The stock image blot only keeps src/alt and drops everything else on
+// setContents, which would lose blotFormatter2's resize/align (width/style) and
+// our reference marker (data-saex-attachment) on every load/save round-trip.
+const SaexBaseImage = Quill.import('formats/image');
+const SAEX_IMG_ATTRS = ['alt', 'height', 'width', 'class', 'style', 'data-saex-attachment'];
+class SaexImage extends SaexBaseImage {
+    static formats(domNode) {
+        return SAEX_IMG_ATTRS.reduce(function (formats, attr) {
+            if (domNode.hasAttribute(attr)) {
+                formats[attr] = domNode.getAttribute(attr);
+            }
+            return formats;
+        }, {});
+    }
+    format(name, value) {
+        if (SAEX_IMG_ATTRS.indexOf(name) > -1) {
+            if (value) {
+                this.domNode.setAttribute(name, value);
+            } else {
+                this.domNode.removeAttribute(name);
+            }
+        } else {
+            super.format(name, value);
+        }
+    }
+}
+Quill.register(SaexImage, true);
+
 function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextElement) {
     var options = {
         placeholder: placeholder,
@@ -141,6 +170,9 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
     options.modules = {
         keyboard: { bindings: bindings },
         toolbar: toolbarOptions,
+        // images-as-attachments spike: allow pasting/dropping images. They land as
+        // base64 in the editor (WYSIWYG, resizable/alignable via blotFormatter2) and
+        // are extracted to attachment references on save (ApiClient.ExtractInlineImagesAsync).
         imageDrop: true,
         blotFormatter2: {
             align: {
@@ -160,6 +192,7 @@ function initializeEditor(dotNetRef, quillElement, placeholder, readOnly, nextEl
     };
 
     let quill = new Quill(quillElement, options);
+
     quill.on("selection-change", async function (range, oldRange, source) {
         if (range === null && oldRange !== null) {
             await dotNetRef.invokeMethodAsync("OnFocusJS");

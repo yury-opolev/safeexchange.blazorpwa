@@ -17,6 +17,7 @@ namespace SafeExchange.Client.Common.Model
         {
             this.ContentName = source.ContentName;
             this.IsMain = source.IsMain;
+            this.IsImage = source.IsImage;
             this.ContentType = source.ContentType;
             this.FileName = source.FileName;
             this.IsReady = source.IsReady;
@@ -30,6 +31,7 @@ namespace SafeExchange.Client.Common.Model
         {
             this.ContentName = source.ContentName;
             this.IsMain = source.IsMain;
+            this.IsImage = source.IsImage;
             this.ContentType = source.ContentType;
             this.FileName = source.FileName;
             this.IsReady = source.IsReady;
@@ -42,6 +44,8 @@ namespace SafeExchange.Client.Common.Model
         public string ContentName { get; set; }
 
         public bool IsMain { get; set; }
+
+        public bool IsImage { get; set; }
 
         public string ContentType { get; set; }
 
@@ -92,7 +96,8 @@ namespace SafeExchange.Client.Common.Model
         public ContentMetadataCreationInput ToCreationDto() => new ContentMetadataCreationInput()
         {
             ContentType = this.ContentType,
-            FileName = this.FileName
+            FileName = this.FileName,
+            IsImage = this.IsImage
         };
 
         public ContentMetadataUpdateInput ToUpdateDto() => new ContentMetadataUpdateInput()
