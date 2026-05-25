@@ -26,6 +26,8 @@
 @inject IConfiguration Configuration
 @inject TelemetryService Telemetry
 
+@implements IAsyncDisposable
+
 @if (this.Notification != null)
 {
     <div class="alert alert-dismissible @(this.Notification.GetAlertClass() ?? "alert-primary")" role="alert">
@@ -644,7 +646,7 @@
             return;
         }
 
-        var dataUri = await this.FetchImageDataUriAsync(attachment);
+        var dataUri = await this.FetchImageObjectUrlAsync(attachment);
         if (dataUri is not null)
         {
             this.imagePreviews[attachment.ContentName] = dataUri;
@@ -653,11 +655,13 @@
         this.StateHasChanged();
     }
 
-    // Fetches an image attachment through the existing authenticated content
-    // endpoint and returns it as a base64 data URI (or null on failure). Shared
-    // by the Preview button and inline-token resolution so both go through the
-    // same auth/decrypt path — there is no public URL for an attachment.
-    private async Task<string?> FetchImageDataUriAsync(ContentMetadata attachment)
+    // Fetches an image attachment through the authenticated content endpoint and
+    // returns a blob: object URL for it (or null on failure). Shared by the Preview
+    // button and inline-image resolution. We use a blob: URL rather than a data: URI
+    // because large images fail to render as multi-MB data: URIs on iOS Safari
+    // (blank-with-border) — see saexImages.createObjectUrl. The returned URL must be
+    // revoked when no longer needed — see RevokeBlobUrlsAsync.
+    private async Task<string?> FetchImageObjectUrlAsync(ContentMetadata attachment)
     {
         try
         {
@@ -671,14 +675,46 @@
             using var memory = new MemoryStream();
             await streamResponse.Result.CopyToAsync(memory);
             var base64 = Convert.ToBase64String(memory.ToArray());
-            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "image/*" : attachment.ContentType;
-            return $"data:{contentType};base64,{base64}";
+            var contentType = attachment.ContentType ?? string.Empty;
+            return await this.JSRuntime.InvokeAsync<string>("saexImages.createObjectUrl", base64, contentType);
         }
         catch (AccessTokenNotAvailableException exception)
         {
             exception.Redirect();
             return null;
         }
+    }
+
+    // Revoke every blob: object URL we created (Preview + inline images) and clear the
+    // caches. blob: URLs are NOT garbage-collected automatically — without this they
+    // accumulate until the document unloads. Called before re-resolving (Refresh /
+    // viewing another secret) and on dispose.
+    private async Task RevokeBlobUrlsAsync()
+    {
+        if (this.imagePreviews.Count == 0 && this.inlineImageDataUris.Count == 0)
+        {
+            return;
+        }
+
+        var urls = this.imagePreviews.Values.Concat(this.inlineImageDataUris.Values).ToArray();
+        this.imagePreviews.Clear();
+        this.inlineImageDataUris.Clear();
+        foreach (var url in urls)
+        {
+            try
+            {
+                await this.JSRuntime.InvokeVoidAsync("saexImages.revokeObjectUrl", url);
+            }
+            catch
+            {
+                // Best-effort: the JS runtime may be tearing down during dispose.
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await this.RevokeBlobUrlsAsync();
     }
 
     // Resolves [[image:filename]] tokens in the stored note to inline <img>
@@ -724,7 +760,7 @@
                 continue;
             }
 
-            var dataUri = await this.FetchImageDataUriAsync(attachment);
+            var dataUri = await this.FetchImageObjectUrlAsync(attachment);
             if (dataUri is not null)
             {
                 this.inlineImageDataUris[contentName] = dataUri;
@@ -751,6 +787,9 @@
     private async Task FetchSecretAsync(string objectName)
     {
         this.StateContainer.IsInProgress = true;
+        // Free any blob: URLs from a previous load before re-resolving (Refresh /
+        // viewing another secret reuses this component instance).
+        await this.RevokeBlobUrlsAsync();
         try
         {
             var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
