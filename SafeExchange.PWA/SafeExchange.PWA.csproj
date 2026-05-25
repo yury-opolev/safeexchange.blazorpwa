@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <!-- We set InformationalVersion ourselves (git sha + build date) in the
+         StampClientVersion target; stop the SDK appending the raw revision id. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,5 +36,17 @@
   <ItemGroup>
     <Folder Include="wwwroot\img\" />
   </ItemGroup>
+
+  <!-- Stamp the client version (git short SHA + UTC build date) into the assembly's
+       informational version so the web client can show exactly what's deployed.
+       Degrades gracefully (keeps the default version) if git isn't available. -->
+  <Target Name="StampClientVersion" BeforeTargets="GetAssemblyVersion">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" ContinueOnError="true" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="ClientGitSha" />
+    </Exec>
+    <PropertyGroup>
+      <InformationalVersion Condition="'$(ClientGitSha)' != ''">$(ClientGitSha) ($([System.DateTime]::UtcNow.ToString("yyyy-MM-dd")))</InformationalVersion>
+    </PropertyGroup>
+  </Target>
 
 </Project>
