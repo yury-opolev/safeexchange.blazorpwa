@@ -3,64 +3,105 @@
 > Spike branches: `spike/s2s-apps` in `safeexchange` (backend) and
 > `safeexchange.blazorpwa` (frontend). **Never deployed.** Local-only.
 
-## What works in the current branch state
+## What's on the branch right now
 
-Phase A foundation + Phase A self-service slice + Phase B main-PWA UI slice:
+Phases A, B, and C are landed end-to-end:
 
-- Backend: `ApplicationOwner` entity + Cosmos container, ownership-invariant
-  service, two endpoints — `POST /v2/s2sapps` (register, caller becomes
-  owner #1) and `GET /v2/s2sapps/mine` (apps where caller is direct user
-  owner).
-- Frontend: `/s2sapps` page on the main PWA — lists your apps and registers
-  a new one with a required second owner. "My Apps" link added to NavMenu.
+### Backend (`safeexchange`)
 
-What's pending (subsequent commits on the same branch):
+- New entity `ApplicationOwner` (many-to-many `Application` ↔ User/Group),
+  Cosmos container `ApplicationOwners`. Composite key
+  `{ApplicationId, SubjectType, SubjectId}`.
+- `ApplicationOwnerService` enforces the ownership invariant: **≥ 2 distinct
+  principals, ≥ 1 must be a User**. Pure-function ValidateInvariant is unit-
+  tested in `ApplicationOwnerInvariantTests` (no Cosmos dependency, green).
+- KV-backed settings: `Features:S2SAppsSelfService`,
+  `Features:RequireApplicationOwnership`, `Limits:AdminListDefaultPageSize`,
+  `Limits:AdminListMaxPageSize`, `Limits:OwnerlessGracePeriodDays`. All default
+  to safe values; spike branch flips `Features:S2SAppsSelfService=True` via
+  local `appsettings.json`.
 
-- Backend: detail GET, PATCH, DELETE, owners sub-resource; admin paginated
-  users/applications/audit endpoints; existing-Applications migration class.
-- Frontend: per-app detail / owner management UX.
-- New project: `SafeExchange.AdminPanel` — separate WASM static web app with
-  its own theme and admin pages (users / applications / audit). Scaffolding
-  is in the plan; not yet committed.
+Self-service endpoints (regular auth gate):
+- `POST   /v2/s2sapps` register (caller becomes owner #1; ≥1 additional owner required)
+- `GET    /v2/s2sapps/mine`
+- `GET    /v2/s2sapps/{name}` (owner-only)
+- `DELETE /v2/s2sapps/{name}` (owner-only; cascades owner rows)
+- `GET    /v2/s2sapps/{name}/owners` (owner-only)
+- `POST   /v2/s2sapps/{name}/owners` (owner-only; idempotent)
+- `DELETE /v2/s2sapps/{name}/owners/{subjectType}/{subjectId}` (owner-only; refuses if invariant would break)
 
-See `docs/SPIKE-s2s-apps.md` and `docs/SPIKE-s2s-apps-PLAN.md` for the full
-design and task list.
+Admin endpoints (admin gate, paginated `?q=&page=&pageSize=` uniformly):
+- `GET   /v2/admin/users` + `PATCH /v2/admin/users/{upn}/enabled`
+- `GET   /v2/admin/applications` + `PATCH /v2/admin/applications/{name}/enabled`
+- `GET   /v2/admin/audit?secretName=` — substring search, **includes historical
+  anchors** for purged secrets (`IsHistorical=true` on the response).
+
+### Main PWA (`safeexchange.blazorpwa`, project `SafeExchange.PWA`)
+
+- `/s2sapps` page: list, register form with required second owner. NavMenu
+  link "My Apps" (authenticated users only).
+- `ApiClient.S2SApps.cs` partial with `RegisterS2SAppAsync` /
+  `ListMyS2SAppsAsync`.
+
+### Admin panel (new project `SafeExchange.AdminPanel`)
+
+- **Separate Blazor WASM app**, peer of `SafeExchange.PWA`. Same Entra client
+  id; no project reference to `SafeExchange.Client.Web.Components` so the
+  visual language can diverge cleanly. Bootstrap via CDN.
+- Dark theme by default, cyan accent (`--admin-accent: #36b1bf`), mobile-first
+  layout (slide-over nav on phones), permanent `ADMIN` chip in the top bar.
+- Pages:
+  - `/` dashboard with three cards.
+  - `/users` paginated search + enable/disable toggle.
+  - `/applications` paginated search by name or client-id GUID + toggle + a
+    "needs attention" pill when an app has fewer than 2 owners.
+  - `/audit` paginated secret-name substring search with historical pill.
+- `ApiClient.Admin.cs` partial in `SafeExchange.Client.Common` powers the panel.
+
+### Still pending in the branch (next turns)
+
+- **Phase A6:** `ApplicationOwnershipMigration` class (idempotent reconciliation
+  of existing `Application` rows that have no `ApplicationOwner` records yet),
+  exposed via `POST /v2/admin/migrate-applications`. Spike-local: also a
+  `SEED_TEST_APPS=true` switch that pre-loads two test apps so the UI is
+  testable without registering Entra apps by hand.
+- **Phase B finish:** per-app detail / owner-mgmt UX on `/s2sapps`.
+- **Phase D dev-auth cherry-pick:** lift the no-Entra-needed local-auth harness
+  from `spike/images-as-attachments` so the spike can run without real Entra.
+  Until that's done, **the spike needs a valid Entra token to hit any endpoint**.
+- **Code reviewer subagent passes** for Phase A, B, and C — to be done once
+  the remaining code lands.
 
 ## Prerequisites
 
 - .NET 10 SDK
-- Cosmos DB Emulator (the backend tests + dev run already expect this; same
-  one used by the rest of the project)
-- Azurite (Azure Storage Emulator)
-- An auth path. For the spike, the cleanest is to cherry-pick the dev-auth
-  bypass from `spike/images-as-attachments` so you don't need real Entra.
-  That branch's `LocalDev/` helpers are intentionally never-merged-to-main;
-  see its README. (The cherry-pick step is **planned for Phase D** and not yet
-  done on this branch — track in `SPIKE-s2s-apps-PLAN.md`.)
+- Cosmos DB Emulator (used by the existing tests + dev run)
+- Azurite (Storage Emulator)
+- A way to log in. Two options:
+  1. Real Entra: same app registration as staging. Easiest if you already use it.
+  2. Dev-auth harness from `spike/images-as-attachments` (planned cherry-pick).
 
 ## Backend
 
 ```pwsh
 cd safeexchange
 git checkout spike/s2s-apps
-
-# In local.settings.json (or user secrets), enable the spike feature flag:
-#   "Features:S2SAppsSelfService": "True"
-# Default is false everywhere, including the spike — endpoints return 204
-# until you flip it.
-
 cd SafeExchange.Functions
+
+# Add to local.settings.json under "Values" (or user secrets):
+#   "Features:S2SAppsSelfService": "True"
+# Without it the endpoints return 204 (off-by-default for safety).
+
 func host start
 ```
 
-Sanity-check (with the feature flag on):
+Sanity-check with a real token:
 
 ```pwsh
-# Should return an empty list once you have a valid token; 204 if disabled.
 curl -H "Authorization: Bearer $TOKEN" http://localhost:7071/api/v2/s2sapps/mine
 ```
 
-## Main PWA (`/s2sapps`)
+## Main PWA — self-service
 
 ```pwsh
 cd safeexchange.blazorpwa
@@ -69,24 +110,31 @@ git checkout spike/s2s-apps
 dotnet run --project SafeExchange.PWA
 ```
 
-Navigate to `https://localhost:5001/s2sapps`. With the feature flag on and a
-valid token, you'll see the empty-state message and the register form.
+Open `https://localhost:5001/s2sapps` and register an app
+(display name + Entra client GUID + second-owner UPN).
 
 ## Admin panel
 
-Not yet in the branch — scaffolding is planned as the next Phase C in
-`SPIKE-s2s-apps-PLAN.md`. It will live as a peer Blazor WASM project at
-`SafeExchange.AdminPanel/` in the same repo and be started independently
-(`dotnet run --project SafeExchange.AdminPanel`).
+```pwsh
+# Different port (so it can run alongside the main PWA).
+dotnet run --project SafeExchange.AdminPanel --urls "https://localhost:5101"
+```
 
-## Smoke test (once everything is in)
+Open `https://localhost:5101` to land on the admin dashboard, then explore
+Users / Applications / Audit. Search-as-you-go + pagination work; toggle
+buttons call the backend.
+
+## End-to-end smoke (manual)
 
 1. Start backend + main PWA + admin panel.
-2. From main PWA → `/s2sapps`, register an app supplying yourself as caller
-   plus a co-owner email.
-3. Switch to admin panel → `/applications` → see the new app, observe the
-   pagination + filter.
-4. Toggle the app to `disabled` from admin; the owner's `/s2sapps` row should
-   flip to a disabled badge.
-5. Try to remove a co-owner via the owner UI — the 409 message should mention
-   the ≥2-with-user invariant.
+2. Main PWA → `/s2sapps`: register an app with a co-owner.
+3. Admin panel → `/applications`: see the new app appear; `Owners: 2` (no
+   "attn" pill).
+4. Admin panel → toggle the app `disabled`.
+5. Main PWA → `/s2sapps`: the row's badge flips to "disabled".
+6. (After Phase B finish lands) Try removing a co-owner from main PWA — the
+   server should respond 409 with the ≥2-with-a-user message.
+7. Admin panel → `/users`: search a partial UPN substring, page through, toggle
+   `enabled` on a test user.
+8. Admin panel → `/audit?secretName=…`: search across anchors, including a
+   secret you've deleted — the row should carry the `historical` pill.
