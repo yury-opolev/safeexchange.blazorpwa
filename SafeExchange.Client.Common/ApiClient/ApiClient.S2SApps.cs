@@ -30,7 +30,7 @@ namespace SafeExchange.Client.Common
         /// <summary>GET /v2/s2sapps/mine — apps where the caller is a direct user-owner.</summary>
         public async Task<BaseResponseObject<List<S2SAppOverview>>> ListMyS2SAppsAsync()
         {
-            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/mine");
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/me/s2sapps");
             using var http = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await this.client.SendAsync(http);
             return await DeserializeOrErrorAsync<List<S2SAppOverview>>(response);
