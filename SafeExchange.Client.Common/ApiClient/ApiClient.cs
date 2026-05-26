@@ -18,7 +18,7 @@ namespace SafeExchange.Client.Common
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
 
-    public class ApiClient
+    public partial class ApiClient
     {
         public static readonly string DefaultHttpClientName = "BackendApi";
 

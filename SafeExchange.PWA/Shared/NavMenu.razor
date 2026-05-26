@@ -30,6 +30,11 @@
             <Authorized>
                 <li><hr class="dropdown-divider text-light"></li>
                 <li class="nav-item px-3">
+                    <NavLinkAccessibility class="nav-link" href="s2sapps" ActiveAttributes="ActiveAttributes">
+                        <span class="bi bi-robot h4" aria-hidden="true"></span> My Apps
+                    </NavLinkAccessibility>
+                </li>
+                <li class="nav-item px-3">
                     <NavLinkAccessibility class="nav-link" href="accessrequests" ActiveAttributes="ActiveAttributes">
                         <span class="bi bi-person-lines-fill h4" aria-hidden="true"></span> My Requests &nbsp;
                         @if (this.StateContainerInstance.IsFetchingAccessRequests)
