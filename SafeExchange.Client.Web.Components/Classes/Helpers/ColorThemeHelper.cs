@@ -26,7 +26,7 @@ namespace SafeExchange.Client.Web.Components
 
             if (string.IsNullOrEmpty(preferredTheme))
             {
-                return ColorTheme.Light;
+                return ColorTheme.Auto;
             }
 
             switch (preferredTheme)
@@ -41,7 +41,7 @@ namespace SafeExchange.Client.Web.Components
                     return ColorTheme.Auto;
 
                 default:
-                    return ColorTheme.Light;
+                    return ColorTheme.Auto;
             }
         }
 

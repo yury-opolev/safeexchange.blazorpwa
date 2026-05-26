@@ -16,20 +16,32 @@
                 <EditForm class="px-4 py-2" EditContext="@editContext">
                     <div class="row gy-2">
                         <div class="px-0">Theme:</div>
-                        <div Name="colorThemeRadioGroup" aria-label="Color theme picker">
-                            <div class="py-2 form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="lightThemeSwitch" disabled="@this.IsInProgress" @bind="this.colorThemeContext.IsLightSelected" />
-                                <label class="form-check-label" for="lightThemeSwitch">&nbsp;<i class="bi bi-sun"></i>&nbsp; Light</label>
+                        @* Switched from form-switch to radios: the choices are mutually
+                           exclusive, and a Bootstrap switch in its off state reads as
+                           "disabled" — confusing here. Radios show clearly which option
+                           is selected without implying the others are unavailable.
+                           Unique ids per radio (the previous markup shared one id, so
+                           clicking the Dark/Auto labels actually toggled Light). *@
+                        <div role="radiogroup" aria-label="Color theme picker">
+                            <div class="py-2 form-check">
+                                <input class="form-check-input" type="radio" name="colorTheme" id="lightThemeRadio" disabled="@this.IsInProgress"
+                                       checked="@(this.colorThemeContext.Value == ColorTheme.Light)"
+                                       @onchange="() => this.OnColorThemeChangedAsync(ColorTheme.Light)" />
+                                <label class="form-check-label" for="lightThemeRadio">&nbsp;<i class="bi bi-sun"></i>&nbsp; Light</label>
                             </div>
 
-                            <div class="py-2 form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="lightThemeSwitch" disabled="@this.IsInProgress" @bind="this.colorThemeContext.IsDarkSelected" />
-                                <label class="form-check-label" for="lightThemeSwitch">&nbsp; <i class="bi bi-moon"></i>&nbsp; Dark</label>
+                            <div class="py-2 form-check">
+                                <input class="form-check-input" type="radio" name="colorTheme" id="darkThemeRadio" disabled="@this.IsInProgress"
+                                       checked="@(this.colorThemeContext.Value == ColorTheme.Dark)"
+                                       @onchange="() => this.OnColorThemeChangedAsync(ColorTheme.Dark)" />
+                                <label class="form-check-label" for="darkThemeRadio">&nbsp; <i class="bi bi-moon"></i>&nbsp; Dark</label>
                             </div>
 
-                            <div class="py-2 form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="lightThemeSwitch" disabled="@this.IsInProgress" @bind="this.colorThemeContext.IsAutoSelected" />
-                                <label class="form-check-label" for="lightThemeSwitch">&nbsp; <i class="bi bi-circle-half"></i>&nbsp; Auto</label>
+                            <div class="py-2 form-check">
+                                <input class="form-check-input" type="radio" name="colorTheme" id="autoThemeRadio" disabled="@this.IsInProgress"
+                                       checked="@(this.colorThemeContext.Value == ColorTheme.Auto)"
+                                       @onchange="() => this.OnColorThemeChangedAsync(ColorTheme.Auto)" />
+                                <label class="form-check-label" for="autoThemeRadio">&nbsp; <i class="bi bi-circle-half"></i>&nbsp; Auto</label>
                             </div>
                         </div>
                     </div>
@@ -85,6 +97,11 @@
 
     private async Task OnColorThemeChangedAsync(ColorTheme theme)
     {
+        // Radio @onchange bypasses the IsLightSelected/IsDarkSelected/IsAutoSelected
+        // setters on ColorThemeContext, which is where Value used to be updated.
+        // Set it explicitly so the @checked bindings on the other radios re-render
+        // to the new selection.
+        this.colorThemeContext.Value = theme;
         await colorThemeHelper.SetThemeAsync(theme);
     }
 }
