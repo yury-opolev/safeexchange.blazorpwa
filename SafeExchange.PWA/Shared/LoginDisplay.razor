@@ -100,7 +100,8 @@
             var info = await this.Http.GetFromJsonAsync<VersionInfo>("version.json");
             if (info is { Version.Length: > 0 })
             {
-                this.versionLabel = $"v{info.Version}";
+                // No "v" prefix — the row label is already "Version".
+                this.versionLabel = info.Version;
                 this.versionTooltip = string.IsNullOrWhiteSpace(info.BuildDate)
                     ? this.versionLabel
                     : $"{this.versionLabel} · {info.BuildDate}";

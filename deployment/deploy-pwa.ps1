@@ -177,6 +177,56 @@ if ($subscription -and $subscription -ne $account.id) {
 }
 
 # ──────────────────────────────────────────────────────────────────
+# Auto-bump version.json patch number
+# ──────────────────────────────────────────────────────────────────
+# Every deploy = a new build, so bump the patch number in
+# SafeExchange.PWA/wwwroot/version.json before publishing.
+#
+# To avoid double-bumping when staging and prod are deployed
+# back-to-back for the same code, the bump is SKIPPED if HEAD already
+# changed the "version" field — that's either a previous auto-bump
+# commit from this script or a manual release-version edit. Either way,
+# we ship the current version unchanged. As soon as a new code commit
+# lands on top, the next deploy will bump again.
+#
+# Skipped entirely under -WhatIf (a dry run must not commit or push).
+$bumpedThisDeploy = $false
+$bumpRepoRoot     = Split-Path $PSScriptRoot -Parent
+$srcVersionJson   = Join-Path $bumpRepoRoot 'SafeExchange.PWA\wwwroot\version.json'
+if ((-not $WhatIf) -and (Test-Path $srcVersionJson)) {
+    $relPath  = 'SafeExchange.PWA/wwwroot/version.json'
+    $headDiff = git -C $bumpRepoRoot show HEAD --format='' -- $relPath 2>&1
+    $versionAlreadyChanged = @($headDiff | Where-Object { $_ -match '^\+\s*"version"\s*:' }).Count -gt 0
+
+    if ($versionAlreadyChanged) {
+        $current = (Get-Content -LiteralPath $srcVersionJson -Raw | ConvertFrom-Json).version
+        Write-Host ""
+        Write-Host "Version: $current (HEAD already bumped this; no auto-bump for this deploy)" -ForegroundColor DarkGray
+    } else {
+        $info  = Get-Content -LiteralPath $srcVersionJson -Raw | ConvertFrom-Json
+        $parts = $info.version -split '\.'
+        if ($parts.Length -lt 3) {
+            Write-Warning "version.json version '$($info.version)' is not MAJOR.MINOR.PATCH; skipping auto-bump."
+        } else {
+            $oldVersion = $info.version
+            $parts[2]   = [string]([int]$parts[2] + 1)
+            $info.version = $parts -join '.'
+            $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $srcVersionJson -NoNewline
+
+            git -C $bumpRepoRoot add $relPath | Out-Null
+            git -C $bumpRepoRoot commit -m "chore(version): auto-bump $oldVersion -> $($info.version) before $Environment deploy" -q
+            if ($LASTEXITCODE -eq 0) {
+                $bumpedThisDeploy = $true
+                Write-Host ""
+                Write-Host "Auto-bumped version: $oldVersion -> $($info.version) (committed locally; pushed after successful deploy)" -ForegroundColor Cyan
+            } else {
+                Write-Warning "Auto-bump commit failed (exit $LASTEXITCODE). The bumped version is on disk; resolve manually."
+            }
+        }
+    }
+}
+
+# ──────────────────────────────────────────────────────────────────
 # Build and publish
 # ──────────────────────────────────────────────────────────────────
 Write-Host ""
@@ -430,6 +480,22 @@ if ($afdProfile -and $afdEndpoint) {
 } else {
     Write-Host ""
     Write-Host "FRONT_DOOR_* not set for $envSuffix — skipping cache purge." -ForegroundColor DarkGray
+}
+
+# ──────────────────────────────────────────────────────────────────
+# Push the auto-bump commit
+# ──────────────────────────────────────────────────────────────────
+# The chore(version) commit from the auto-bump step is still local —
+# push it now that the upload and cache purge have succeeded so the
+# committed version on origin always matches what's actually deployed.
+if ($bumpedThisDeploy) {
+    $currentBranch = (git -C $bumpRepoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    Write-Host ""
+    Write-Host "Pushing auto-bump commit to origin/$currentBranch..." -ForegroundColor Cyan
+    git -C $bumpRepoRoot push origin $currentBranch 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "git push failed; the auto-bump commit is local. Resolve and push manually so origin matches the deployed version."
+    }
 }
 
 Write-Host ""
