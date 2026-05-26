@@ -8,6 +8,15 @@ a, .btn-link {
     color: #0366d6;
 }
 
+/* The #0366d6 above is tuned for light backgrounds; against our dark
+   theme it's too dim for comfortable reading (notably the pinned-secret
+   links on the home page). Brighten it for the dark theme — #79c0ff is
+   GitHub's dark-mode link colour and gives a clear, familiar contrast. */
+[data-bs-theme="dark"] a,
+[data-bs-theme="dark"] .btn-link {
+    color: #79c0ff;
+}
+
 .btn-primary {
     color: #fff;
     background-color: #1b6ec2;
