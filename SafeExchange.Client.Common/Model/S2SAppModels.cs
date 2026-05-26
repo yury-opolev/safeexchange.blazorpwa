@@ -54,5 +54,7 @@ namespace SafeExchange.Client.Common.Model
         public string AadClientId { get; set; } = string.Empty;
         public bool Enabled { get; set; }
         public int OwnerCount { get; set; }
+        /// <summary>True iff the caller registered this app; false = added later as a co-owner.</summary>
+        public bool IsRegistrar { get; set; }
     }
 }

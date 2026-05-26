@@ -39,14 +39,28 @@
     <ul class="list-group mb-4">
         @foreach (var a in this.apps)
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <strong>@a.DisplayName</strong>
                     <small class="ms-2 text-muted">@a.AadClientId</small>
                 </div>
-                <span class="badge @(a.Enabled ? "text-bg-success" : "text-bg-secondary")">
-                    @(a.Enabled ? "enabled" : "disabled")
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    @if (a.IsRegistrar)
+                    {
+                        <span class="badge text-bg-primary" title="You registered this app (primary owner)">
+                            <i class="bi bi-star-fill"></i> primary
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-info" title="You were added as a co-owner">
+                            <i class="bi bi-people-fill"></i> co-owner
+                        </span>
+                    }
+                    <span class="badge @(a.Enabled ? "text-bg-success" : "text-bg-secondary")">
+                        @(a.Enabled ? "enabled" : "disabled")
+                    </span>
+                </div>
             </li>
         }
     </ul>

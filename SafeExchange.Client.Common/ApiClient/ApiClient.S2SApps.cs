@@ -48,6 +48,22 @@ namespace SafeExchange.Client.Common
                 return new BaseResponseObject<T> { Status = "disabled", Error = "Feature is disabled." };
             }
 
+            // Defensive: if we point at the wrong backend (e.g. PWA still configured for
+            // the deployed env), the response will be 404 HTML, not JSON. Catch that
+            // before attempting JSON parsing so the UI gets a useful diagnostic.
+            var mediaType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (!mediaType.Contains("json", System.StringComparison.OrdinalIgnoreCase))
+            {
+                var snippet = await response.Content.ReadAsStringAsync();
+                if (snippet.Length > 200) { snippet = snippet.Substring(0, 200) + "…"; }
+                return new BaseResponseObject<T>
+                {
+                    Status = "error",
+                    Error = $"Backend returned HTTP {(int)response.StatusCode} with {(string.IsNullOrEmpty(mediaType) ? "no content-type" : mediaType)} — expected JSON. Check that BackendApi:BaseAddress points to a running SafeExchange backend." +
+                            (string.IsNullOrEmpty(snippet) ? string.Empty : $" Body: {snippet}"),
+                };
+            }
+
             try
             {
                 var typed = await response.Content.ReadFromJsonAsync<BaseResponseObject<T>>(this.jsonOptions);
