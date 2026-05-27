@@ -5,6 +5,8 @@
 :root {
     --admin-accent: #36b1bf;
     --admin-accent-hover: #4cd6e6;
+    --admin-accent-alt: #a855ff;                    /* contrasting hue for the animated strip */
+    --admin-nav-active-bg: rgba(255, 255, 255, .12);
     --admin-surface: #11161c;
     --admin-surface-2: #1a2129;
     --admin-border: #2a3441;
@@ -15,8 +17,10 @@
 }
 
 :root[data-bs-theme="light"] {
-    --admin-accent: #1a8a96;
-    --admin-accent-hover: #2ca8b7;
+    --admin-accent: #48c8d6;
+    --admin-accent-hover: #6cdce8;
+    --admin-accent-alt: #7c2acc;                    /* contrasting hue for the animated strip, light theme */
+    --admin-nav-active-bg: rgba(0, 0, 0, .10);
     --admin-surface: #f5f7fa;
     --admin-surface-2: #ffffff;
     --admin-border: #d6dde4;
@@ -54,6 +58,30 @@ a:hover { color: var(--admin-accent-hover); }
     top: 0;
     z-index: 10;
 }
+.admin-topbar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        var(--admin-accent) 0%,
+        var(--admin-accent-alt) 50%,
+        var(--admin-accent) 100%);
+    background-size: 200% 100%;
+    animation: admin-accent-shift 9s linear infinite;
+    z-index: 11;
+    pointer-events: none;
+}
+@keyframes admin-accent-shift {
+    0%   { background-position:   0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .admin-topbar::after { animation: none; }
+}
 
 .admin-brand { font-weight: 600; letter-spacing: .02em; }
 
@@ -86,18 +114,27 @@ a:hover { color: var(--admin-accent-hover); }
     gap: .25rem;
 }
 
-.admin-nav-link {
+/* Nav links: always render in the regular text color regardless of the
+   global a, .btn-link accent. Active state is bold, not background. */
+.admin-nav .admin-nav-link,
+.admin-nav .admin-nav-link:hover,
+.admin-nav .admin-nav-link:focus,
+.admin-nav .admin-nav-link.active,
+.admin-nav a.admin-nav-link {
     color: var(--admin-text);
     text-decoration: none;
+}
+.admin-nav-link {
     padding: .55rem .85rem;
     border-radius: 6px;
     display: flex;
     align-items: center;
     gap: .55rem;
     font-size: .95rem;
+    font-weight: 400;
 }
-.admin-nav-link:hover { background: rgba(255, 255, 255, .04); color: var(--admin-text); }
-.admin-nav-link.active { background: var(--admin-accent); color: #062930; }
+.admin-nav-link:hover { background: rgba(127, 127, 127, .12); }
+.admin-nav-link.active { background: var(--admin-nav-active-bg); font-weight: 700; }
 .admin-nav-link i { font-size: 1.1rem; }
 
 .admin-main {
