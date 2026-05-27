@@ -63,6 +63,15 @@
 
             <div class="dropdown-divider"></div>
 
+            <div class="px-3 pb-2">
+                <button type="button" class="btn btn-link btn-sm w-100 text-start text-decoration-none px-0"
+                        @onclick="this.GoToMyApps">
+                    <i class="bi bi-robot me-2"></i>My S2S apps
+                </button>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
             <div class="px-3 py-2 d-flex align-items-center gap-2">
                 <small class="text-muted text-nowrap">Session</small>
                 @if (this.Telemetry.IsEnabled)
@@ -209,6 +218,9 @@
         await this.Telemetry.FlushAsync();
         this.Navigation.NavigateToLogout(this.OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
     }
+
+    private void GoToMyApps()
+        => this.Navigation.NavigateTo("s2sapps");
 
     private sealed record VersionInfo(string Version, string BuildDate);
 }

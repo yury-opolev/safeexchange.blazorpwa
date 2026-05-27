@@ -44,13 +44,11 @@
 </p>
 
 <EditForm Model="@this.searchInput" OnValidSubmit="@ViewObject">
-    <div class="row">
-        <div class="col-md-8">
-            <InputText class="form-control" @bind-Value="this.searchInput.SearchString" placeholder="Secret Name" aria-label="Secret To Search" />
-        </div>
-        <div class="col-md-4">
-            <button class="btn btn-outline-success" type="submit" disabled="@this.StateContainer.IsInProgress" aria-label="Search">Search</button>
-        </div>
+    <div class="input-group">
+        <InputText class="form-control" @bind-Value="this.searchInput.SearchString" placeholder="Secret Name" aria-label="Secret To Search" />
+        <button class="btn btn-outline-primary" type="submit" disabled="@this.StateContainer.IsInProgress" aria-label="Search">
+            <i class="bi bi-search me-1"></i> Search
+        </button>
     </div>
 
 </EditForm>

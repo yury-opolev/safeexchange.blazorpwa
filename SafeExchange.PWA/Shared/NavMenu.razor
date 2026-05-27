@@ -1,88 +1,56 @@
-﻿@using SafeExchange.Client.Web.Components
+@using SafeExchange.Client.Web.Components
 
 @inject StateContainer StateContainerInstance
+@implements IDisposable
 
-<div class="top-row px-3 navbar navbar-dark">
-    <a class="navbar-brand" href="">SafeExchange</a>
-    <button class="navbar-toggler" @onclick="ToggleNavMenu">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-</div>
+<NavLinkAccessibility class="client-nav-link" href="" ActiveAttributes="ActiveAttributes" Match="NavLinkMatch.All">
+    <i class="bi bi-house-door"></i><span>Home</span>
+</NavLinkAccessibility>
+<NavLinkAccessibility class="client-nav-link" href="createdata" ActiveAttributes="ActiveAttributes">
+    <i class="bi bi-shield-plus"></i><span>Add Secret</span>
+</NavLinkAccessibility>
+<NavLinkAccessibility class="client-nav-link" href="listdata" ActiveAttributes="ActiveAttributes">
+    <i class="bi bi-journal-bookmark"></i><span>My Secrets</span>
+</NavLinkAccessibility>
 
-<div class="@NavMenuCssClass" role="navigation" @onclick="ToggleNavMenu">
-    <ul class="nav flex-column">
-        <li class="nav-item px-3">
-            <NavLinkAccessibility class="nav-link" href="" ActiveAttributes="ActiveAttributes" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door h4" aria-hidden="true"></span> Home
-            </NavLinkAccessibility>
-        </li>
-        <li class="nav-item px-3">
-            <NavLinkAccessibility class="nav-link" href="createdata" ActiveAttributes="ActiveAttributes">
-                <span class="bi bi-shield-plus h4" aria-hidden="true"></span> Add Secret
-            </NavLinkAccessibility>
-        </li>
-        <li class="nav-item px-3">
-            <NavLinkAccessibility class="nav-link" href="listdata" ActiveAttributes="ActiveAttributes">
-                <span class="bi bi-journal-bookmark h4" aria-hidden="true"></span> My Secrets
-            </NavLinkAccessibility>
-        </li>
-        <AuthorizeView>
-            <Authorized>
-                <li><hr class="dropdown-divider text-light"></li>
-                <li class="nav-item px-3">
-                    <NavLinkAccessibility class="nav-link" href="s2sapps" ActiveAttributes="ActiveAttributes">
-                        <span class="bi bi-robot h4" aria-hidden="true"></span> My Apps
-                    </NavLinkAccessibility>
-                </li>
-                <li class="nav-item px-3">
-                    <NavLinkAccessibility class="nav-link" href="accessrequests" ActiveAttributes="ActiveAttributes">
-                        <span class="bi bi-person-lines-fill h4" aria-hidden="true"></span> My Requests &nbsp;
-                        @if (this.StateContainerInstance.IsFetchingAccessRequests)
-                        {
-                            <span class="spinner-border spinner-border-sm text-light" role="status"></span>
-                        }
-                        else
-                        {
-                            if ((this.StateContainerInstance.IncomingAccessRequests?.Count ?? 0) > 0)
-                            {
-                                <span class="badge rounded-pill bg-danger">@(this.StateContainerInstance.IncomingAccessRequests.Count)</span><span>&nbsp;</span>
-                            }
-                            if ((this.StateContainerInstance.OutgoingAccessRequests?.Count ?? 0) > 0)
-                            {
-                                <span class="badge rounded-pill bg-light text-dark">@(this.StateContainerInstance.OutgoingAccessRequests.Count)</span>
-                            }
-                        }
-                    </NavLinkAccessibility>
-                </li>
-                <li class="nav-item px-3">
-                    <NavLinkAccessibility class="nav-link" href="addrequest" ActiveAttributes="ActiveAttributes">
-                        <span class="bi bi-person-raised-hand h4" aria-hidden="true"></span> Add Request
-                    </NavLinkAccessibility>
-                </li>
-            </Authorized>
-        </AuthorizeView>
-    </ul>
-</div>
+<AuthorizeView>
+    <Authorized>
+        <hr class="client-nav-sep" />
+        <NavLinkAccessibility class="client-nav-link" href="accessrequests" ActiveAttributes="ActiveAttributes">
+            <i class="bi bi-person-lines-fill"></i>
+            <span>My Requests</span>
+            @if (this.StateContainerInstance.IsFetchingAccessRequests)
+            {
+                <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
+            }
+            else
+            {
+                @if ((this.StateContainerInstance.IncomingAccessRequests?.Count ?? 0) > 0)
+                {
+                    <span class="badge rounded-pill bg-accent ms-2">@(this.StateContainerInstance.IncomingAccessRequests.Count)</span>
+                }
+                @if ((this.StateContainerInstance.OutgoingAccessRequests?.Count ?? 0) > 0)
+                {
+                    <span class="badge rounded-pill bg-light text-dark ms-2">@(this.StateContainerInstance.OutgoingAccessRequests.Count)</span>
+                }
+            }
+        </NavLinkAccessibility>
+        <NavLinkAccessibility class="client-nav-link" href="addrequest" ActiveAttributes="ActiveAttributes">
+            <i class="bi bi-person-raised-hand"></i><span>Add Request</span>
+        </NavLinkAccessibility>
+    </Authorized>
+</AuthorizeView>
 
 @code {
-    private bool collapseNavMenu = true;
-
-    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private Dictionary<string, object> ActiveAttributes { get; set; } = new Dictionary<string, object>() { { "aria-current", "page" } };
+    private Dictionary<string, object> ActiveAttributes { get; } = new() { { "aria-current", "page" } };
 
     protected override void OnInitialized()
     {
-        StateContainerInstance.OnChange += StateHasChanged;
+        this.StateContainerInstance.OnChange += this.StateHasChanged;
     }
 
     public void Dispose()
     {
-        StateContainerInstance.OnChange -= StateHasChanged;
-    }
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
+        this.StateContainerInstance.OnChange -= this.StateHasChanged;
     }
 }

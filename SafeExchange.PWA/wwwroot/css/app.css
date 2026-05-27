@@ -4,23 +4,126 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-a, .btn-link {
-    color: #0366d6;
+/* Accent colors are pulled from the topbar's animated palette so links,
+   buttons, and other accent surfaces all read as the same family. Both
+   --client-accent and --client-accent-hover are theme-aware (defined in
+   the :root blocks further down). The dark/light-prefixed selectors are
+   needed to beat the shared component CSS, which sets a more specific
+   [data-bs-theme="dark"] a { color: #79c0ff } rule. */
+a, .btn-link,
+[data-bs-theme="dark"] a,  [data-bs-theme="dark"]  .btn-link,
+[data-bs-theme="light"] a, [data-bs-theme="light"] .btn-link {
+    color: var(--client-accent);
 }
-
-/* The #0366d6 above is tuned for light backgrounds; against our dark
-   theme it's too dim for comfortable reading (notably the pinned-secret
-   links on the home page). Brighten it for the dark theme — #79c0ff is
-   GitHub's dark-mode link colour and gives a clear, familiar contrast. */
-[data-bs-theme="dark"] a,
-[data-bs-theme="dark"] .btn-link {
-    color: #79c0ff;
+a:hover, .btn-link:hover,
+[data-bs-theme="dark"] a:hover,  [data-bs-theme="dark"]  .btn-link:hover,
+[data-bs-theme="light"] a:hover, [data-bs-theme="light"] .btn-link:hover {
+    color: var(--client-accent-hover);
 }
 
 .btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--client-accent);
+    --bs-btn-border-color: var(--client-accent);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--client-accent-hover);
+    --bs-btn-hover-border-color: var(--client-accent-hover);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--client-accent-hover);
+    --bs-btn-active-border-color: var(--client-accent-hover);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--client-accent);
+    --bs-btn-disabled-border-color: var(--client-accent);
+}
+/* Defensive overrides: the local bootstrap.min.css declares the idle,
+   hover, active, and disabled states with explicit background-color /
+   border-color, bypassing the variable approach above. Re-state directly. */
+.btn-primary,
+.btn-primary:disabled,
+.btn-primary.disabled {
+    background-color: var(--client-accent);
+    border-color: var(--client-accent);
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active {
+    background-color: var(--client-accent-hover);
+    border-color: var(--client-accent-hover);
+    color: #fff;
+}
+
+/* Form controls: radios, checkboxes, switches. Bootstrap's local
+   bootstrap.min.css hardcodes a blue checked-state in these rules, so we
+   override the checked colour to match the accent. The white check-mark
+   SVG inside the input is supplied by Bootstrap; only the input's bg
+   colour needs adjusting. */
+.form-check-input:checked {
+    background-color: var(--client-accent);
+    border-color: var(--client-accent);
+}
+.form-check-input:focus,
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--client-accent);
+    box-shadow: 0 0 0 .25rem color-mix(in srgb, var(--client-accent) 25%, transparent);
+}
+/* Native fallback (browser-rendered input/select widgets, range, etc.) */
+input, select, textarea, progress {
+    accent-color: var(--client-accent);
+}
+
+/* Accent-coloured badge — used for the My Requests counter pills in both
+   the sidebar and the access-requests tabs. */
+.badge.bg-accent {
+    background-color: var(--client-accent) !important;
+    color: #fff !important;
+}
+
+/* Bootstrap's outline buttons re-declare --bs-btn-* variables on the
+   selector, so the global --bs-primary override doesn't reach them.
+   Re-declare here so View / Edit and similar .btn-outline-primary
+   buttons follow the accent. */
+.btn-outline-primary,
+.btn-outline-primary-noborder {
+    --bs-btn-color: var(--client-accent);
+    --bs-btn-border-color: var(--client-accent);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--client-accent);
+    --bs-btn-hover-border-color: var(--client-accent);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--client-accent);
+    --bs-btn-active-border-color: var(--client-accent);
+    --bs-btn-disabled-color: var(--client-accent);
+    --bs-btn-disabled-border-color: var(--client-accent);
+}
+
+/* Light-mode only: Quill's content area inherits the page surface so it
+   blends into the main panel. Lift it to white (matches form-control and
+   access-list items) so the secret body reads as a distinct card. Dark
+   mode is left alone — looks good as-is. */
+[data-bs-theme="light"] .ql-container.ql-snow,
+[data-bs-theme="light"] .ql-toolbar.ql-snow,
+[data-bs-theme="light"] #quill-toolbar,
+[data-bs-theme="light"] #quill-editor-container,
+[data-bs-theme="light"] .ql-editor {
+    background-color: #ffffff;
+}
+
+/* The search-result rows reuse Bootstrap text-primary for the secondary
+   pin button; make sure that one follows the accent too. */
+.itemsearch-dialog-list .text-primary,
+.itemsearch-dialog-list-pinned .text-primary { color: var(--client-accent) !important; }
+
+/* When a result row is hovered or selected, the row's background becomes
+   the accent. The inner pin button (text-primary by default) would then
+   merge into the background — flip it to white so the star stays visible,
+   matching the row's foreground text. */
+.btn-outline-primary-noborder:hover .btn-link,
+.btn-outline-primary-noborder:focus .btn-link,
+.btn-outline-primary-noborder.active .btn-link {
+    color: #fff !important;
 }
 
 .content {
@@ -116,3 +219,224 @@ a, .btn-link {
     .loading-progress-text:after {
         content: var(--blazor-load-percentage-text, "Loading");
     }
+
+/* ===== Main PWA shell (admin-panel style, indigo accent) ===== */
+
+:root {
+    --client-accent: #c85ab4;                           /* magenta — dark-theme primary accent (mid saturation) */
+    --client-accent-hover: #d883c5;
+    /* Animated topbar strip colors — kept vivid regardless of accent. */
+    --client-strip-a: #d943c1;
+    --client-strip-b: #7c5cff;
+    --client-nav-active-bg: rgba(255, 255, 255, .12);   /* neutral lighten on dark surface */
+    --client-surface: #11141c;
+    --client-surface-2: #1a1d28;
+    --client-border: #2a2f3d;
+    --client-text: #d8dbe6;
+    --client-text-muted: #8a90a3;
+    --client-topbar-h: 56px;
+    --client-nav-w: 240px;
+
+    /* Bring Bootstrap's primary/link variables in line with the accent so
+       tabs, alerts, outline-buttons and any other Bootstrap component that
+       defers to --bs-primary follows the same magenta family. */
+    --bs-primary: #c85ab4;
+    --bs-primary-rgb: 200, 90, 180;
+    --bs-link-color: #c85ab4;
+    --bs-link-color-rgb: 200, 90, 180;
+    --bs-link-hover-color: #d883c5;
+    --bs-link-hover-color-rgb: 216, 131, 197;
+}
+
+:root[data-bs-theme="light"] {
+    --client-accent: #5a3eed;                           /* indigo — light-theme primary accent */
+    --client-accent-hover: #7c5cff;
+    --client-strip-a: #5a3eed;
+    --client-strip-b: #b1219c;
+    --client-nav-active-bg: rgba(0, 0, 0, .10);         /* neutral darken on light surface */
+    --client-surface: #f6f7fb;
+    --client-surface-2: #ffffff;
+    --client-border: #d8dbe4;
+    --client-text: #1f2333;
+    --client-text-muted: #5b6275;
+
+    --bs-primary: #5a3eed;
+    --bs-primary-rgb: 90, 62, 237;
+    --bs-link-color: #5a3eed;
+    --bs-link-color-rgb: 90, 62, 237;
+    --bs-link-hover-color: #7c5cff;
+    --bs-link-hover-color-rgb: 124, 92, 255;
+}
+
+.client-shell {
+    /* Lock the shell to the viewport so the sidebar and topbar stay put;
+       .client-main owns its own scrolling via overflow-y: auto below.
+       dvh adapts to mobile browser chrome (URL bar) where supported. */
+    height: 100vh;
+    height: 100dvh;
+    background-color: var(--client-surface);
+    color: var(--client-text);
+    display: grid;
+    grid-template-columns: var(--client-nav-w) 1fr;
+    grid-template-rows: var(--client-topbar-h) 1fr;
+    grid-template-areas: "topbar topbar" "nav main";
+    overflow: hidden;
+}
+
+.client-topbar {
+    grid-area: topbar;
+    background: var(--client-surface-2);
+    border-bottom: 1px solid var(--client-border);
+    display: grid;
+    grid-template-columns: var(--client-nav-w) 1fr auto;
+    align-items: center;
+    /* No left padding here: the brand cell handles its own padding so the
+       state-header column starts exactly at the sidebar's right edge. */
+    padding: 0 1rem 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+.client-topbar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        var(--client-strip-a) 0%,
+        var(--client-strip-b) 50%,
+        var(--client-strip-a) 100%);
+    background-size: 200% 100%;
+    animation: client-accent-shift 9s linear infinite;
+    z-index: 21;
+    pointer-events: none;
+}
+@keyframes client-accent-shift {
+    0%   { background-position:   0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .client-topbar::after { animation: none; }
+}
+
+.client-brand {
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--client-text);
+    padding-left: 1rem;
+}
+
+.client-state-header {
+    color: var(--client-text);
+    font-weight: 500;
+    padding-left: 1rem;
+    border-left: 1px solid var(--client-border);
+}
+
+/* Container for the LoginDisplay component. Wrapping it in a single grid
+   child prevents the dropdown-menu sibling from claiming its own grid
+   cell and pushing the icon onto a second row. */
+.client-login-wrap { position: relative; display: flex; align-items: center; }
+
+.client-hamburger {
+    background: transparent;
+    color: var(--client-text);
+    border: 1px solid var(--client-border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    display: none;
+    line-height: 1;
+}
+.client-hamburger i { font-size: 1.25rem; }
+
+.client-nav {
+    grid-area: nav;
+    background: var(--client-surface-2);
+    border-right: 1px solid var(--client-border);
+    padding: 1rem .5rem;
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+}
+
+/* Nav links: always render in the regular text color regardless of the
+   global a, .btn-link accent. Active state is communicated through font
+   weight, not color or background. */
+.client-nav .client-nav-link,
+.client-nav .client-nav-link:hover,
+.client-nav .client-nav-link:focus,
+.client-nav .client-nav-link.active,
+.client-nav a.client-nav-link {
+    color: var(--client-text);
+    text-decoration: none;
+}
+.client-nav-link {
+    padding: .55rem .85rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    font-size: .95rem;
+    line-height: 1.2;
+    font-weight: 400;
+}
+.client-nav-link i { font-size: 1.1rem; }
+.client-nav-link:hover { background: rgba(127, 127, 127, .12); }
+.client-nav-link.active { background: var(--client-nav-active-bg); font-weight: 700; }
+
+.client-nav-sep {
+    border: 0;
+    border-top: 1px solid var(--client-border);
+    margin: .5rem .25rem;
+}
+
+.client-main { grid-area: main; overflow-y: auto; }
+.client-main .content {
+    color: var(--client-text);
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.client-main .container-md { max-width: 1100px; }
+
+.client-nav-scrim { display: none; }
+
+@media (max-width: 720px) {
+    .client-shell {
+        grid-template-columns: 1fr;
+        grid-template-areas: "topbar" "main";
+    }
+    .client-topbar {
+        display: flex;
+        gap: .75rem;
+        padding: 0 1rem;
+    }
+    .client-brand { padding-left: 0; }
+    .client-hamburger { display: inline-flex; align-items: center; }
+    .client-state-header { display: none; }
+    .client-main .content,
+    .client-main .container-md { max-width: 100%; }
+    .client-nav {
+        position: fixed;
+        top: var(--client-topbar-h);
+        left: 0;
+        bottom: 0;
+        width: 78%;
+        max-width: 320px;
+        transform: translateX(-100%);
+        transition: transform .18s ease-out;
+        z-index: 19;
+    }
+    .client-nav.open { transform: translateX(0); }
+    .client-nav-scrim {
+        display: block;
+        position: fixed;
+        top: var(--client-topbar-h);
+        left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,.45);
+        z-index: 18;
+    }
+}
