@@ -61,6 +61,30 @@
                 </div>
             </div>
 
+            <div class="px-3 py-2">
+                <div class="small text-muted mb-1">Accent</div>
+                <div class="btn-group btn-group-sm w-100" role="group" aria-label="Accent">
+                    <input type="radio" class="btn-check" name="login-accent" id="login-accent-mono"
+                           checked="@(this.currentAccent == "mono")"
+                           @onchange="@(_ => this.OnAccentChangedAsync("mono"))" />
+                    <label class="btn btn-outline-secondary" for="login-accent-mono">
+                        <i class="bi bi-circle-half me-1"></i>Mono
+                    </label>
+                    <input type="radio" class="btn-check" name="login-accent" id="login-accent-vivid"
+                           checked="@(this.currentAccent == "vivid")"
+                           @onchange="@(_ => this.OnAccentChangedAsync("vivid"))" />
+                    <label class="btn btn-outline-secondary" for="login-accent-vivid">
+                        <i class="bi bi-circle-fill me-1 swatch-vivid"></i>Vivid
+                    </label>
+                    <input type="radio" class="btn-check" name="login-accent" id="login-accent-blue"
+                           checked="@(this.currentAccent == "blue")"
+                           @onchange="@(_ => this.OnAccentChangedAsync("blue"))" />
+                    <label class="btn btn-outline-secondary" for="login-accent-blue">
+                        <i class="bi bi-circle-fill me-1 swatch-blue"></i>Blue
+                    </label>
+                </div>
+            </div>
+
             <div class="dropdown-divider"></div>
 
             <div class="px-3 pb-2">
@@ -116,7 +140,10 @@
 </AuthorizeView>
 
 @code {
+    private const string AccentStorageKey = "client-accent";
+
     private ColorTheme currentTheme = ColorTheme.Auto;
+    private string currentAccent = "mono";
     private string versionLabel = string.Empty;
     private string versionTooltip = string.Empty;
 
@@ -150,6 +177,19 @@
 
         try
         {
+            var stored = await this.JS.InvokeAsync<string?>("localStorage.getItem", AccentStorageKey);
+            if (!string.IsNullOrEmpty(stored) && IsValidAccent(stored))
+            {
+                this.currentAccent = stored;
+            }
+            await this.ApplyAccentAsync(this.currentAccent);
+        }
+        catch
+        {
+        }
+
+        try
+        {
             var info = await this.Http.GetFromJsonAsync<VersionInfo>("version.json");
             if (info is { Version.Length: > 0 })
             {
@@ -163,6 +203,42 @@
         {
         }
     }
+
+    private async Task OnAccentChangedAsync(string accent)
+    {
+        if (!IsValidAccent(accent) || string.Equals(this.currentAccent, accent, StringComparison.Ordinal))
+        {
+            return;
+        }
+        this.currentAccent = accent;
+        try
+        {
+            await this.JS.InvokeVoidAsync("localStorage.setItem", AccentStorageKey, accent);
+        }
+        catch
+        {
+        }
+        await this.ApplyAccentAsync(accent);
+    }
+
+    private async Task ApplyAccentAsync(string accent)
+    {
+        try
+        {
+            // Direct function-path interop; the PWA's CSP blocks eval, so the
+            // earlier eval-based attempt silently failed.
+            await this.JS.InvokeVoidAsync(
+                "document.documentElement.setAttribute",
+                "data-accent",
+                accent);
+        }
+        catch
+        {
+        }
+    }
+
+    private static bool IsValidAccent(string accent)
+        => accent == "mono" || accent == "vivid" || accent == "blue";
 
     public void Dispose()
     {

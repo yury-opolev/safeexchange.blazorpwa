@@ -22,16 +22,16 @@ a:hover, .btn-link:hover,
 }
 
 .btn-primary {
-    --bs-btn-color: #fff;
+    --bs-btn-color: var(--client-on-accent);
     --bs-btn-bg: var(--client-accent);
     --bs-btn-border-color: var(--client-accent);
-    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-color: var(--client-on-accent);
     --bs-btn-hover-bg: var(--client-accent-hover);
     --bs-btn-hover-border-color: var(--client-accent-hover);
-    --bs-btn-active-color: #fff;
+    --bs-btn-active-color: var(--client-on-accent);
     --bs-btn-active-bg: var(--client-accent-hover);
     --bs-btn-active-border-color: var(--client-accent-hover);
-    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-color: var(--client-on-accent);
     --bs-btn-disabled-bg: var(--client-accent);
     --bs-btn-disabled-border-color: var(--client-accent);
 }
@@ -43,7 +43,7 @@ a:hover, .btn-link:hover,
 .btn-primary.disabled {
     background-color: var(--client-accent);
     border-color: var(--client-accent);
-    color: #fff;
+    color: var(--client-on-accent);
 }
 .btn-primary:hover,
 .btn-primary:focus,
@@ -51,7 +51,7 @@ a:hover, .btn-link:hover,
 .btn-primary.active {
     background-color: var(--client-accent-hover);
     border-color: var(--client-accent-hover);
-    color: #fff;
+    color: var(--client-on-accent);
 }
 
 /* Form controls: radios, checkboxes, switches. Bootstrap's local
@@ -78,8 +78,17 @@ input, select, textarea, progress {
    the sidebar and the access-requests tabs. */
 .badge.bg-accent {
     background-color: var(--client-accent) !important;
-    color: #fff !important;
+    color: var(--client-on-accent) !important;
 }
+
+/* Accent-preset chips use Bootstrap-icons: bi-circle-half for Mono and
+   bi-circle-fill for Vivid / Blue. Fill colour mirrors the accent the
+   preset will actually apply in the current theme, so what you see in
+   the swatch matches what you'll get after picking it. */
+.swatch-vivid { color: #c85ab4; }          /* vivid magenta (dark theme) */
+[data-bs-theme="light"] .swatch-vivid { color: #5a3eed; }  /* vivid indigo (light theme) */
+.swatch-blue  { color: #3b78f5; }          /* blue (dark theme) */
+[data-bs-theme="light"] .swatch-blue  { color: #2563eb; }  /* blue (light theme) */
 
 /* Bootstrap's outline buttons re-declare --bs-btn-* variables on the
    selector, so the global --bs-primary override doesn't reach them.
@@ -89,10 +98,10 @@ input, select, textarea, progress {
 .btn-outline-primary-noborder {
     --bs-btn-color: var(--client-accent);
     --bs-btn-border-color: var(--client-accent);
-    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-color: var(--client-on-accent);
     --bs-btn-hover-bg: var(--client-accent);
     --bs-btn-hover-border-color: var(--client-accent);
-    --bs-btn-active-color: #fff;
+    --bs-btn-active-color: var(--client-on-accent);
     --bs-btn-active-bg: var(--client-accent);
     --bs-btn-active-border-color: var(--client-accent);
     --bs-btn-disabled-color: var(--client-accent);
@@ -123,7 +132,7 @@ input, select, textarea, progress {
 .btn-outline-primary-noborder:hover .btn-link,
 .btn-outline-primary-noborder:focus .btn-link,
 .btn-outline-primary-noborder.active .btn-link {
-    color: #fff !important;
+    color: var(--client-on-accent) !important;
 }
 
 .content {
@@ -220,11 +229,88 @@ input, select, textarea, progress {
         content: var(--blazor-load-percentage-text, "Loading");
     }
 
+/* ===== Accent presets =====
+   Default (no data-accent attribute) = "Vivid" (matches the strip family).
+   Override via <html data-accent="blue|vivid|mono">; only the accent
+   variables change. --client-strip-a / --client-strip-b stay locked to
+   the brand magenta↔indigo wash regardless of the user's pick. */
+
+:root[data-accent="vivid"] {
+    --client-accent: #c85ab4;
+    --client-accent-hover: #d883c5;
+    --client-on-accent: #ffffff;
+    --bs-primary: #c85ab4;
+    --bs-primary-rgb: 200, 90, 180;
+    --bs-link-color: #c85ab4;
+    --bs-link-color-rgb: 200, 90, 180;
+    --bs-link-hover-color: #d883c5;
+    --bs-link-hover-color-rgb: 216, 131, 197;
+}
+:root[data-accent="vivid"][data-bs-theme="light"] {
+    --client-accent: #5a3eed;
+    --client-accent-hover: #7c5cff;
+    --bs-primary: #5a3eed;
+    --bs-primary-rgb: 90, 62, 237;
+    --bs-link-color: #5a3eed;
+    --bs-link-color-rgb: 90, 62, 237;
+    --bs-link-hover-color: #7c5cff;
+    --bs-link-hover-color-rgb: 124, 92, 255;
+}
+
+:root[data-accent="blue"] {
+    --client-accent: #3b78f5;
+    --client-accent-hover: #5a8fff;
+    --client-on-accent: #ffffff;
+    --bs-primary: #3b78f5;
+    --bs-primary-rgb: 59, 120, 245;
+    --bs-link-color: #3b78f5;
+    --bs-link-color-rgb: 59, 120, 245;
+    --bs-link-hover-color: #5a8fff;
+    --bs-link-hover-color-rgb: 90, 143, 255;
+}
+:root[data-accent="blue"][data-bs-theme="light"] {
+    --client-accent: #2563eb;
+    --client-accent-hover: #3b78f5;
+    --bs-primary: #2563eb;
+    --bs-primary-rgb: 37, 99, 235;
+    --bs-link-color: #2563eb;
+    --bs-link-color-rgb: 37, 99, 235;
+    --bs-link-hover-color: #3b78f5;
+    --bs-link-hover-color-rgb: 59, 120, 245;
+}
+
+:root[data-accent="mono"] {
+    --client-accent: #cbd5e1;
+    --client-accent-hover: #e2e8f0;
+    --bs-primary: #cbd5e1;
+    --bs-primary-rgb: 203, 213, 225;
+    --bs-link-color: #cbd5e1;
+    --bs-link-color-rgb: 203, 213, 225;
+    --bs-link-hover-color: #e2e8f0;
+    --bs-link-hover-color-rgb: 226, 232, 240;
+}
+:root[data-accent="mono"][data-bs-theme="light"] {
+    --client-accent: #475569;
+    --client-accent-hover: #64748b;
+    --bs-primary: #475569;
+    --bs-primary-rgb: 71, 85, 105;
+    --bs-link-color: #475569;
+    --bs-link-color-rgb: 71, 85, 105;
+    --bs-link-hover-color: #64748b;
+    --bs-link-hover-color-rgb: 100, 116, 139;
+}
+
 /* ===== Main PWA shell (admin-panel style, indigo accent) ===== */
 
 :root {
-    --client-accent: #c85ab4;                           /* magenta — dark-theme primary accent (mid saturation) */
-    --client-accent-hover: #d883c5;
+    /* Default accent = Mono (neutral grayscale). Vivid/Blue presets
+       override via :root[data-accent="…"] below. */
+    --client-accent: #cbd5e1;
+    --client-accent-hover: #e2e8f0;
+    /* Foreground on accent surfaces (button labels, badge text). White by
+       default; flipped to near-black under mono dark where the accent is
+       too light for white to read against. */
+    --client-on-accent: #1f2333;
     /* Animated topbar strip colors — kept vivid regardless of accent. */
     --client-strip-a: #d943c1;
     --client-strip-b: #7c5cff;
@@ -237,20 +323,19 @@ input, select, textarea, progress {
     --client-topbar-h: 56px;
     --client-nav-w: 240px;
 
-    /* Bring Bootstrap's primary/link variables in line with the accent so
-       tabs, alerts, outline-buttons and any other Bootstrap component that
-       defers to --bs-primary follows the same magenta family. */
-    --bs-primary: #c85ab4;
-    --bs-primary-rgb: 200, 90, 180;
-    --bs-link-color: #c85ab4;
-    --bs-link-color-rgb: 200, 90, 180;
-    --bs-link-hover-color: #d883c5;
-    --bs-link-hover-color-rgb: 216, 131, 197;
+    /* Bring Bootstrap's primary/link variables in line with the accent. */
+    --bs-primary: #cbd5e1;
+    --bs-primary-rgb: 203, 213, 225;
+    --bs-link-color: #cbd5e1;
+    --bs-link-color-rgb: 203, 213, 225;
+    --bs-link-hover-color: #e2e8f0;
+    --bs-link-hover-color-rgb: 226, 232, 240;
 }
 
 :root[data-bs-theme="light"] {
-    --client-accent: #5a3eed;                           /* indigo — light-theme primary accent */
-    --client-accent-hover: #7c5cff;
+    --client-accent: #475569;
+    --client-accent-hover: #64748b;
+    --client-on-accent: #ffffff;
     --client-strip-a: #5a3eed;
     --client-strip-b: #b1219c;
     --client-nav-active-bg: rgba(0, 0, 0, .10);         /* neutral darken on light surface */
@@ -260,12 +345,12 @@ input, select, textarea, progress {
     --client-text: #1f2333;
     --client-text-muted: #5b6275;
 
-    --bs-primary: #5a3eed;
-    --bs-primary-rgb: 90, 62, 237;
-    --bs-link-color: #5a3eed;
-    --bs-link-color-rgb: 90, 62, 237;
-    --bs-link-hover-color: #7c5cff;
-    --bs-link-hover-color-rgb: 124, 92, 255;
+    --bs-primary: #475569;
+    --bs-primary-rgb: 71, 85, 105;
+    --bs-link-color: #475569;
+    --bs-link-color-rgb: 71, 85, 105;
+    --bs-link-hover-color: #64748b;
+    --bs-link-hover-color-rgb: 100, 116, 139;
 }
 
 .client-shell {
