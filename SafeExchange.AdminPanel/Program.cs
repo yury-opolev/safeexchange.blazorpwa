@@ -6,6 +6,7 @@ namespace SafeExchange.AdminPanel
     using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
     using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
     using Microsoft.Extensions.DependencyInjection;
+    using SafeExchange.AdminPanel.Services;
     using SafeExchange.Client.Common;
 
     public class Program
@@ -53,6 +54,7 @@ namespace SafeExchange.AdminPanel
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
             builder.Services.AddScoped<ApiClient>();
+            builder.Services.AddScoped<AdminPreferences>();
             builder.Services.AddAuthorizationCore();
 
             await builder.Build().RunAsync();

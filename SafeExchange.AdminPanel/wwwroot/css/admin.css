@@ -14,6 +14,16 @@
     --admin-nav-w: 220px;
 }
 
+:root[data-bs-theme="light"] {
+    --admin-accent: #1a8a96;
+    --admin-accent-hover: #2ca8b7;
+    --admin-surface: #f5f7fa;
+    --admin-surface-2: #ffffff;
+    --admin-border: #d6dde4;
+    --admin-text: #1f2933;
+    --admin-text-muted: #5a6675;
+}
+
 html, body {
     height: 100%;
     background-color: var(--admin-surface) !important;
@@ -162,3 +172,28 @@ a:hover { color: var(--admin-accent-hover); }
 .admin-pill.off { background: rgba(160, 160, 160, .08); color: var(--admin-text-muted); }
 .admin-pill.attn { background: rgba(255, 191, 71, .12); color: #ffd07a; border-color: #6e561c; }
 .admin-pill.historical { background: rgba(255, 132, 132, .1); color: #f59595; border-color: #6a2d2d; }
+
+#blazor-error-ui {
+    background: #2a1a1a;
+    color: var(--admin-text);
+    border-top: 1px solid #6a2d2d;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.4);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+#blazor-error-ui .dismiss { cursor: pointer; position: absolute; right: 0.75rem; top: 0.5rem; }
+
+.admin-login-link {
+    color: var(--admin-text) !important;
+    padding: 4px 6px;
+    border-radius: 6px;
+    line-height: 1;
+}
+.admin-login-link i { font-size: 1.6rem; }
+.admin-login-link:hover { background: rgba(255, 255, 255, .04); }
+.admin-login-menu { min-width: 280px; }

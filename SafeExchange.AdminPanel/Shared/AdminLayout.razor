@@ -1,6 +1,6 @@
 @inherits LayoutComponentBase
 
-<div class="admin-shell" data-bs-theme="dark">
+<div class="admin-shell">
     <header class="admin-topbar">
         <button class="admin-hamburger" @onclick="ToggleNav" aria-label="Toggle menu">
             <i class="bi bi-list"></i>
@@ -8,11 +8,7 @@
         <div class="admin-brand">SafeExchange</div>
         <span class="admin-chip">ADMIN</span>
         <div class="flex-grow-1"></div>
-        <AuthorizeView>
-            <Authorized>
-                <small class="text-muted me-2 d-none d-sm-inline">@context.User.Identity?.Name</small>
-            </Authorized>
-        </AuthorizeView>
+        <AdminLoginDisplay />
     </header>
 
     <aside class="admin-nav @(navOpen ? "open" : "")">

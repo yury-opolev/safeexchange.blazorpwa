@@ -1,0 +1,163 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using Microsoft.Extensions.Options
+@using Microsoft.JSInterop
+@using SafeExchange.AdminPanel.Services
+@using System.Security.Claims
+
+@inject NavigationManager Navigation
+@inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
+@inject AdminPreferences Preferences
+@inject IJSRuntime JS
+@inject HttpClient Http
+
+<AuthorizeView>
+    <Authorized>
+        <a class="nav-link admin-login-link" href="" @onclick:preventDefault id="adminUserDropdown"
+           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-haspopup="true" aria-expanded="false"
+           aria-label="Account menu" title="@context.User.Identity?.Name">
+            <i class="bi bi-person-circle"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end admin-login-menu" aria-labelledby="adminUserDropdown">
+            @{
+                var displayName = context.User.FindFirst("name")?.Value ?? context.User.Identity?.Name;
+                var upn = context.User.FindFirst("preferred_username")?.Value
+                    ?? context.User.FindFirst(ClaimTypes.Upn)?.Value
+                    ?? context.User.FindFirst("upn")?.Value
+                    ?? context.User.FindFirst(ClaimTypes.Email)?.Value
+                    ?? context.User.FindFirst("email")?.Value;
+            }
+            <div class="px-3 py-2">
+                <div class="fw-semibold text-truncate">@displayName</div>
+                @if (!string.IsNullOrEmpty(upn) && !string.Equals(upn, displayName, StringComparison.OrdinalIgnoreCase))
+                {
+                    <small class="text-muted text-truncate d-block">@upn</small>
+                }
+            </div>
+            <div class="dropdown-divider"></div>
+
+            <div class="px-3 py-2">
+                <div class="small text-muted mb-1">Theme</div>
+                <div class="btn-group btn-group-sm w-100" role="group" aria-label="Theme">
+                    <input type="radio" class="btn-check" name="admin-theme" id="admin-theme-auto"
+                           checked="@(this.Preferences.Theme == "auto")"
+                           @onchange="@(_ => this.SetThemeAsync("auto"))" />
+                    <label class="btn btn-outline-secondary" for="admin-theme-auto">
+                        <i class="bi bi-circle-half"></i> Auto
+                    </label>
+                    <input type="radio" class="btn-check" name="admin-theme" id="admin-theme-dark"
+                           checked="@(this.Preferences.Theme == "dark")"
+                           @onchange="@(_ => this.SetThemeAsync("dark"))" />
+                    <label class="btn btn-outline-secondary" for="admin-theme-dark">
+                        <i class="bi bi-moon-stars"></i> Dark
+                    </label>
+                    <input type="radio" class="btn-check" name="admin-theme" id="admin-theme-light"
+                           checked="@(this.Preferences.Theme == "light")"
+                           @onchange="@(_ => this.SetThemeAsync("light"))" />
+                    <label class="btn btn-outline-secondary" for="admin-theme-light">
+                        <i class="bi bi-sun"></i> Light
+                    </label>
+                </div>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
+            <div class="px-3 py-2 d-flex align-items-center gap-2">
+                <small class="text-muted text-nowrap">Session</small>
+                <code class="flex-grow-1 text-truncate" title="@this.Preferences.SessionId">@this.TruncatedSessionId</code>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        aria-label="Copy session id" @onclick="this.CopySessionIdAsync">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(this.versionLabel))
+            {
+                <div class="dropdown-divider"></div>
+                <div class="px-3 py-2 d-flex align-items-center gap-2">
+                    <small class="text-muted text-nowrap">Version</small>
+                    <span class="flex-grow-1 text-truncate" title="@this.versionTooltip">@this.versionLabel</span>
+                </div>
+            }
+
+            <div class="dropdown-divider"></div>
+            <div class="px-3 pb-2">
+                <button class="btn btn-outline-light btn-sm w-100" @onclick="this.BeginSignOut">
+                    <i class="bi bi-box-arrow-right me-1"></i> Sign out
+                </button>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <a class="nav-link admin-login-link" href="" @onclick="this.BeginSignIn" @onclick:preventDefault
+           aria-label="Sign in" title="Sign in">
+            <i class="bi bi-person-slash"></i>
+        </a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string versionLabel = string.Empty;
+    private string versionTooltip = string.Empty;
+
+    private string TruncatedSessionId
+    {
+        get
+        {
+            var id = this.Preferences.SessionId;
+            return id.Length > 8 ? $"{id.Substring(0, 8)}…" : id;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await this.Preferences.InitialiseAsync();
+        await this.LoadVersionAsync();
+    }
+
+    private async Task LoadVersionAsync()
+    {
+        try
+        {
+            var info = await this.Http.GetFromJsonAsync<VersionInfo>("version.json");
+            if (info is { Version.Length: > 0 })
+            {
+                this.versionLabel = info.Version;
+                this.versionTooltip = string.IsNullOrWhiteSpace(info.BuildDate)
+                    ? this.versionLabel
+                    : $"{this.versionLabel} · {info.BuildDate}";
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task SetThemeAsync(string theme)
+    {
+        await this.Preferences.SetThemeAsync(theme);
+    }
+
+    private async Task CopySessionIdAsync()
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("navigator.clipboard.writeText", this.Preferences.SessionId);
+        }
+        catch
+        {
+        }
+    }
+
+    private void BeginSignIn(MouseEventArgs args)
+    {
+        this.Navigation.NavigateToLogin(this.OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogInPath);
+    }
+
+    private void BeginSignOut(MouseEventArgs args)
+    {
+        this.Navigation.NavigateToLogout(this.OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
+    }
+
+    private sealed record VersionInfo(string Version, string BuildDate);
+}
