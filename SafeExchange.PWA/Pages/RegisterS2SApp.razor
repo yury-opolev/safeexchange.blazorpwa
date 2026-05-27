@@ -1,0 +1,322 @@
+@page "/s2sapps/register"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components
+@using SafeExchange.Client.Web.Components.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.ComponentModel.DataAnnotations
+
+@inject ApiClient apiClient
+@inject StateContainer StateContainer
+@inject NavigationManager NavManager
+
+<ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..."
+                  OnItemPickedCallback="this.FinishUserPick"
+                  SearchItemsAsyncCallback="this.SearchUsersAsync"
+                  OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="user">
+        <div class="px-2">
+            <div class="text-truncate">@user.DisplayName</div>
+            <div class="text-truncate"><small>@user.UserPrincipalName</small></div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
+
+<ItemSearchDialog TItem="GraphGroupOutput" @ref="this.groupPickDialog" DialogTitle="Find group" Placeholder="Search groups..."
+                  OnItemPickedCallback="this.FinishGroupPick"
+                  SearchItemsAsyncCallback="this.SearchGroupsAsync"
+                  OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="group">
+        <div class="px-2">
+            <div class="text-truncate">@group.DisplayName</div>
+            <div class="text-truncate"><small>@(group.Mail ?? "- no mail -")</small></div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
+
+<p class="text-muted d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <span>
+        Every app needs at least two owner principals so it has a safety net if you're unavailable.
+        You are owner #1 automatically; add one or more co-owners (users or groups) by searching the directory.
+    </span>
+    <button type="button" class="btn btn-outline-secondary" @onclick="this.GoToList">
+        <i class="bi bi-arrow-left me-1"></i> Back to list
+    </button>
+</p>
+
+@if (!string.IsNullOrEmpty(this.error))
+{
+    <div class="alert alert-warning" role="alert">@this.error</div>
+}
+
+<EditForm Model="this.form" OnValidSubmit="this.RegisterAsync">
+    <DataAnnotationsValidator />
+
+    <div class="mb-2">
+        <label class="form-label" for="display-name">Display name</label>
+        <InputText id="display-name" class="form-control" @bind-Value="this.form.DisplayName" />
+        <ValidationMessage For="@(() => this.form.DisplayName)" class="text-danger small" />
+        <small class="form-text text-muted">3–64 chars, starts with an English letter, then letters/digits/'-'/'_'.</small>
+    </div>
+    <div class="mb-2">
+        <label class="form-label" for="aad-client-id">Entra client id (GUID)</label>
+        <InputText id="aad-client-id" class="form-control" @bind-Value="this.form.AadClientId"
+                   placeholder="00000000-0000-0000-0000-000000000000" />
+        <ValidationMessage For="@(() => this.form.AadClientId)" class="text-danger small" />
+    </div>
+
+    <p class="mt-3 mb-2"><strong>Co-owners:</strong></p>
+    <ValidationMessage For="@(() => this.form.CoOwners)" class="text-danger small d-block mb-2" />
+
+    @for (int i = 0; i < this.form.CoOwners.Count; i++)
+    {
+        var idx = i;
+        var row = this.form.CoOwners[idx];
+        <div class="row align-items-center mb-2" @key="row">
+            <div class="col-2">
+                <div class="form-floating">
+                    <select id="@($"owner-type-{idx}")" class="form-select"
+                            value="@row.SubjectType"
+                            @onchange="@(e => this.OnOwnerTypeChanged(idx, e.Value?.ToString()))">
+                        <option value="@OwnerSubjectType.User">User</option>
+                        <option value="@OwnerSubjectType.Group">Group</option>
+                    </select>
+                    <label for="@($"owner-type-{idx}")" class="form-label">Type</label>
+                </div>
+            </div>
+            <div class="col">
+                <div class="input-group">
+                    <div class="form-floating">
+                        <input id="@($"owner-input-{idx}")" type="text" class="form-control" readonly
+                               value="@row.SubjectLabel"
+                               placeholder="@(row.SubjectType == OwnerSubjectType.User ? "Username" : "Group")" />
+                        <label for="@($"owner-input-{idx}")" class="form-label">
+                            @(row.SubjectType == OwnerSubjectType.User ? "Username" : "Group")
+                        </label>
+                    </div>
+                    <span class="narrow-floating-group input-group-text">
+                        <button class="btn" type="button" @onclick="@(e => this.StartPickAsync(idx))"
+                                aria-label="@(row.SubjectType == OwnerSubjectType.User ? "Find user" : "Find group")">
+                            <span class="bi bi-search"></span>
+                        </button>
+                    </span>
+                </div>
+            </div>
+            <div class="col-2">
+                <button class="btn btn-outline-danger" type="button"
+                        disabled="@(this.form.CoOwners.Count <= 1)"
+                        @onclick="@(e => this.RemoveCoOwner(idx))"
+                        aria-label="Remove co-owner">
+                    <span class="bi bi-x-lg"></span>
+                </button>
+            </div>
+        </div>
+    }
+
+    <div class="row mb-3">
+        <div class="col">
+            <button class="btn btn-outline-primary" type="button" @onclick="this.AddCoOwner">
+                <span class="bi bi-plus-lg"></span>&nbsp; Add co-owner
+            </button>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" disabled="@(this.submitting || !this.CanSubmit)">
+            @if (this.submitting) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+            Register
+        </button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="this.GoToList" disabled="@this.submitting">
+            Cancel
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    private bool submitting;
+    private string? error;
+    private RegisterForm form = new();
+    private int currentOwnerIndex;
+
+    private ItemSearchDialog<GraphUserOutput>? userPickDialog;
+    private ItemSearchDialog<GraphGroupOutput>? groupPickDialog;
+
+    protected override void OnInitialized()
+    {
+        this.StateContainer.SetCurrentPageHeader("Register S2S app");
+        this.form.CoOwners.Add(new CoOwnerRow());
+    }
+
+    private bool CanSubmit
+        => !string.IsNullOrWhiteSpace(this.form.DisplayName)
+        && !string.IsNullOrWhiteSpace(this.form.AadClientId)
+        && this.form.CoOwners.Any(o => !string.IsNullOrWhiteSpace(o.SubjectId));
+
+    private void AddCoOwner()
+        => this.form.CoOwners.Add(new CoOwnerRow());
+
+    private void RemoveCoOwner(int index)
+    {
+        if (this.form.CoOwners.Count > 1)
+        {
+            this.form.CoOwners.RemoveAt(index);
+        }
+    }
+
+    private void OnOwnerTypeChanged(int index, string? newValue)
+    {
+        if (!Enum.TryParse<OwnerSubjectType>(newValue, out var t))
+        {
+            return;
+        }
+        var row = this.form.CoOwners[index];
+        if (row.SubjectType != t)
+        {
+            row.SubjectType = t;
+            row.SubjectId = string.Empty;
+            row.SubjectLabel = string.Empty;
+        }
+    }
+
+    private async Task StartPickAsync(int index)
+    {
+        this.currentOwnerIndex = index;
+        var row = this.form.CoOwners[index];
+        if (row.SubjectType == OwnerSubjectType.User)
+        {
+            if (this.userPickDialog is not null)
+            {
+                await this.userPickDialog.StartItemSearchAsync();
+            }
+        }
+        else
+        {
+            if (this.groupPickDialog is not null)
+            {
+                await this.groupPickDialog.StartItemSearchAsync();
+            }
+        }
+    }
+
+    private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
+        => await this.apiClient.SearchUsersAsync(searchInput);
+
+    private async Task<BaseResponseObject<List<GraphGroupOutput>>> SearchGroupsAsync(SearchInput searchInput)
+        => await this.apiClient.SearchGroupsAsync(searchInput);
+
+    public void FinishUserPick(GraphUserOutput pickedUser)
+    {
+        if (this.currentOwnerIndex < 0 || this.currentOwnerIndex >= this.form.CoOwners.Count)
+        {
+            return;
+        }
+        var row = this.form.CoOwners[this.currentOwnerIndex];
+        row.SubjectType = OwnerSubjectType.User;
+        row.SubjectId = pickedUser.UserPrincipalName ?? string.Empty;
+        row.SubjectLabel = string.IsNullOrEmpty(pickedUser.DisplayName)
+            ? (pickedUser.UserPrincipalName ?? string.Empty)
+            : $"{pickedUser.DisplayName} ({pickedUser.UserPrincipalName})";
+    }
+
+    public void FinishGroupPick(GraphGroupOutput pickedGroup)
+    {
+        if (this.currentOwnerIndex < 0 || this.currentOwnerIndex >= this.form.CoOwners.Count)
+        {
+            return;
+        }
+        var row = this.form.CoOwners[this.currentOwnerIndex];
+        row.SubjectType = OwnerSubjectType.Group;
+        row.SubjectId = pickedGroup.Id ?? string.Empty;
+        row.SubjectLabel = string.IsNullOrEmpty(pickedGroup.DisplayName)
+            ? (pickedGroup.Id ?? string.Empty)
+            : pickedGroup.DisplayName;
+    }
+
+    private async Task RegisterAsync()
+    {
+        if (!this.CanSubmit)
+        {
+            this.error = "Display name, client id, and at least one co-owner are required.";
+            return;
+        }
+
+        this.submitting = true;
+        this.error = null;
+        try
+        {
+            var owners = this.form.CoOwners
+                .Where(o => !string.IsNullOrWhiteSpace(o.SubjectId))
+                .Select(o => new S2SAppOwnerInput
+                {
+                    SubjectType = o.SubjectType,
+                    SubjectId = o.SubjectId.Trim(),
+                })
+                .ToList();
+
+            var request = new S2SAppRegistrationRequest
+            {
+                DisplayName = this.form.DisplayName.Trim(),
+                AadClientId = this.form.AadClientId.Trim(),
+                AdditionalOwners = owners,
+            };
+
+            var response = await this.apiClient.RegisterS2SAppAsync(request);
+            if ("ok".Equals(response.Status))
+            {
+                this.NavManager.NavigateTo("s2sapps");
+            }
+            else
+            {
+                this.error = response.Error ?? response.Status;
+            }
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+        finally
+        {
+            this.submitting = false;
+        }
+    }
+
+    private void GoToList()
+        => this.NavManager.NavigateTo("s2sapps");
+
+    private sealed class RegisterForm : IValidatableObject
+    {
+        // Keep regex/length in sync with SafeExchange.Core.Utilities.S2SAppDisplayNameValidator.
+        public const string DisplayNamePattern = "^[A-Za-z][A-Za-z0-9_-]*$";
+        public const string GuidPattern = "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$";
+
+        [Required(ErrorMessage = "Display name is required.")]
+        [StringLength(64, MinimumLength = 3, ErrorMessage = "Display name must be 3–64 characters.")]
+        [RegularExpression(DisplayNamePattern, ErrorMessage = "Display name must start with an English letter and contain only English letters, digits, '-' or '_'.")]
+        public string DisplayName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Entra client id is required.")]
+        [RegularExpression(GuidPattern, ErrorMessage = "Entra client id must be a GUID (00000000-0000-0000-0000-000000000000).")]
+        public string AadClientId { get; set; } = string.Empty;
+
+        public List<CoOwnerRow> CoOwners { get; } = new();
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!this.CoOwners.Any(o => !string.IsNullOrWhiteSpace(o.SubjectId)))
+            {
+                yield return new ValidationResult(
+                    "Pick at least one co-owner (user or group).",
+                    new[] { nameof(this.CoOwners) });
+            }
+        }
+    }
+
+    private sealed class CoOwnerRow
+    {
+        public OwnerSubjectType SubjectType { get; set; } = OwnerSubjectType.User;
+        public string SubjectId { get; set; } = string.Empty;
+        public string SubjectLabel { get; set; } = string.Empty;
+    }
+}

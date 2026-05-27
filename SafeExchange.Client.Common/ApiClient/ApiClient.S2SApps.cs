@@ -36,6 +36,54 @@ namespace SafeExchange.Client.Common
             return await DeserializeOrErrorAsync<List<S2SAppOverview>>(response);
         }
 
+        /// <summary>GET /v2/s2sapps/{displayName} — detail (owner-only).</summary>
+        public async Task<BaseResponseObject<S2SApp>> GetS2SAppAsync(string displayName)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}");
+            using var http = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<S2SApp>(response);
+        }
+
+        /// <summary>DELETE /v2/s2sapps/{displayName} — delete app (owner-only; cascades owner rows).</summary>
+        public async Task<BaseResponseObject<S2SApp>> DeleteS2SAppAsync(string displayName)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}");
+            using var http = new HttpRequestMessage(HttpMethod.Delete, url);
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<S2SApp>(response);
+        }
+
+        /// <summary>GET /v2/s2sapps/{displayName}/owners — list owners (owner-only).</summary>
+        public async Task<BaseResponseObject<List<S2SAppOwner>>> ListS2SAppOwnersAsync(string displayName)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}/owners");
+            using var http = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<List<S2SAppOwner>>(response);
+        }
+
+        /// <summary>POST /v2/s2sapps/{displayName}/owners — add owner (owner-only; idempotent).</summary>
+        public async Task<BaseResponseObject<S2SAppOwner>> AddS2SAppOwnerAsync(string displayName, S2SAppOwnerInput owner)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}/owners");
+            using var http = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(owner, options: this.jsonOptions),
+            };
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<S2SAppOwner>(response);
+        }
+
+        /// <summary>DELETE /v2/s2sapps/{displayName}/owners/{subjectType}/{subjectId} — remove owner (owner-only; refuses if invariant would break).</summary>
+        public async Task<BaseResponseObject<S2SAppOwner>> RemoveS2SAppOwnerAsync(string displayName, OwnerSubjectType subjectType, string subjectId)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}/owners/{subjectType}/{Uri.EscapeDataString(subjectId)}");
+            using var http = new HttpRequestMessage(HttpMethod.Delete, url);
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<S2SAppOwner>(response);
+        }
+
         // Small helper, lifted to keep both methods readable. Returns the
         // typed response when the server returned JSON; otherwise an error
         // envelope so the caller's switch on `.Status` works uniformly.

@@ -4,24 +4,21 @@
 @using SafeExchange.Client.Common
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components
-@using SafeExchange.Client.Web.Components.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
 @inject ApiClient apiClient
 @inject StateContainer StateContainer
+@inject NavigationManager NavManager
 
-<h3 class="d-flex align-items-center">
-    My S2S apps
-    @if (this.loading)
-    {
-        <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
-    }
-</h3>
-
-<p class="text-muted">
-    Register Entra app identities that can talk to SafeExchange as a service-to-service subject.
-    Every app needs at least two owner principals (a co-owner) so it has a safety net if you're
-    unavailable.
+<p class="text-muted d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <span>
+        Entra app identities that can talk to SafeExchange as a service-to-service subject.
+        Every app needs at least two owner principals (a co-owner) so it has a safety net if
+        you're unavailable.
+    </span>
+    <button type="button" class="btn btn-primary" @onclick="this.GoToRegister">
+        <i class="bi bi-plus-circle me-1"></i> Register new app
+    </button>
 </p>
 
 @if (!string.IsNullOrEmpty(this.error))
@@ -29,14 +26,16 @@
     <div class="alert alert-warning" role="alert">@this.error</div>
 }
 
-@if (this.apps is not null && this.apps.Count == 0)
+@if (this.apps is not null && this.apps.Count == 0 && string.IsNullOrEmpty(this.error))
 {
-    <div class="alert alert-info">You don't own any S2S apps yet. Register one below.</div>
+    <div class="alert alert-info">
+        You don't own any S2S apps yet. Use <strong>Register new app</strong> above to add one.
+    </div>
 }
 
 @if (this.apps is { Count: > 0 })
 {
-    <ul class="list-group mb-4">
+    <ul class="list-group">
         @foreach (var a in this.apps)
         {
             <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -66,40 +65,9 @@
     </ul>
 }
 
-<hr />
-<h4>Register a new S2S app</h4>
-<EditForm Model="this.form" OnValidSubmit="this.RegisterAsync">
-    <div class="mb-2">
-        <label class="form-label">Display name</label>
-        <InputText class="form-control" @bind-Value="this.form.DisplayName" />
-    </div>
-    <div class="mb-2">
-        <label class="form-label">Entra client id (GUID)</label>
-        <InputText class="form-control" @bind-Value="this.form.AadClientId" placeholder="00000000-0000-0000-0000-000000000000" />
-    </div>
-    <div class="mb-2">
-        <label class="form-label">Second owner — user UPN or group OID</label>
-        <div class="input-group">
-            <select class="form-select flex-grow-0" style="width: 9rem" @bind="this.form.SecondOwnerType">
-                <option value="User">User</option>
-                <option value="Group">Group</option>
-            </select>
-            <InputText class="form-control" @bind-Value="this.form.SecondOwnerId" placeholder="alice@contoso.com or group OID" />
-        </div>
-        <small class="form-text text-muted">A second owner is required — the app must have at least two owner principals.</small>
-    </div>
-    <button type="submit" class="btn btn-primary" disabled="@this.submitting">
-        @if (this.submitting) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
-        Register
-    </button>
-</EditForm>
-
 @code {
     private List<S2SAppOverview>? apps;
-    private bool loading;
-    private bool submitting;
     private string? error;
-    private RegisterForm form = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -109,7 +77,7 @@
 
     private async Task FetchAsync()
     {
-        this.loading = true;
+        this.StateContainer.IsInProgress = true;
         this.error = null;
         try
         {
@@ -134,62 +102,10 @@
         }
         finally
         {
-            this.loading = false;
+            this.StateContainer.IsInProgress = false;
         }
     }
 
-    private async Task RegisterAsync()
-    {
-        if (string.IsNullOrWhiteSpace(this.form.DisplayName) || string.IsNullOrWhiteSpace(this.form.AadClientId)
-            || string.IsNullOrWhiteSpace(this.form.SecondOwnerId))
-        {
-            this.error = "Display name, client id, and a second owner are all required.";
-            return;
-        }
-
-        this.submitting = true;
-        this.error = null;
-        try
-        {
-            var ownerType = Enum.TryParse<OwnerSubjectType>(this.form.SecondOwnerType, out var t)
-                ? t : OwnerSubjectType.User;
-
-            var request = new S2SAppRegistrationRequest
-            {
-                DisplayName = this.form.DisplayName.Trim(),
-                AadClientId = this.form.AadClientId.Trim(),
-                AdditionalOwners = new()
-                {
-                    new S2SAppOwnerInput { SubjectType = ownerType, SubjectId = this.form.SecondOwnerId.Trim() },
-                },
-            };
-
-            var response = await this.apiClient.RegisterS2SAppAsync(request);
-            if ("ok".Equals(response.Status))
-            {
-                this.form = new();
-                await this.FetchAsync();
-            }
-            else
-            {
-                this.error = response.Error ?? response.Status;
-            }
-        }
-        catch (AccessTokenNotAvailableException ex)
-        {
-            ex.Redirect();
-        }
-        finally
-        {
-            this.submitting = false;
-        }
-    }
-
-    private sealed class RegisterForm
-    {
-        public string DisplayName { get; set; } = string.Empty;
-        public string AadClientId { get; set; } = string.Empty;
-        public string SecondOwnerType { get; set; } = "User";
-        public string SecondOwnerId { get; set; } = string.Empty;
-    }
+    private void GoToRegister()
+        => this.NavManager.NavigateTo("s2sapps/register");
 }

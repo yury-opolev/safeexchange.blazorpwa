@@ -160,3 +160,14 @@ a, .btn-link {
     padding-right: 6px;
 }
 
+.login-link {
+    color: var(--bs-body-color) !important;
+    padding: 4px 6px;
+    border-radius: 6px;
+    line-height: 1;
+    text-decoration: none;
+}
+.login-link i { font-size: 1.6rem; }
+.login-link:hover { background: rgba(127, 127, 127, .12); }
+.login-menu { min-width: 280px; }
+
