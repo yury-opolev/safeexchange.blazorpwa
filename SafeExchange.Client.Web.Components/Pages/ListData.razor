@@ -27,8 +27,8 @@
         {
             var secretPermissions = this.SecretsPermissions[i];
             var objectUri = this.GetViewUri(secretPermissions.ObjectName);
-            <li class="list-group-item list-item-hover-border d-flex justify-content-between align-items-center flex-wrap">
-                <div class="d-flex align-items-center">
+            <li class="list-group-item list-item-hover-border secret-item d-flex justify-content-between align-items-center flex-wrap">
+                <div class="secret-item-info d-flex align-items-center">
                     <button type="button" class="btn btn-link text-primary px-2 me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Pin / unpin secret"
                             disabled="@(this.togglingNames.Contains(secretPermissions.ObjectName) || this.StateContainer.IsInProgress)"
                             @onclick="() => this.TogglePinAsync(secretPermissions.ObjectName)">
@@ -45,11 +45,11 @@
                             <i class="bi bi-star"></i>
                         }
                     </button>
-                    <div>
+                    <div class="secret-item-meta">
                         <CopyableContent Data="@objectUri">
-                            <span>@secretPermissions.ObjectName</span>
+                            <span class="secret-item-name">@secretPermissions.ObjectName</span>
                         </CopyableContent>
-                        <small class="my-0">@secretPermissions.PermissionsString</small>
+                        <small class="secret-item-permissions my-0" title="@secretPermissions.PermissionsString">@secretPermissions.PermissionsString</small>
                     </div>
                 </div>
                 <div class="btn-group px-4 my-2" role="group" aria-label="Item buttons">

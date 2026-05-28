@@ -1,0 +1,41 @@
+/* Mobile-friendly secret-list row layout.
+   On narrow widths the row goes flex-wrap (li already has flex-wrap on),
+   but the secret-name + permissions text inside .secret-item-meta has no
+   intrinsic shrink — so long names + long permission strings spill over
+   the right edge of the card. Two coordinated rules:
+     - .secret-item-info (the left half — pin button + meta) is allowed
+       to shrink (min-width: 0; flex: 1 1 auto).
+     - .secret-item-meta (the meta column) gets min-width: 0 too so its
+       text children can be truncated, and its children get the standard
+       ellipsis-on-overflow treatment.
+   The full string remains accessible via the hover title attribute.
+*/
+
+.secret-item {
+    gap: .5rem;
+    /* The right-hand button group should never crowd out the name.
+       row-gap kicks in once flex-wrap pushes it to the next row. */
+    row-gap: .5rem;
+}
+
+.secret-item-info {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.secret-item-meta {
+    min-width: 0;
+    /* Take the remaining horizontal space inside .secret-item-info so
+       the children can truncate against a fixed width. */
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.secret-item-name,
+.secret-item-permissions {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

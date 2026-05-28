@@ -555,6 +555,12 @@ input, select, textarea, progress {
     .client-brand { padding-left: 0; }
     .client-hamburger { display: inline-flex; align-items: center; }
     .client-state-header { display: none; }
+    /* Mobile topbar is flex (not grid) with gap, so without an explicit
+       push the user-icon column sits right after the brand. margin-left:
+       auto consumes the remaining row to pin the login menu to the right
+       edge — matching the desktop grid layout where the third column
+       was already pinned via grid-template-columns. */
+    .client-login-wrap { margin-left: auto; }
     .client-main .content,
     .client-main .container-md { max-width: 100%; }
     .client-nav {
