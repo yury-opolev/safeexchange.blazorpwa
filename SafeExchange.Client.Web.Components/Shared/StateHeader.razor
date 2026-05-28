@@ -15,7 +15,7 @@
 </span>
 @if (!string.IsNullOrEmpty(this.StateContainerInstance.HeaderBadgeText))
 {
-    <span class="badge text-bg-info ms-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="@this.StateContainerInstance.HeaderBadgeTooltip">
+    <span class="badge bg-accent ms-2" data-bs-toggle="tooltip" data-bs-placement="bottom" title="@this.StateContainerInstance.HeaderBadgeTooltip">
         @if (!string.IsNullOrEmpty(this.StateContainerInstance.HeaderBadgeIcon))
         {
             <i class="bi @this.StateContainerInstance.HeaderBadgeIcon"></i><span>&nbsp;</span>

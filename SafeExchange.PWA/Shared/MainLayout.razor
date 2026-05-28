@@ -1,23 +1,40 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <UpdateAvailableDetector />
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
 
-    <SettingsDialog/>
-
-    <div class="main">
-        <div class="top-row px-4 auth">
-            <div class="top-row-first">
-                <StateHeader />
-            </div>
+<div class="client-shell">
+    <header class="client-topbar">
+        <button class="client-hamburger" @onclick="ToggleNav" aria-label="Toggle navigation">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="client-brand">SafeExchange</div>
+        <div class="client-state-header">
+            <StateHeader />
+        </div>
+        <div class="client-login-wrap">
             <LoginDisplay />
         </div>
+    </header>
 
-        <div class="container-md content px-4">
+    <aside class="client-nav @(navOpen ? "open" : "")" @onclick="CloseNav">
+        <NavMenu />
+    </aside>
+
+    @if (navOpen)
+    {
+        <div class="client-nav-scrim" @onclick="CloseNav"></div>
+    }
+
+    <main class="client-main">
+        <div class="container-md content px-3 py-3">
             @Body
         </div>
-    </div>
+    </main>
 </div>
+
+@code {
+    private bool navOpen;
+
+    private void ToggleNav() => this.navOpen = !this.navOpen;
+    private void CloseNav() => this.navOpen = false;
+}

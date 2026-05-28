@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+
+<div class="admin-shell">
+    <header class="admin-topbar">
+        <button class="admin-hamburger" @onclick="ToggleNav" aria-label="Toggle menu">
+            <i class="bi bi-list"></i>
+        </button>
+        <div class="admin-brand">SafeExchange</div>
+        <span class="admin-chip">ADMIN</span>
+        <div class="flex-grow-1"></div>
+        <AdminLoginDisplay />
+    </header>
+
+    <aside class="admin-nav @(navOpen ? "open" : "")">
+        <NavLink class="admin-nav-link" href="" Match="NavLinkMatch.All"><i class="bi bi-speedometer2"></i> Dashboard</NavLink>
+        <NavLink class="admin-nav-link" href="users"><i class="bi bi-people"></i> Users</NavLink>
+        <NavLink class="admin-nav-link" href="applications"><i class="bi bi-robot"></i> Applications</NavLink>
+        <NavLink class="admin-nav-link" href="audit"><i class="bi bi-search"></i> Audit</NavLink>
+    </aside>
+
+    <main class="admin-main">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool navOpen;
+    private void ToggleNav() => this.navOpen = !this.navOpen;
+}

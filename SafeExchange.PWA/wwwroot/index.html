@@ -15,7 +15,7 @@
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: blob: https://graph.microsoft.com;
         font-src 'self';
-        connect-src 'self' https://login.microsoftonline.com https://*.azurewebsites.net https://graph.microsoft.com https://*.applicationinsights.azure.com https://*.in.applicationinsights.azure.com https://*.livediagnostics.monitor.azure.com https://js.monitor.azure.com;
+        connect-src 'self' http://localhost:7071 https://localhost:7071 https://login.microsoftonline.com https://*.azurewebsites.net https://graph.microsoft.com https://*.applicationinsights.azure.com https://*.in.applicationinsights.azure.com https://*.livediagnostics.monitor.azure.com https://js.monitor.azure.com;
         frame-src https://login.microsoftonline.com;
         form-action 'self' https://login.microsoftonline.com;
         worker-src 'self';
@@ -31,6 +31,7 @@
     <link href="_content/SafeExchange.Client.Web.Components/quill-modules/quill-blot-formatter2.css" rel="stylesheet" />
     <link href="_content/SafeExchange.Client.Web.Components/css/app.css" rel="stylesheet" />
     <link href="css/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
     <link href="SafeExchange.PWA.styles.css" rel="stylesheet" />
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
@@ -74,6 +75,7 @@
 
     <script src="_content/SafeExchange.Client.Web.Components/js/jquery-3.3.1.slim.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/js/bootstrap.bundle.min.js"></script>
+    <script src="js/safeexchange-ui.js"></script>
 
     <script src="_content/SafeExchange.Client.Web.Components/quill.2.0.3.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/quill-modules/image-drop.min.js"></script>

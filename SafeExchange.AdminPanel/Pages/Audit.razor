@@ -1,0 +1,106 @@
+@page "/audit"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject ApiClient apiClient
+@inject NavigationManager NavManager
+
+<h3><i class="bi bi-search"></i> Audit search</h3>
+
+<div class="input-group mb-3">
+    <span class="input-group-text admin-search"><i class="bi bi-search"></i></span>
+    <input class="form-control admin-search" placeholder="Secret name (substring) — includes deleted secrets" @bind="this.q" @bind:event="oninput" @onkeyup="this.OnSearchKey" />
+    <button class="btn btn-outline-light" @onclick="this.SearchAsync">Search</button>
+</div>
+
+<p class="text-muted small">
+    <i class="bi bi-info-circle"></i> Audit anchors outlive secret deletion — results include historical entries
+    even after a secret is purged, until retention expires.
+</p>
+
+@if (this.loading) { <div class="text-muted"><i class="spinner-border spinner-border-sm"></i> Loading…</div> }
+@if (!string.IsNullOrEmpty(this.error)) { <div class="alert alert-warning">@this.error</div> }
+
+@if (this.page is not null)
+{
+    @foreach (var a in this.page.Items)
+    {
+        var instanceId = a.AuditInstanceId;
+        <div class="admin-card admin-card-link" role="button" tabindex="0"
+             @onclick="() => this.OpenAudit(instanceId)"
+             @onkeydown="@(e => OnRowKey(e, instanceId))">
+            <div class="grow">
+                <div>
+                    <strong>@a.SecretObjectName</strong>
+                    @if (a.IsHistorical)
+                    {
+                        <span class="admin-pill historical ms-2"><i class="bi bi-archive"></i> historical</span>
+                    }
+                </div>
+                <div class="text-muted small">
+                    instance @a.AuditInstanceId · created @a.CreatedAt.ToString("yyyy-MM-dd HH:mm") by @a.CreatedBy
+                    @if (a.DeletedAt.HasValue)
+                    {
+                        <text> · deleted @a.DeletedAt.Value.ToString("yyyy-MM-dd HH:mm")</text>
+                    }
+                </div>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+        </div>
+    }
+    <div class="admin-pager">
+        <button class="btn btn-sm btn-outline-light" @onclick="() => this.GoAsync(this.page.Page - 1)" disabled="@(this.page.Page == 0)">Prev</button>
+        <span>Page @(this.page.Page + 1) — @this.page.Total result@(this.page.Total == 1 ? "" : "s") total</span>
+        <button class="btn btn-sm btn-outline-light" @onclick="() => this.GoAsync(this.page.Page + 1)" disabled="@(!this.page.HasMore)">Next</button>
+    </div>
+}
+
+@code {
+    private PaginatedResult<SecretAuditAnchorOverview>? page;
+    private string q = string.Empty;
+    private bool loading;
+    private string? error;
+
+    protected override Task OnInitializedAsync() => this.GoAsync(0);
+
+    private async Task OnSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await this.SearchAsync();
+        }
+    }
+
+    private Task SearchAsync() => this.GoAsync(0);
+
+    private async Task GoAsync(int p)
+    {
+        this.loading = true;
+        this.error = null;
+        try
+        {
+            var resp = await this.apiClient.SearchAuditAsync(this.q, p);
+            if ("ok".Equals(resp.Status))
+            {
+                this.page = resp.Result;
+            }
+            else
+            {
+                this.error = resp.Error ?? resp.Status;
+            }
+        }
+        finally
+        {
+            this.loading = false;
+        }
+    }
+
+    private void OpenAudit(string auditInstanceId)
+        => this.NavManager.NavigateTo($"audit/{Uri.EscapeDataString(auditInstanceId)}");
+
+    private void OnRowKey(KeyboardEventArgs e, string auditInstanceId)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            this.OpenAudit(auditInstanceId);
+        }
+    }
+}

@@ -1,0 +1,65 @@
+@inject IJSRuntime JS
+
+<div class="modal fade" @ref="this.modalElement" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@this.title</h5>
+                <button type="button" class="btn-close" aria-label="Close"
+                        @onclick="@(() => this.CloseAsync(false))"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(this.body))
+                {
+                    <p class="mb-0">@this.body</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary"
+                        @onclick="@(() => this.CloseAsync(false))">@this.cancelLabel</button>
+                <button type="button" class="btn @this.confirmButtonClass"
+                        @onclick="@(() => this.CloseAsync(true))">@this.confirmLabel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ElementReference modalElement;
+    private string title = string.Empty;
+    private string body = string.Empty;
+    private string confirmLabel = "OK";
+    private string cancelLabel = "Cancel";
+    private string confirmButtonClass = "btn-primary";
+    private TaskCompletionSource<bool>? pending;
+
+    public async Task<bool> ShowAsync(
+        string title,
+        string body,
+        string confirmLabel = "OK",
+        string cancelLabel = "Cancel",
+        string confirmButtonClass = "btn-primary")
+    {
+        this.title = title;
+        this.body = body;
+        this.confirmLabel = confirmLabel;
+        this.cancelLabel = cancelLabel;
+        this.confirmButtonClass = confirmButtonClass;
+        this.pending = new TaskCompletionSource<bool>();
+        this.StateHasChanged();
+        await this.JS.InvokeVoidAsync("adminUi.showModal", this.modalElement);
+        return await this.pending.Task;
+    }
+
+    private async Task CloseAsync(bool result)
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("adminUi.hideModal", this.modalElement);
+        }
+        catch
+        {
+        }
+        this.pending?.TrySetResult(result);
+    }
+}

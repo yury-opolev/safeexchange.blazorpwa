@@ -1,0 +1,119 @@
+@page "/s2sapps"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
+@using SafeExchange.Client.Web.Components
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@inject ApiClient apiClient
+@inject StateContainer StateContainer
+@inject NavigationManager NavManager
+
+<p class="text-muted d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <span>
+        Entra app identities that can talk to SafeExchange as a service-to-service subject.
+        Every app needs at least two owner principals (a co-owner) so it has a safety net if
+        you're unavailable.
+    </span>
+    <button type="button" class="btn btn-primary" @onclick="this.GoToRegister">
+        <i class="bi bi-plus-circle me-1"></i> Register new app
+    </button>
+</p>
+
+@if (!string.IsNullOrEmpty(this.error))
+{
+    <div class="alert alert-warning" role="alert">@this.error</div>
+}
+
+@if (this.apps is not null && this.apps.Count == 0 && string.IsNullOrEmpty(this.error))
+{
+    <div class="alert alert-info">
+        You don't own any S2S apps yet. Use <strong>Register new app</strong> above to add one.
+    </div>
+}
+
+@if (this.apps is { Count: > 0 })
+{
+    <ul class="list-group">
+        @foreach (var a in this.apps)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <strong>@a.DisplayName</strong>
+                    <small class="ms-2 text-muted">@a.AadClientId</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    @if (a.IsRegistrar)
+                    {
+                        <span class="badge text-bg-primary" title="You registered this app (primary owner)">
+                            <i class="bi bi-star-fill"></i> primary
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-info" title="You were added as a co-owner">
+                            <i class="bi bi-people-fill"></i> co-owner
+                        </span>
+                    }
+                    <span class="badge @(a.Enabled ? "text-bg-success" : "text-bg-secondary")">
+                        @(a.Enabled ? "enabled" : "disabled")
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            @onclick="@(() => this.GoToManage(a.DisplayName))"
+                            title="Manage owners, enable/disable, delete">
+                        <i class="bi bi-gear me-1"></i> Manage
+                    </button>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<S2SAppOverview>? apps;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.StateContainer.SetCurrentPageHeader("My S2S apps");
+        await this.FetchAsync();
+    }
+
+    private async Task FetchAsync()
+    {
+        this.StateContainer.IsInProgress = true;
+        this.error = null;
+        try
+        {
+            var response = await this.apiClient.ListMyS2SAppsAsync();
+            if ("ok".Equals(response.Status))
+            {
+                this.apps = response.Result ?? new List<S2SAppOverview>();
+            }
+            else if ("disabled".Equals(response.Status))
+            {
+                this.error = "Self-service S2S app registration is disabled in this environment.";
+                this.apps = new();
+            }
+            else
+            {
+                this.error = response.Error ?? response.Status;
+            }
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+        finally
+        {
+            this.StateContainer.IsInProgress = false;
+        }
+    }
+
+    private void GoToRegister()
+        => this.NavManager.NavigateTo("s2sapps/register");
+
+    private void GoToManage(string displayName)
+        => this.NavManager.NavigateTo($"s2sapps/{Uri.EscapeDataString(displayName)}");
+}
