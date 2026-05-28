@@ -42,7 +42,7 @@ namespace SafeExchange.Client.Common
         public Task<BaseResponseObject<PaginatedResult<SecretAuditAnchorOverview>>> SearchAuditAsync(string? secretName, int page = 0, int pageSize = 25)
             => GetAsync<PaginatedResult<SecretAuditAnchorOverview>>($"{ApiVersion}/admin/audit{BuildAuditQuery(secretName, page, pageSize)}");
 
-        public Task<BaseResponseObject<SecretAuditPageOutput>> GetSecretAuditAsAdminAsync(string secretName, string? continuation = null, bool raw = false, string direction = "desc", int pageSize = 100)
+        public Task<BaseResponseObject<AdminSecretAuditPageOutput>> GetAuditInstanceAsync(string auditInstanceId, string? continuation = null, bool raw = false, string direction = "desc", int pageSize = 100)
         {
             var qs = $"?direction={Uri.EscapeDataString(direction)}&pageSize={pageSize}";
             if (raw)
@@ -55,7 +55,7 @@ namespace SafeExchange.Client.Common
                 qs += $"&continuation={Uri.EscapeDataString(continuation)}";
             }
 
-            return GetAsync<SecretAuditPageOutput>($"{ApiVersion}/admin/secret/{Uri.EscapeDataString(secretName)}/audit{qs}");
+            return GetAsync<AdminSecretAuditPageOutput>($"{ApiVersion}/admin/audit/{Uri.EscapeDataString(auditInstanceId)}{qs}");
         }
 
         private static string BuildPagingQuery(string? q, int page, int pageSize)

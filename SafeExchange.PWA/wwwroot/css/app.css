@@ -99,6 +99,27 @@ input, select, textarea, progress {
     color: var(--client-on-accent) !important;
 }
 
+/* Audit-log badges. Bootstrap's text-bg-info defaults to cyan and
+   text-bg-warning to amber, both of which clash with the accent palette
+   (the rest of the chrome is pink/purple). Re-theme so every audit
+   badge sits in the same family as --client-accent. Three semantic
+   axes: lifecycle (neutral-tinted), content (accent), request (warning
+   pulled toward accent). */
+.text-bg-secondary {
+    background-color: color-mix(in srgb, var(--client-accent) 18%, var(--bs-tertiary-bg)) !important;
+    color: var(--bs-body-color) !important;
+}
+
+.text-bg-info {
+    background-color: color-mix(in srgb, var(--client-accent) 65%, transparent) !important;
+    color: var(--client-on-accent) !important;
+}
+
+.text-bg-warning {
+    background-color: color-mix(in srgb, var(--client-accent) 35%, #b58a00) !important;
+    color: var(--client-on-accent) !important;
+}
+
 /* Owner row pending removal on the ManageS2SApp page — show the existing
    row struck through and dimmed so the user can see what will be removed
    without losing the original context. The X button toggles the state. */
