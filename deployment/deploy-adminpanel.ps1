@@ -173,6 +173,60 @@ if ($subscription -and $accountShow.id -ne $subscription)
     & az account set --subscription $subscription | Out-Null
 }
 
+# ──────────────────────────────────────────────────────────────────
+# Auto-bump version.json patch number
+# ──────────────────────────────────────────────────────────────────
+# Mirrors the PWA flow: every deploy = a new build, so bump the patch
+# number in SafeExchange.AdminPanel/wwwroot/version.json before publishing.
+# Skipped when HEAD already touched the version field (avoids double-
+# bumping when staging + prod are deployed back-to-back for the same
+# code) and under -WhatIf.
+$bumpedThisDeploy = $false
+$bumpRepoRoot     = Split-Path $PSScriptRoot -Parent
+$srcVersionJson   = Join-Path $bumpRepoRoot 'SafeExchange.AdminPanel\wwwroot\version.json'
+if ((-not $WhatIf) -and (Test-Path $srcVersionJson))
+{
+    $relPath = 'SafeExchange.AdminPanel/wwwroot/version.json'
+    $headDiff = git -C $bumpRepoRoot show HEAD --format='' -- $relPath 2>&1
+    $versionAlreadyChanged = @($headDiff | Where-Object { $_ -match '^\+\s*"version"\s*:' }).Count -gt 0
+
+    if ($versionAlreadyChanged)
+    {
+        $current = (Get-Content -LiteralPath $srcVersionJson -Raw | ConvertFrom-Json).version
+        Write-Host ""
+        Write-Host "Version: $current (HEAD already bumped this; no auto-bump for this deploy)" -ForegroundColor DarkGray
+    }
+    else
+    {
+        $info  = Get-Content -LiteralPath $srcVersionJson -Raw | ConvertFrom-Json
+        $parts = $info.version -split '\.'
+        if ($parts.Length -lt 3)
+        {
+            Write-Warning "version.json version '$($info.version)' is not MAJOR.MINOR.PATCH; skipping auto-bump."
+        }
+        else
+        {
+            $oldVersion = $info.version
+            $parts[2]   = [string]([int]$parts[2] + 1)
+            $info.version = $parts -join '.'
+            $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $srcVersionJson -NoNewline
+
+            git -C $bumpRepoRoot add $relPath | Out-Null
+            git -C $bumpRepoRoot commit -m "chore(adminpanel-version): auto-bump $oldVersion -> $($info.version) before $Environment deploy" -q
+            if ($LASTEXITCODE -eq 0)
+            {
+                $bumpedThisDeploy = $true
+                Write-Host ""
+                Write-Host "Auto-bumped admin-panel version: $oldVersion -> $($info.version) (committed locally; pushed after successful deploy)" -ForegroundColor Cyan
+            }
+            else
+            {
+                Write-Warning "Auto-bump commit failed (exit $LASTEXITCODE). The bumped version is on disk; resolve manually."
+            }
+        }
+    }
+}
+
 # Build.
 Write-Host ""
 Write-Host "Publishing $adminProject (Release)..." -ForegroundColor Cyan
@@ -220,6 +274,23 @@ Write-Host "  ClientId:    $appsettingsClientId" -ForegroundColor DarkGray
 Write-Host "  Authority:   $appsettingsAuthority" -ForegroundColor DarkGray
 Write-Host "  BackendApi:  $appsettingsBackend" -ForegroundColor DarkGray
 Write-Host "  Scope:       $appsettingsScope" -ForegroundColor DarkGray
+
+# Stamp the build date into the published version.json so the panel
+# can show "vX.Y.Z (yyyy-MM-dd)" without us having to remember to
+# touch the file by hand. No SW SRI patching here — admin panel has
+# no service worker, unlike the main PWA.
+$publishVersionJson = Join-Path $publishDir 'version.json'
+if (Test-Path $publishVersionJson)
+{
+    $versionInfo = Get-Content -LiteralPath $publishVersionJson -Raw | ConvertFrom-Json
+    $versionInfo.buildDate = [System.DateTime]::UtcNow.ToString('yyyy-MM-dd')
+    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $publishVersionJson -NoNewline
+    Write-Host "Stamped version.json: v$($versionInfo.version) ($($versionInfo.buildDate))" -ForegroundColor DarkGray
+}
+else
+{
+    Write-Warning "Published version.json not found at $publishVersionJson — version display will be empty."
+}
 
 if ($WhatIf)
 {
@@ -272,6 +343,20 @@ if ($afdProfile -and $afdEndpoint -and $afdRg)
 else
 {
     Write-Host "FRONT_DOOR_*_ADMIN_$envSuffix not set — skipping AFD purge (admin panel not behind AFD yet)." -ForegroundColor DarkGray
+}
+
+# Push the auto-bump commit. Kept local until the upload succeeded so
+# origin never carries a version that didn't actually deploy.
+if ($bumpedThisDeploy)
+{
+    $currentBranch = (git -C $bumpRepoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    Write-Host ""
+    Write-Host "Pushing auto-bump commit to origin/$currentBranch..." -ForegroundColor Cyan
+    git -C $bumpRepoRoot push origin $currentBranch 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0)
+    {
+        Write-Warning "git push failed; the auto-bump commit is local. Resolve and push manually so origin matches the deployed version."
+    }
 }
 
 Write-Host ""
