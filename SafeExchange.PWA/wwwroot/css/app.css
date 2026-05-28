@@ -133,8 +133,8 @@ input, select, textarea, progress {
    the swatch matches what you'll get after picking it. */
 .swatch-vivid { color: #c85ab4; }          /* vivid magenta (dark theme) */
 [data-bs-theme="light"] .swatch-vivid { color: #5a3eed; }  /* vivid indigo (light theme) */
-.swatch-blue  { color: #3b78f5; }          /* blue (dark theme) */
-[data-bs-theme="light"] .swatch-blue  { color: #2563eb; }  /* blue (light theme) */
+.swatch-blue  { color: #2a78d6; }          /* blue (same in both themes) */
+[data-bs-theme="light"] .swatch-blue  { color: #2a78d6; }
 
 /* Bootstrap's outline buttons re-declare --bs-btn-* variables on the
    selector, so the global --bs-primary override doesn't reach them.
@@ -276,7 +276,8 @@ input, select, textarea, progress {
     }
 
 /* ===== Accent presets =====
-   Default (no data-accent attribute) = "Vivid" (matches the strip family).
+   Default (no data-accent attribute) = "Blue" (matches the base :root
+   below, so first-paint before JS sets data-accent is still blue).
    Override via <html data-accent="blue|vivid|mono">; only the accent
    variables change. --client-strip-a / --client-strip-b stay locked to
    the brand magenta↔indigo wash regardless of the user's pick. */
@@ -304,30 +305,33 @@ input, select, textarea, progress {
 }
 
 :root[data-accent="blue"] {
-    --client-accent: #3b78f5;
-    --client-accent-hover: #5a8fff;
+    --client-accent: #2a78d6;
+    --client-accent-hover: #4a91e6;
     --client-on-accent: #ffffff;
-    --bs-primary: #3b78f5;
-    --bs-primary-rgb: 59, 120, 245;
-    --bs-link-color: #3b78f5;
-    --bs-link-color-rgb: 59, 120, 245;
-    --bs-link-hover-color: #5a8fff;
-    --bs-link-hover-color-rgb: 90, 143, 255;
+    --bs-primary: #2a78d6;
+    --bs-primary-rgb: 42, 120, 214;
+    --bs-link-color: #2a78d6;
+    --bs-link-color-rgb: 42, 120, 214;
+    --bs-link-hover-color: #4a91e6;
+    --bs-link-hover-color-rgb: 74, 145, 230;
 }
 :root[data-accent="blue"][data-bs-theme="light"] {
-    --client-accent: #2563eb;
-    --client-accent-hover: #3b78f5;
-    --bs-primary: #2563eb;
-    --bs-primary-rgb: 37, 99, 235;
-    --bs-link-color: #2563eb;
-    --bs-link-color-rgb: 37, 99, 235;
-    --bs-link-hover-color: #3b78f5;
-    --bs-link-hover-color-rgb: 59, 120, 245;
+    --client-accent: #2a78d6;
+    --client-accent-hover: #4a91e6;
+    --bs-primary: #2a78d6;
+    --bs-primary-rgb: 42, 120, 214;
+    --bs-link-color: #2a78d6;
+    --bs-link-color-rgb: 42, 120, 214;
+    --bs-link-hover-color: #4a91e6;
+    --bs-link-hover-color-rgb: 74, 145, 230;
 }
 
 :root[data-accent="mono"] {
     --client-accent: #cbd5e1;
     --client-accent-hover: #e2e8f0;
+    /* Light gray accent + white labels would be invisible — flip
+       on-accent to near-black for the mono dark case. */
+    --client-on-accent: #1f2333;
     --bs-primary: #cbd5e1;
     --bs-primary-rgb: 203, 213, 225;
     --bs-link-color: #cbd5e1;
@@ -349,14 +353,17 @@ input, select, textarea, progress {
 /* ===== Main PWA shell (admin-panel style, indigo accent) ===== */
 
 :root {
-    /* Default accent = Mono (neutral grayscale). Vivid/Blue presets
-       override via :root[data-accent="…"] below. */
-    --client-accent: #cbd5e1;
-    --client-accent-hover: #e2e8f0;
-    /* Foreground on accent surfaces (button labels, badge text). White by
-       default; flipped to near-black under mono dark where the accent is
-       too light for white to read against. */
-    --client-on-accent: #1f2333;
+    /* Default accent = Blue. Vivid/Mono presets override via
+       :root[data-accent="…"] below. Keeping the base :root in sync
+       with [data-accent="blue"] means the first paint (before JS
+       gets a chance to set data-accent from localStorage) is already
+       the right colour and we avoid a flash of the wrong accent. */
+    --client-accent: #2a78d6;
+    --client-accent-hover: #4a91e6;
+    /* Foreground on accent surfaces (button labels, badge text). White
+       reads well on the blue/vivid accents; flipped to near-black under
+       mono dark where the accent is too light for white to read against. */
+    --client-on-accent: #ffffff;
     /* Animated topbar strip colors — kept vivid regardless of accent. */
     --client-strip-a: #d943c1;
     --client-strip-b: #7c5cff;
