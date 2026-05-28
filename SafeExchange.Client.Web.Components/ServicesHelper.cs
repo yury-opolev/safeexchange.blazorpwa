@@ -80,6 +80,14 @@ namespace SafeExchange.Client.Web.Components
                 builder.Configuration.Bind("AzureAdB2C", options.ProviderOptions.Authentication);
                 builder.Configuration.Bind("AccessTokenScopes", options.ProviderOptions.DefaultAccessTokenScopes);
                 builder.Configuration.Bind("AdditionalScopesToConsent", options.ProviderOptions.AdditionalScopesToConsent);
+
+                // Force redirect login mode. The default is popup, and on iOS
+                // Safari a popup is a separate browser tab whose token hand-off
+                // back to the opener routinely fails — login then stalls on the
+                // orphaned /authentication/login-callback tab. Redirect uses a
+                // same-tab, full-page navigation that completes reliably on all
+                // platforms. See docs and dotnet/aspnetcore#23621.
+                options.ProviderOptions.LoginMode = "redirect";
             });
 
             // Telemetry — authenticated-only client-side Application Insights.

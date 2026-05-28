@@ -27,6 +27,14 @@ namespace SafeExchange.AdminPanel
                 {
                     options.ProviderOptions.DefaultAccessTokenScopes.Add(scope);
                 }
+
+                // Force redirect login mode. The default is popup, and on iOS
+                // Safari a popup is a separate browser tab whose token hand-off
+                // back to the opener routinely fails — login then stalls on the
+                // orphaned /authentication/login-callback tab. Redirect uses a
+                // same-tab, full-page navigation that completes reliably on all
+                // platforms. See docs and dotnet/aspnetcore#23621.
+                options.ProviderOptions.LoginMode = "redirect";
             });
 
             // BackendApi HttpClient with the auth message handler so calls carry
