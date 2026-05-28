@@ -39,3 +39,20 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* On narrow screens the View/Edit/More button group + the name column
+   were sharing one row, squeezing the name into a 5-character ellipsis.
+   Push the buttons to a second row so the name gets the full width. */
+@media (max-width: 720px) {
+    .secret-item-info {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .secret-item .btn-group {
+        flex: 0 0 auto;
+        margin-left: auto;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+}
