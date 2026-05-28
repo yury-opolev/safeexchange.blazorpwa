@@ -295,8 +295,17 @@
         this.Navigation.NavigateToLogout(this.OptionsSnapshot.Get(Options.DefaultName).AuthenticationPaths.LogOutPath);
     }
 
-    private void GoToMyApps()
-        => this.Navigation.NavigateTo("s2sapps");
+    private async Task GoToMyApps()
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("safeexchange.closeUserDropdown");
+        }
+        catch
+        {
+        }
+        this.Navigation.NavigateTo("s2sapps");
+    }
 
     private sealed record VersionInfo(string Version, string BuildDate);
 }

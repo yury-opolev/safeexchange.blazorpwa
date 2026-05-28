@@ -35,6 +35,64 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
+@* Update confirmation modal — same declarative pattern as the delete dialog. *@
+<div class="modal fade" id="manageUpdateDialog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update app</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Apply pending changes to <strong>@(this.app?.DisplayName ?? this.DisplayName)</strong>?</p>
+                @if (this.app is not null)
+                {
+                    <ul class="mb-0">
+                        @if (this.pendingEnabled != this.app.Enabled)
+                        {
+                            <li>Status: @(this.app.Enabled ? "Enabled" : "Disabled") → <strong>@(this.pendingEnabled ? "Enabled" : "Disabled")</strong></li>
+                        }
+                        @{
+                            var ownerSummary = this.OwnerChangeSummary();
+                        }
+                        @if (ownerSummary.added > 0)
+                        {
+                            <li>@ownerSummary.added owner(s) to add</li>
+                        }
+                        @if (ownerSummary.removed > 0)
+                        {
+                            <li>@ownerSummary.removed owner(s) to remove</li>
+                        }
+                    </ul>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" @onclick="this.UpdateAsync">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Delete confirmation modal — same declarative pattern as secret-edit's #deletionDialog. *@
+<div class="modal fade" id="manageDeletionDialog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete app</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Delete <strong>@(this.app?.DisplayName ?? this.DisplayName)</strong>? Cascades all owner rows and cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No</button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @onclick="this.DeleteAsync">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="d-flex justify-content-end mb-2">
     <button type="button" class="btn btn-outline-secondary" @onclick="this.GoToList">
         <i class="bi bi-arrow-left me-1"></i> Back to list
@@ -48,96 +106,157 @@
 
 @if (this.app is not null)
 {
-    <dl class="row">
-        <dt class="col-sm-3">Entra client id</dt>
-        <dd class="col-sm-9"><code>@this.app.AadClientId</code></dd>
-        <dt class="col-sm-3">Tenant id</dt>
-        <dd class="col-sm-9"><code>@this.app.AadTenantId</code></dd>
-        <dt class="col-sm-3">Status</dt>
-        <dd class="col-sm-9">
-            <span class="badge @(this.app.Enabled ? "text-bg-success" : "text-bg-secondary")">
-                @(this.app.Enabled ? "enabled" : "disabled")
-            </span>
-        </dd>
-    </dl>
+    <EditForm Model="this.app" OnValidSubmit="@(() => Task.CompletedTask)">
+        <dl class="row">
+            <dt class="col-sm-3">Entra client id</dt>
+            <dd class="col-sm-9"><code>@this.app.AadClientId</code></dd>
+            <dt class="col-sm-3">Tenant id</dt>
+            <dd class="col-sm-9"><code>@this.app.AadTenantId</code></dd>
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">
+                <div class="form-check form-switch">
+                    <input type="checkbox" role="switch" class="form-check-input" id="enabled-switch"
+                           checked="@this.pendingEnabled"
+                           @onchange="@(e => this.pendingEnabled = (bool)(e.Value ?? false))" />
+                    <label class="form-check-label" for="enabled-switch">
+                        @(this.pendingEnabled ? "Enabled" : "Disabled")
+                    </label>
+                </div>
+            </dd>
+        </dl>
 
-    <h4 class="mt-3 mb-2">
-        <i class="bi bi-people me-1"></i> Owners
-        <small class="text-muted ms-2">(@this.app.Owners.Count)</small>
-    </h4>
+        <p class="mt-3"><strong>Owners:</strong></p>
 
-    <ul class="list-group mb-3">
-        @foreach (var o in this.app.Owners)
+        @for (int i = 0; i < this.pendingOwners.Count; i++)
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi @(o.SubjectType == OwnerSubjectType.User ? "bi-person" : "bi-people")"></i>
-                    <div>
-                        <div>@o.SubjectId</div>
-                        <small class="text-muted">@o.SubjectType · added @o.AddedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</small>
+            var idx = i;
+            var row = this.pendingOwners[idx];
+            var isExisting = row.IsExisting;
+            var isRegistrar = isExisting
+                && row.SubjectType == OwnerSubjectType.User
+                && !string.IsNullOrEmpty(this.app?.RegistrarSubjectId)
+                && string.Equals(row.SubjectId, this.app!.RegistrarSubjectId, StringComparison.OrdinalIgnoreCase);
+            var rowClasses = "row align-items-center" + (row.MarkedForRemoval ? " owner-row-removed" : string.Empty);
+            <p @key="OwnerKey(row)">
+                <div class="@rowClasses">
+                    <div class="col-2">
+                        <div class="form-floating">
+                            <select id="@($"owner-type-{idx}")" class="form-select"
+                                    disabled="@(isExisting || row.MarkedForRemoval)"
+                                    value="@row.SubjectType"
+                                    @onchange="@(e => this.OnRowTypeChanged(idx, e.Value?.ToString()))">
+                                <option value="@OwnerSubjectType.User">User</option>
+                                <option value="@OwnerSubjectType.Group">Group</option>
+                            </select>
+                            <label for="@($"owner-type-{idx}")" class="form-label">Type</label>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="input-group">
+                            <div class="form-floating">
+                                <input id="@($"owner-subject-{idx}")" type="text" class="form-control" readonly
+                                       value="@(string.IsNullOrEmpty(row.SubjectName) ? row.SubjectId : row.SubjectName)"
+                                       placeholder="@(row.SubjectType == OwnerSubjectType.User ? "Username" : "Group")" />
+                                <label for="@($"owner-subject-{idx}")" class="form-label">
+                                    @(row.SubjectType == OwnerSubjectType.User ? "Username" : "Group")
+                                </label>
+                            </div>
+                            @if (!isExisting)
+                            {
+                                <span class="narrow-floating-group input-group-text">
+                                    <button class="btn" type="button"
+                                            disabled="@row.MarkedForRemoval"
+                                            @onclick="@(() => this.StartRowPickAsync(idx))"
+                                            aria-label="@(row.SubjectType == OwnerSubjectType.User ? "Find user" : "Find group")">
+                                        <span class="bi bi-search"></span>
+                                    </button>
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-2">
+                        @if (isRegistrar)
+                        {
+                            <span class="badge text-bg-secondary" title="Registrar — cannot be removed. Delete the app to remove the primary owner.">
+                                <span class="bi bi-shield-lock me-1"></span>registrar
+                            </span>
+                        }
+                        else if (row.MarkedForRemoval)
+                        {
+                            <button class="btn btn-outline-secondary" type="button"
+                                    @onclick="@(() => this.RemoveRow(idx))"
+                                    title="Restore owner" aria-label="Restore owner">
+                                <span class="bi bi-arrow-counterclockwise"></span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-danger" type="button"
+                                    @onclick="@(() => this.RemoveRow(idx))"
+                                    title="Remove owner" aria-label="Remove owner">
+                                <span class="bi bi-x-lg"></span>
+                            </button>
+                        }
                     </div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-danger"
-                        disabled="@(this.busyOwnerKey == OwnerKey(o))"
-                        @onclick="() => this.RemoveOwnerAsync(o)">
-                    @if (this.busyOwnerKey == OwnerKey(o)) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
-                    <i class="bi bi-x-lg me-1"></i> Remove
+            </p>
+        }
+
+        <p>
+            <div class="row">
+                <div class="col">
+                    <button class="btn btn-outline-primary" type="button" @onclick="this.AddOwnerRow">
+                        <span class="bi bi-plus-lg"></span>&nbsp; Add owner
+                    </button>
+                </div>
+            </div>
+        </p>
+
+        <p>
+            <div class="d-flex justify-content-center">
+                <button type="button" class="btn btn-primary mx-2"
+                        data-bs-toggle="modal" data-bs-target="#manageUpdateDialog"
+                        disabled="@(!this.HasChanges || this.saving || this.deleting)">
+                    @if (this.saving)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-cloud-arrow-up"></i>
+                    }
+                    <span>&nbsp;Update</span>
                 </button>
-            </li>
-        }
-    </ul>
-
-    <p class="mt-3 mb-2"><strong>Add a co-owner</strong></p>
-    <div class="input-group mb-3">
-        <select class="form-select flex-grow-0" style="width: 7rem"
-                value="@this.addType"
-                @onchange="@(e => this.OnAddTypeChanged(e.Value?.ToString()))">
-            <option value="@OwnerSubjectType.User">User</option>
-            <option value="@OwnerSubjectType.Group">Group</option>
-        </select>
-        <input type="text" class="form-control" readonly value="@this.addLabel"
-               placeholder="@(this.addType == OwnerSubjectType.User ? "Pick a user" : "Pick a group")" />
-        @if (!string.IsNullOrEmpty(this.addSubjectId))
-        {
-            <button type="button" class="btn btn-outline-secondary" title="Clear" @onclick="this.ClearAdd">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        }
-        <button type="button" class="btn btn-outline-primary" @onclick="this.StartAddPickAsync">
-            <i class="bi bi-search me-1"></i> Search
-        </button>
-        <button type="button" class="btn btn-primary"
-                disabled="@(string.IsNullOrEmpty(this.addSubjectId) || this.adding)"
-                @onclick="this.AddOwnerAsync">
-            @if (this.adding) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
-            <i class="bi bi-plus-lg me-1"></i> Add
-        </button>
-    </div>
-
-    <hr />
-
-    <h5 class="text-danger"><i class="bi bi-exclamation-octagon me-1"></i> Danger zone</h5>
-    <p class="text-muted">Deleting the app removes it from SafeExchange and cascades all owner rows. This cannot be undone.</p>
-    <button type="button" class="btn btn-outline-danger"
-            disabled="@this.deleting"
-            @onclick="this.DeleteAppAsync">
-        @if (this.deleting) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
-        <i class="bi bi-trash me-1"></i> Delete app
-    </button>
+                <button type="button" class="btn btn-danger mx-2"
+                        data-bs-toggle="modal" data-bs-target="#manageDeletionDialog"
+                        disabled="@(this.saving || this.deleting)">
+                    @if (this.deleting)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-trash"></i>
+                    }
+                    <span>&nbsp;Delete</span>
+                </button>
+            </div>
+        </p>
+    </EditForm>
 }
 
 @code {
     [Parameter] public string DisplayName { get; set; } = string.Empty;
 
     private S2SApp? app;
-    private bool adding;
+    private bool pendingEnabled;
+    private List<OwnerRow> pendingOwners = new();
+
+    private bool saving;
     private bool deleting;
-    private string? busyOwnerKey;
     private string? error;
 
-    private OwnerSubjectType addType = OwnerSubjectType.User;
-    private string addSubjectId = string.Empty;
-    private string addLabel = string.Empty;
+    private int currentOwnerIndex = -1;
 
     private ItemSearchDialog<GraphUserOutput>? userPickDialog;
     private ItemSearchDialog<GraphGroupOutput>? groupPickDialog;
@@ -158,6 +277,7 @@
             if ("ok".Equals(response.Status))
             {
                 this.app = response.Result;
+                this.ResetPending();
                 this.StateContainer.SetCurrentPageHeader($"App {this.app?.DisplayName ?? this.DisplayName}");
             }
             else if ("disabled".Equals(response.Status))
@@ -179,38 +299,101 @@
         }
     }
 
-    private static string OwnerKey(S2SAppOwner o) => $"{o.SubjectType}|{o.SubjectId}";
-
-    private void OnAddTypeChanged(string? newValue)
+    private void ResetPending()
     {
-        if (Enum.TryParse<OwnerSubjectType>(newValue, out var t) && t != this.addType)
+        if (this.app is null) { return; }
+        this.pendingEnabled = this.app.Enabled;
+        this.pendingOwners = this.app.Owners.Select(o => new OwnerRow
         {
-            this.addType = t;
-            this.ClearAdd();
+            SubjectType = o.SubjectType,
+            SubjectId = o.SubjectId,
+            SubjectName = o.SubjectName,
+            AddedAt = o.AddedAt,
+            IsExisting = true,
+        }).ToList();
+    }
+
+    private static string OwnerKey(OwnerRow o) => $"{o.SubjectType}|{o.SubjectId}|{(o.IsExisting ? "x" : "n")}|{o.RowId}";
+
+    private bool HasChanges
+    {
+        get
+        {
+            if (this.app is null) { return false; }
+            if (this.pendingEnabled != this.app.Enabled) { return true; }
+            var originalKeys = this.app.Owners
+                .Select(o => $"{o.SubjectType}|{o.SubjectId}")
+                .ToHashSet();
+            var desiredKeys = this.pendingOwners
+                .Where(o => !o.MarkedForRemoval && !string.IsNullOrWhiteSpace(o.SubjectId))
+                .Select(o => $"{o.SubjectType}|{o.SubjectId}")
+                .ToHashSet();
+            return !originalKeys.SetEquals(desiredKeys);
         }
     }
 
-    private void ClearAdd()
+    private (int added, int removed) OwnerChangeSummary()
     {
-        this.addSubjectId = string.Empty;
-        this.addLabel = string.Empty;
+        if (this.app is null) { return (0, 0); }
+        var originalKeys = this.app.Owners
+            .Select(o => $"{o.SubjectType}|{o.SubjectId}")
+            .ToHashSet();
+        var desiredKeys = this.pendingOwners
+            .Where(o => !o.MarkedForRemoval && !string.IsNullOrWhiteSpace(o.SubjectId))
+            .Select(o => $"{o.SubjectType}|{o.SubjectId}")
+            .ToHashSet();
+        var added = desiredKeys.Except(originalKeys).Count();
+        var removed = originalKeys.Except(desiredKeys).Count();
+        return (added, removed);
     }
 
-    private async Task StartAddPickAsync()
+    private void AddOwnerRow()
     {
-        if (this.addType == OwnerSubjectType.User)
+        this.pendingOwners.Add(new OwnerRow
         {
-            if (this.userPickDialog is not null)
-            {
-                await this.userPickDialog.StartItemSearchAsync();
-            }
+            SubjectType = OwnerSubjectType.User,
+            IsExisting = false,
+        });
+    }
+
+    private void RemoveRow(int index)
+    {
+        if (index < 0 || index >= this.pendingOwners.Count) { return; }
+        var row = this.pendingOwners[index];
+        if (row.IsExisting)
+        {
+            // Toggle pending-removal so the row stays visible (struck through)
+            // until Update is applied. Re-click restores it.
+            row.MarkedForRemoval = !row.MarkedForRemoval;
         }
         else
         {
-            if (this.groupPickDialog is not null)
-            {
-                await this.groupPickDialog.StartItemSearchAsync();
-            }
+            // New (unsaved) rows are dropped outright on remove.
+            this.pendingOwners.RemoveAt(index);
+        }
+    }
+
+    private void OnRowTypeChanged(int index, string? newValue)
+    {
+        if (!Enum.TryParse<OwnerSubjectType>(newValue, out var t)) { return; }
+        var row = this.pendingOwners[index];
+        if (row.IsExisting || row.SubjectType == t) { return; }
+        row.SubjectType = t;
+        row.SubjectId = string.Empty;
+        row.SubjectName = string.Empty;
+    }
+
+    private async Task StartRowPickAsync(int index)
+    {
+        this.currentOwnerIndex = index;
+        var row = this.pendingOwners[index];
+        if (row.SubjectType == OwnerSubjectType.User)
+        {
+            if (this.userPickDialog is not null) { await this.userPickDialog.StartItemSearchAsync(); }
+        }
+        else
+        {
+            if (this.groupPickDialog is not null) { await this.groupPickDialog.StartItemSearchAsync(); }
         }
     }
 
@@ -222,40 +405,66 @@
 
     public void FinishUserPick(GraphUserOutput pickedUser)
     {
-        this.addType = OwnerSubjectType.User;
-        this.addSubjectId = pickedUser.UserPrincipalName ?? string.Empty;
-        this.addLabel = string.IsNullOrEmpty(pickedUser.DisplayName)
+        if (this.currentOwnerIndex < 0 || this.currentOwnerIndex >= this.pendingOwners.Count) { return; }
+        var row = this.pendingOwners[this.currentOwnerIndex];
+        if (row.IsExisting) { return; }
+        row.SubjectType = OwnerSubjectType.User;
+        row.SubjectId = pickedUser.UserPrincipalName ?? string.Empty;
+        row.SubjectName = string.IsNullOrEmpty(pickedUser.DisplayName)
             ? (pickedUser.UserPrincipalName ?? string.Empty)
             : $"{pickedUser.DisplayName} ({pickedUser.UserPrincipalName})";
     }
 
     public void FinishGroupPick(GraphGroupOutput pickedGroup)
     {
-        this.addType = OwnerSubjectType.Group;
-        this.addSubjectId = pickedGroup.Id ?? string.Empty;
-        this.addLabel = string.IsNullOrEmpty(pickedGroup.DisplayName)
+        if (this.currentOwnerIndex < 0 || this.currentOwnerIndex >= this.pendingOwners.Count) { return; }
+        var row = this.pendingOwners[this.currentOwnerIndex];
+        if (row.IsExisting) { return; }
+        row.SubjectType = OwnerSubjectType.Group;
+        row.SubjectId = pickedGroup.Id ?? string.Empty;
+        row.SubjectName = string.IsNullOrEmpty(pickedGroup.DisplayName)
             ? (pickedGroup.Id ?? string.Empty)
             : pickedGroup.DisplayName;
     }
 
-    private async Task AddOwnerAsync()
+    private async Task UpdateAsync()
     {
-        if (string.IsNullOrEmpty(this.addSubjectId) || this.app is null) { return; }
-        this.adding = true;
+        if (this.app is null || !this.HasChanges) { return; }
+
+        var originalKeys = this.app.Owners
+            .Select(o => $"{o.SubjectType}|{o.SubjectId}")
+            .ToHashSet();
+        var desiredKeys = this.pendingOwners
+            .Where(o => !o.MarkedForRemoval && !string.IsNullOrWhiteSpace(o.SubjectId))
+            .Select(o => $"{o.SubjectType}|{o.SubjectId}")
+            .ToHashSet();
+        var ownersChanged = !originalKeys.SetEquals(desiredKeys);
+        var willToggle = this.pendingEnabled != this.app.Enabled;
+
+        this.saving = true;
         this.error = null;
         try
         {
-            var input = new S2SAppOwnerInput { SubjectType = this.addType, SubjectId = this.addSubjectId.Trim() };
-            var response = await this.apiClient.AddS2SAppOwnerAsync(this.app.DisplayName, input);
-            if ("ok".Equals(response.Status))
+            if (willToggle)
             {
-                this.ClearAdd();
-                await this.FetchAsync();
+                var r = await this.apiClient.ToggleS2SAppEnabledAsync(this.app.DisplayName, this.pendingEnabled);
+                if (!"ok".Equals(r.Status)) { this.error = r.Error ?? r.Status; return; }
             }
-            else
+            if (ownersChanged)
             {
-                this.error = response.Error ?? response.Status;
+                var desired = this.pendingOwners
+                    .Where(o => !o.MarkedForRemoval && !string.IsNullOrWhiteSpace(o.SubjectId))
+                    .Select(o => new S2SAppOwnerInput
+                    {
+                        SubjectType = o.SubjectType,
+                        SubjectId = o.SubjectId,
+                        SubjectName = o.SubjectName ?? string.Empty,
+                    })
+                    .ToList();
+                var r = await this.apiClient.ReplaceS2SAppOwnersAsync(this.app.DisplayName, desired);
+                if (!"ok".Equals(r.Status)) { this.error = r.Error ?? r.Status; return; }
             }
+            await this.FetchAsync();
         }
         catch (AccessTokenNotAvailableException ex)
         {
@@ -263,38 +472,11 @@
         }
         finally
         {
-            this.adding = false;
+            this.saving = false;
         }
     }
 
-    private async Task RemoveOwnerAsync(S2SAppOwner owner)
-    {
-        if (this.app is null) { return; }
-        this.busyOwnerKey = OwnerKey(owner);
-        this.error = null;
-        try
-        {
-            var response = await this.apiClient.RemoveS2SAppOwnerAsync(this.app.DisplayName, owner.SubjectType, owner.SubjectId);
-            if ("ok".Equals(response.Status))
-            {
-                await this.FetchAsync();
-            }
-            else
-            {
-                this.error = response.Error ?? response.Status;
-            }
-        }
-        catch (AccessTokenNotAvailableException ex)
-        {
-            ex.Redirect();
-        }
-        finally
-        {
-            this.busyOwnerKey = null;
-        }
-    }
-
-    private async Task DeleteAppAsync()
+    private async Task DeleteAsync()
     {
         if (this.app is null) { return; }
         this.deleting = true;
@@ -302,7 +484,7 @@
         try
         {
             var response = await this.apiClient.DeleteS2SAppAsync(this.app.DisplayName);
-            if ("ok".Equals(response.Status))
+            if ("ok".Equals(response.Status) || "no_content".Equals(response.Status))
             {
                 this.NavManager.NavigateTo("s2sapps");
             }
@@ -322,4 +504,15 @@
     }
 
     private void GoToList() => this.NavManager.NavigateTo("s2sapps");
+
+    private sealed class OwnerRow
+    {
+        public OwnerSubjectType SubjectType { get; set; } = OwnerSubjectType.User;
+        public string SubjectId { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
+        public DateTime AddedAt { get; set; }
+        public bool IsExisting { get; set; }
+        public bool MarkedForRemoval { get; set; }
+        public Guid RowId { get; } = Guid.NewGuid();
+    }
 }

@@ -69,6 +69,15 @@ a:hover, .btn-link:hover,
     border-color: var(--client-accent);
     box-shadow: 0 0 0 .25rem color-mix(in srgb, var(--client-accent) 25%, transparent);
 }
+
+/* In mono dark, the form-switch's ON-state track is light gray and the
+   default thumb SVG fills white — the two merge. Override --bs-form-switch-bg
+   (the data-URI Bootstrap reads as the thumb) with a dark-filled circle so
+   the thumb pops against the light track. Same idea as buttons using
+   --client-on-accent on accent surfaces. */
+:root[data-accent="mono"][data-bs-theme="dark"] .form-switch .form-check-input:checked {
+    --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%231f2333'/%3e%3c/svg%3e");
+}
 /* Native fallback (browser-rendered input/select widgets, range, etc.) */
 input, select, textarea, progress {
     accent-color: var(--client-accent);
@@ -80,6 +89,22 @@ input, select, textarea, progress {
     background-color: var(--client-accent) !important;
     color: var(--client-on-accent) !important;
 }
+
+/* .text-bg-primary defaults to white text on --bs-primary; under mono
+   dark that's white on light-gray and unreadable. Reroute the foreground
+   through --client-on-accent so the primary-owner badge stays legible
+   in every preset/theme combination. */
+.text-bg-primary {
+    background-color: var(--client-accent) !important;
+    color: var(--client-on-accent) !important;
+}
+
+/* Owner row pending removal on the ManageS2SApp page — show the existing
+   row struck through and dimmed so the user can see what will be removed
+   without losing the original context. The X button toggles the state. */
+.owner-row-removed .form-control,
+.owner-row-removed .form-select { text-decoration: line-through; opacity: .55; }
+.owner-row-removed .form-label { opacity: .55; }
 
 /* Accent-preset chips use Bootstrap-icons: bi-circle-half for Mono and
    bi-circle-fill for Vivid / Blue. Fill colour mirrors the accent the

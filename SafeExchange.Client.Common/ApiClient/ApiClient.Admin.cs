@@ -8,6 +8,7 @@ namespace SafeExchange.Client.Common
 {
     using SafeExchange.Client.Common.Model;
     using System;
+    using System.Collections.Generic;
     using System.Net.Http;
     using System.Net.Http.Json;
     using System.Threading.Tasks;
@@ -28,8 +29,34 @@ namespace SafeExchange.Client.Common
             => PatchAsync<string>($"{ApiVersion}/admin/applications/{Uri.EscapeDataString(displayName)}/enabled",
                 new EnabledToggleRequest { Enabled = enabled });
 
+        public Task<BaseResponseObject<string>> DeleteApplicationAsync(string displayName)
+            => DeleteAsync<string>($"{ApiVersion}/admin/applications/{Uri.EscapeDataString(displayName)}");
+
+        public Task<BaseResponseObject<S2SApp>> GetApplicationDetailAsync(string displayName)
+            => GetAsync<S2SApp>($"{ApiVersion}/admin/applications/{Uri.EscapeDataString(displayName)}");
+
+        public Task<BaseResponseObject<S2SApp>> ReplaceApplicationOwnersAsync(string displayName, IReadOnlyList<S2SAppOwnerInput> owners)
+            => PutAsync<S2SApp>($"{ApiVersion}/admin/applications/{Uri.EscapeDataString(displayName)}/owners",
+                new { owners });
+
         public Task<BaseResponseObject<PaginatedResult<SecretAuditAnchorOverview>>> SearchAuditAsync(string? secretName, int page = 0, int pageSize = 25)
             => GetAsync<PaginatedResult<SecretAuditAnchorOverview>>($"{ApiVersion}/admin/audit{BuildAuditQuery(secretName, page, pageSize)}");
+
+        public Task<BaseResponseObject<SecretAuditPageOutput>> GetSecretAuditAsAdminAsync(string secretName, string? continuation = null, bool raw = false, string direction = "desc", int pageSize = 100)
+        {
+            var qs = $"?direction={Uri.EscapeDataString(direction)}&pageSize={pageSize}";
+            if (raw)
+            {
+                qs += "&raw=true";
+            }
+
+            if (!string.IsNullOrEmpty(continuation))
+            {
+                qs += $"&continuation={Uri.EscapeDataString(continuation)}";
+            }
+
+            return GetAsync<SecretAuditPageOutput>($"{ApiVersion}/admin/secret/{Uri.EscapeDataString(secretName)}/audit{qs}");
+        }
 
         private static string BuildPagingQuery(string? q, int page, int pageSize)
         {
@@ -53,6 +80,23 @@ namespace SafeExchange.Client.Common
         private async Task<BaseResponseObject<T>> PatchAsync<T>(string relative, object body) where T : class
         {
             using var http = new HttpRequestMessage(HttpMethod.Patch, new Uri(this.client.BaseAddress!, relative))
+            {
+                Content = JsonContent.Create(body, options: this.jsonOptions),
+            };
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<T>(response);
+        }
+
+        private async Task<BaseResponseObject<T>> DeleteAsync<T>(string relative) where T : class
+        {
+            using var http = new HttpRequestMessage(HttpMethod.Delete, new Uri(this.client.BaseAddress!, relative));
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<T>(response);
+        }
+
+        private async Task<BaseResponseObject<T>> PutAsync<T>(string relative, object body) where T : class
+        {
+            using var http = new HttpRequestMessage(HttpMethod.Put, new Uri(this.client.BaseAddress!, relative))
             {
                 Content = JsonContent.Create(body, options: this.jsonOptions),
             };

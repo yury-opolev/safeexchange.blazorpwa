@@ -19,6 +19,7 @@ namespace SafeExchange.Client.Common.Model
     {
         public OwnerSubjectType SubjectType { get; set; }
         public string SubjectId { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
     }
 
     public class S2SAppRegistrationRequest
@@ -34,6 +35,7 @@ namespace SafeExchange.Client.Common.Model
     {
         public OwnerSubjectType SubjectType { get; set; }
         public string SubjectId { get; set; } = string.Empty;
+        public string SubjectName { get; set; } = string.Empty;
         public DateTime AddedAt { get; set; }
     }
 
@@ -45,6 +47,10 @@ namespace SafeExchange.Client.Common.Model
         public string ContactEmail { get; set; } = string.Empty;
         public bool Enabled { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        /// <summary>UPN of the user who registered the app. Protected from removal.</summary>
+        public string RegistrarSubjectId { get; set; } = string.Empty;
+
         public List<S2SAppOwner> Owners { get; set; } = new();
     }
 

@@ -252,6 +252,7 @@
                 {
                     SubjectType = o.SubjectType,
                     SubjectId = o.SubjectId.Trim(),
+                    SubjectName = o.SubjectLabel?.Trim() ?? string.Empty,
                 })
                 .ToList();
 

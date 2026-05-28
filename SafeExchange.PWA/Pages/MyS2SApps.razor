@@ -59,6 +59,11 @@
                     <span class="badge @(a.Enabled ? "text-bg-success" : "text-bg-secondary")">
                         @(a.Enabled ? "enabled" : "disabled")
                     </span>
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            @onclick="@(() => this.GoToManage(a.DisplayName))"
+                            title="Manage owners, enable/disable, delete">
+                        <i class="bi bi-gear me-1"></i> Manage
+                    </button>
                 </div>
             </li>
         }
@@ -108,4 +113,7 @@
 
     private void GoToRegister()
         => this.NavManager.NavigateTo("s2sapps/register");
+
+    private void GoToManage(string displayName)
+        => this.NavManager.NavigateTo($"s2sapps/{Uri.EscapeDataString(displayName)}");
 }

@@ -46,10 +46,22 @@ namespace SafeExchange.Client.Common
         }
 
         /// <summary>DELETE /v2/s2sapps/{displayName} — delete app (owner-only; cascades owner rows).</summary>
-        public async Task<BaseResponseObject<S2SApp>> DeleteS2SAppAsync(string displayName)
+        public async Task<BaseResponseObject<string>> DeleteS2SAppAsync(string displayName)
         {
             var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}");
             using var http = new HttpRequestMessage(HttpMethod.Delete, url);
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<string>(response);
+        }
+
+        /// <summary>PATCH /v2/s2sapps/{displayName}/enabled — owner-only enable/disable toggle.</summary>
+        public async Task<BaseResponseObject<S2SApp>> ToggleS2SAppEnabledAsync(string displayName, bool enabled)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}/enabled");
+            using var http = new HttpRequestMessage(HttpMethod.Patch, url)
+            {
+                Content = JsonContent.Create(new { enabled }, options: this.jsonOptions),
+            };
             var response = await this.client.SendAsync(http);
             return await DeserializeOrErrorAsync<S2SApp>(response);
         }
@@ -82,6 +94,18 @@ namespace SafeExchange.Client.Common
             using var http = new HttpRequestMessage(HttpMethod.Delete, url);
             var response = await this.client.SendAsync(http);
             return await DeserializeOrErrorAsync<S2SAppOwner>(response);
+        }
+
+        /// <summary>PUT /v2/s2sapps/{displayName}/owners — atomic full-set reconcile (owner-only).</summary>
+        public async Task<BaseResponseObject<S2SApp>> ReplaceS2SAppOwnersAsync(string displayName, IReadOnlyList<S2SAppOwnerInput> owners)
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps/{Uri.EscapeDataString(displayName)}/owners");
+            using var http = new HttpRequestMessage(HttpMethod.Put, url)
+            {
+                Content = JsonContent.Create(new { owners }, options: this.jsonOptions),
+            };
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<S2SApp>(response);
         }
 
         // Small helper, lifted to keep both methods readable. Returns the
