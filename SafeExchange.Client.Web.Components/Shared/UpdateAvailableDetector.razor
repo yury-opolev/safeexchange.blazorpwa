@@ -2,7 +2,6 @@
 @using Microsoft.JSInterop
 
 @inject IJSRuntime JS
-@inject NavigationManager Navigation
 
 @if (this.newVersionAvailable)
 {
@@ -39,8 +38,12 @@
         return Task.CompletedTask;
     }
 
-    private void ReloadPage()
+    // Plain location.reload() doesn't apply the update: the old SW is
+    // still in control after a reload, so the request gets the cached
+    // old shell. applyUpdate (sw-registrator.js) sends SKIP_WAITING to
+    // the waiting SW, waits for controllerchange, then reloads.
+    private async Task ReloadPage()
     {
-        this.Navigation.NavigateTo(this.Navigation.Uri, forceLoad: true);
+        await this.JS.InvokeVoidAsync("applyUpdate");
     }
 }

@@ -6,6 +6,17 @@ self.addEventListener('install', event => event.waitUntil(onInstall(event)));
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
 self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
 
+// Allow the page to tell the waiting SW to take over. Without this, the
+// "Reload" toast in UpdateAvailableDetector would just reload the same
+// page under the old SW (which serves the cached old index.html), so the
+// new version would never become active. sw-registrator.js sends this
+// message, waits for controllerchange, then triggers location.reload().
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 self.addEventListener('push', event => event.waitUntil(onPush(event)));
 self.addEventListener('notificationclick', event => event.waitUntil(onNotificationClick(event)));
 
