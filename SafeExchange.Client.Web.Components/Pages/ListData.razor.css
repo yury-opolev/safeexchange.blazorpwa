@@ -31,7 +31,35 @@
     overflow: hidden;
 }
 
-.secret-item-name,
+/* CopyableContent renders its children + a copy button inside a plain
+   <div>; left to itself the wrapper is block-level and the button wraps
+   onto its own line below the name. Make it a flex row inside the
+   secret-list meta column so the name + copy icon sit side-by-side, and
+   the icon hugs the name instead of taking up a full line above the
+   permissions. ::deep is required because the wrapper lives in a child
+   component (Shared/CopyableContent.razor). */
+.secret-item-meta ::deep > div {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    min-width: 0;
+}
+
+.secret-item-meta ::deep > div > button {
+    flex: 0 0 auto;
+    padding: 0 .25rem;
+}
+
+/* The name is now a flex child — min-width: 0 lets it shrink so the
+   ellipsis kicks in; the button beside it keeps its intrinsic width. */
+.secret-item-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .secret-item-permissions {
     display: block;
     max-width: 100%;
