@@ -82,6 +82,14 @@ a, .btn-link {
     text-decoration-line: line-through !important;
 }
 
+/* In dark mode --bs-danger-bg-subtle renders as a light pink that clashes
+   with the dark surface (and reads as a light-theme colour). Use a dark
+   crimson so a struck-out / removed row clearly reads as "danger" against
+   the dark theme while keeping the light strikethrough text legible. */
+[data-bs-theme="dark"] .text-removed {
+    background-color: #5c1a25 !important;
+}
+
 .collapsible-content > .btn {
     padding: .25rem .5rem;
     font-weight: 600;
