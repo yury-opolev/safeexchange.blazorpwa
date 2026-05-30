@@ -97,6 +97,17 @@ namespace SafeExchange.Client.Common.Model
         public DateTime ModifiedAt { get; set; }
         public bool ReceiveExternalNotifications { get; set; }
         public bool ConsentRequired { get; set; }
+        public string CurrentTelemetryId { get; set; } = string.Empty;
+        public DateTime TelemetryIdActiveSinceUtc { get; set; }
+        public DateTime TelemetryIdRotatesAtUtc { get; set; }
+        public List<TelemetryIdWindow> RecentTelemetryIds { get; set; } = new();
+    }
+
+    public class TelemetryIdWindow
+    {
+        public string Id { get; set; } = string.Empty;
+        public DateTime ValidFromUtc { get; set; }
+        public DateTime ValidToUtc { get; set; }
     }
 
     public class EnabledToggleRequest

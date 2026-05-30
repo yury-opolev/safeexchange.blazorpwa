@@ -75,6 +75,9 @@ namespace SafeExchange.Client.Common
         public Task<BaseResponseObject<UserDetail>> GetUserDetailAsync(string upn)
             => GetAsync<UserDetail>($"{ApiVersion}/admin/users/{Uri.EscapeDataString(upn)}");
 
+        public Task<BaseResponseObject<UserDetail>> FindUserByTelemetryIdAsync(string telemetryId)
+            => GetAsync<UserDetail>($"{ApiVersion}/admin/users/by-telemetry-id/{Uri.EscapeDataString(telemetryId)}");
+
         public Task<BaseResponseObject<PaginatedResult<SecretAuditAnchorOverview>>> SearchAuditAsync(string? secretName, int page = 0, int pageSize = 25)
             => GetAsync<PaginatedResult<SecretAuditAnchorOverview>>($"{ApiVersion}/admin/audit{BuildAuditQuery(secretName, page, pageSize)}");
 
