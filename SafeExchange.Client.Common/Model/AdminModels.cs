@@ -66,6 +66,7 @@ namespace SafeExchange.Client.Common.Model
         public DateTime ModifiedAt { get; set; }
         public string ModifiedBy { get; set; } = string.Empty;
         public bool KeepInStorage { get; set; }
+        public string AuditInstanceId { get; set; } = string.Empty;
     }
 
     public class SecretAccessItem
