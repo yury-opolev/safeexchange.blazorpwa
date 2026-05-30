@@ -25,7 +25,7 @@
             </div>
             <span class="admin-pill @(u.Enabled ? "ok" : "off")">@(u.Enabled ? "enabled" : "disabled")</span>
             <button class="btn btn-sm btn-outline-primary"
-                    @onclick="() => this.NavManager.NavigateTo($"users/{Uri.EscapeDataString(u.AadUpn)}")"
+                    @onclick="() => this.Manage(u)"
                     title="Manage user">
                 <i class="bi bi-pencil-square"></i>&nbsp;Manage
             </button>
@@ -55,6 +55,9 @@
     }
 
     private Task SearchAsync() => this.GoAsync(0);
+
+    private void Manage(UserOverview u)
+        => this.NavManager.NavigateTo($"users/{Uri.EscapeDataString(u.AadUpn)}");
 
     private async Task GoAsync(int p)
     {
