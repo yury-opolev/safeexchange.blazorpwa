@@ -11,6 +11,13 @@
     <button class="btn btn-outline-light" @onclick="this.SearchAsync">Search</button>
 </div>
 
+<div class="input-group mb-3">
+    <span class="input-group-text admin-search"><i class="bi bi-fingerprint"></i></span>
+    <input class="form-control admin-search" placeholder="Find user by telemetry id (32 hex)…" @bind="this.tid" @bind:event="oninput" @onkeyup="this.OnTidKey" />
+    <button class="btn btn-outline-light" @onclick="this.LookupByTelemetryIdAsync">Look up</button>
+</div>
+@if (!string.IsNullOrEmpty(this.tidError)) { <div class="alert alert-warning">@this.tidError</div> }
+
 @if (this.loading) { <div class="text-muted"><i class="spinner-border spinner-border-sm"></i> Loading…</div> }
 @if (!string.IsNullOrEmpty(this.error)) { <div class="alert alert-warning">@this.error</div> }
 
@@ -43,6 +50,10 @@
     private string q = string.Empty;
     private bool loading;
     private string? error;
+    private string tid = string.Empty;
+    private string? tidError;
+    private static readonly System.Text.RegularExpressions.Regex TidPattern =
+        new("^[0-9a-f]{32}$", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     protected override Task OnInitializedAsync() => this.GoAsync(0);
 
@@ -55,6 +66,34 @@
     }
 
     private Task SearchAsync() => this.GoAsync(0);
+
+    private async Task OnTidKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await this.LookupByTelemetryIdAsync();
+        }
+    }
+
+    private async Task LookupByTelemetryIdAsync()
+    {
+        this.tidError = null;
+        var id = (this.tid ?? string.Empty).Trim().ToLowerInvariant();
+        if (!TidPattern.IsMatch(id))
+        {
+            this.tidError = "Enter a 32-character hex telemetry id.";
+            return;
+        }
+
+        var resp = await this.apiClient.FindUserByTelemetryIdAsync(id);
+        if ("ok".Equals(resp.Status) && resp.Result is not null)
+        {
+            this.NavManager.NavigateTo($"users/{Uri.EscapeDataString(resp.Result.AadUpn)}");
+            return;
+        }
+
+        this.tidError = "No active user has that telemetry id. Ids older than ~28 days are not retained, so they can't be resolved.";
+    }
 
     private void Manage(UserOverview u)
         => this.NavManager.NavigateTo($"users/{Uri.EscapeDataString(u.AadUpn)}");
