@@ -1,0 +1,159 @@
+@page "/users/{Upn}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Model
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+
+@inject ApiClient apiClient
+@inject NavigationManager NavManager
+
+<ConfirmDialog @ref="this.confirmDialog" />
+
+<div class="d-flex align-items-center mb-3">
+    <button type="button" class="btn btn-outline-light" @onclick="this.GoToList">
+        <i class="bi bi-arrow-left me-1"></i> Back to users
+    </button>
+    <h3 class="ms-3 mb-0">
+        <i class="bi bi-person"></i>
+        @(this.user?.DisplayName ?? this.Upn)
+    </h3>
+    @if (this.user is not null)
+    {
+        <span class="admin-pill @(this.user.Enabled ? "ok" : "off") ms-3">
+            @(this.user.Enabled ? "enabled" : "disabled")
+        </span>
+        <button type="button"
+                class="btn btn-sm @(this.user.Enabled ? "btn-outline-warning" : "btn-outline-success") ms-3"
+                disabled="@this.toggling"
+                @onclick="this.ToggleAsync">
+            @if (this.toggling)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            @(this.user.Enabled ? "Disable" : "Enable")
+        </button>
+    }
+</div>
+
+@if (this.loading) { <div class="text-muted"><i class="spinner-border spinner-border-sm me-2"></i>Loading…</div> }
+@if (!string.IsNullOrEmpty(this.error)) { <div class="alert alert-warning">@this.error</div> }
+
+@if (this.user is not null)
+{
+    <div class="admin-card flex-column align-items-stretch">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">UPN</dt>
+            <dd class="col-sm-9"><code>@this.user.AadUpn</code></dd>
+
+            <dt class="col-sm-3">Display name</dt>
+            <dd class="col-sm-9">@this.user.DisplayName</dd>
+
+            <dt class="col-sm-3">Contact email</dt>
+            <dd class="col-sm-9">@this.user.ContactEmail</dd>
+
+            <dt class="col-sm-3">User Id</dt>
+            <dd class="col-sm-9"><code>@this.user.Id</code></dd>
+
+            <dt class="col-sm-3">Entra object id</dt>
+            <dd class="col-sm-9"><code>@this.user.AadObjectId</code></dd>
+
+            <dt class="col-sm-3">Entra tenant id</dt>
+            <dd class="col-sm-9"><code>@this.user.AadTenantId</code></dd>
+
+            <dt class="col-sm-3">Created</dt>
+            <dd class="col-sm-9">@this.user.CreatedAt.ToString("u")</dd>
+
+            <dt class="col-sm-3">Last modified</dt>
+            <dd class="col-sm-9">@this.user.ModifiedAt.ToString("u")</dd>
+
+            <dt class="col-sm-3">External notifications</dt>
+            <dd class="col-sm-9">@(this.user.ReceiveExternalNotifications ? "on" : "off")</dd>
+
+            <dt class="col-sm-3">Consent required</dt>
+            <dd class="col-sm-9">@(this.user.ConsentRequired ? "yes" : "no")</dd>
+        </dl>
+    </div>
+}
+
+@code {
+    [Parameter] public string Upn { get; set; } = string.Empty;
+
+    private UserDetail? user;
+    private bool loading;
+    private bool toggling;
+    private string? error;
+    private ConfirmDialog? confirmDialog;
+
+    protected override Task OnInitializedAsync() => this.FetchAsync();
+
+    private async Task FetchAsync()
+    {
+        this.loading = true;
+        this.error = null;
+        try
+        {
+            var resp = await this.apiClient.GetUserDetailAsync(this.Upn);
+            if ("ok".Equals(resp.Status))
+            {
+                this.user = resp.Result;
+            }
+            else
+            {
+                this.error = resp.Error ?? resp.Status;
+            }
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+        finally
+        {
+            this.loading = false;
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        if (this.user is null || this.confirmDialog is null)
+        {
+            return;
+        }
+
+        var willEnable = !this.user.Enabled;
+        var ok = await this.confirmDialog.ShowAsync(
+            title: willEnable ? "Enable user" : "Disable user",
+            body: $"{(willEnable ? "Enable" : "Disable")} user '{this.user.AadUpn}'?",
+            confirmLabel: willEnable ? "Enable" : "Disable",
+            confirmButtonClass: willEnable ? "btn-success" : "btn-warning");
+        if (!ok)
+        {
+            return;
+        }
+
+        this.toggling = true;
+        this.error = null;
+        try
+        {
+            var resp = await this.apiClient.SetUserEnabledAsync(this.user.AadUpn, willEnable);
+            if ("ok".Equals(resp.Status) && resp.Result is not null)
+            {
+                this.user.Enabled = resp.Result.Enabled;
+            }
+            else
+            {
+                this.error = resp.Error ?? resp.Status;
+            }
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+        finally
+        {
+            this.toggling = false;
+        }
+    }
+
+    private void GoToList() => this.NavManager.NavigateTo("users");
+}
