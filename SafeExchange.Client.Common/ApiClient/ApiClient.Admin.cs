@@ -45,8 +45,7 @@ namespace SafeExchange.Client.Common
             int pageSize = 25,
             string? sortBy = null,
             string? sortDir = null,
-            DateTime? accessedBefore = null,
-            bool neverAccessed = false)
+            DateTime? accessedBefore = null)
         {
             var qs = BuildPagingQuery(q, page, pageSize);
             if (!string.IsNullOrEmpty(sortBy))
@@ -62,11 +61,6 @@ namespace SafeExchange.Client.Common
             if (accessedBefore.HasValue)
             {
                 qs += $"&accessedBefore={Uri.EscapeDataString(accessedBefore.Value.ToUniversalTime().ToString("O"))}";
-            }
-
-            if (neverAccessed)
-            {
-                qs += "&neverAccessed=true";
             }
 
             return GetAsync<PaginatedResult<SecretAdminOverview>>($"{ApiVersion}/admin/secret-list{qs}");

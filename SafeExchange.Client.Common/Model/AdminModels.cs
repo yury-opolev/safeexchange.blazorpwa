@@ -48,25 +48,30 @@ namespace SafeExchange.Client.Common.Model
         public bool IsHistorical { get; set; }
     }
 
+    /// <summary>Minimal list projection — mirrors SecretAdminOverviewOutput (server-side paginated).</summary>
     public class SecretAdminOverview
+    {
+        public string ObjectName { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime LastAccessedAt { get; set; }
+    }
+
+    /// <summary>Full detail view — mirrors SecretAdminDetailOutput.</summary>
+    public class SecretAdminDetail
     {
         public string ObjectName { get; set; } = string.Empty;
         public string CreatedBy { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime LastAccessedAt { get; set; }
+        public DateTime ModifiedAt { get; set; }
+        public string ModifiedBy { get; set; } = string.Empty;
         public DateTime? ExpiresAt { get; set; }
         public DateTime? IdleDeleteAt { get; set; }
         public int AttachmentCount { get; set; }
         public string[] Tags { get; set; } = [];
         public bool AuditEnabled { get; set; }
-    }
-
-    public class SecretAdminDetail : SecretAdminOverview
-    {
-        public DateTime ModifiedAt { get; set; }
-        public string ModifiedBy { get; set; } = string.Empty;
-        public bool KeepInStorage { get; set; }
         public string AuditInstanceId { get; set; } = string.Empty;
+        public bool KeepInStorage { get; set; }
     }
 
     public class SecretAccessItem
