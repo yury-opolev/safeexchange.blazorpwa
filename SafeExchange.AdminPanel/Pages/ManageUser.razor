@@ -72,6 +72,47 @@
 
             <dt class="col-sm-3">Consent required</dt>
             <dd class="col-sm-9">@(this.user.ConsentRequired ? "yes" : "no")</dd>
+
+            <dt class="col-sm-3">Telemetry id (current)</dt>
+            <dd class="col-sm-9">
+                @if (string.IsNullOrEmpty(this.user.CurrentTelemetryId))
+                {
+                    <span class="text-muted">—</span>
+                }
+                else
+                {
+                    <code>@this.user.CurrentTelemetryId</code>
+                    <div class="text-muted small">
+                        active since @this.user.TelemetryIdActiveSinceUtc.ToString("u"), rotates after @this.user.TelemetryIdRotatesAtUtc.ToString("u")
+                    </div>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Recent telemetry ids</dt>
+            <dd class="col-sm-9">
+                @if (this.user.RecentTelemetryIds.Count == 0)
+                {
+                    <span class="text-muted">none retained (within 28 days)</span>
+                }
+                else
+                {
+                    <table class="table table-sm mb-0">
+                        <thead>
+                            <tr><th>Telemetry id</th><th>Active from</th><th>Active to</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var w in this.user.RecentTelemetryIds)
+                            {
+                                <tr>
+                                    <td><code>@w.Id</code></td>
+                                    <td class="text-muted">@w.ValidFromUtc.ToString("u")</td>
+                                    <td class="text-muted">@w.ValidToUtc.ToString("u")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </dd>
         </dl>
     </div>
 }
