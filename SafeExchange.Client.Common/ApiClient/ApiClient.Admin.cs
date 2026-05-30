@@ -39,6 +39,48 @@ namespace SafeExchange.Client.Common
             => PutAsync<S2SApp>($"{ApiVersion}/admin/applications/{Uri.EscapeDataString(displayName)}/owners",
                 new { owners });
 
+        public Task<BaseResponseObject<PaginatedResult<SecretAdminOverview>>> ListSecretsAsync(
+            string? q,
+            int page = 0,
+            int pageSize = 25,
+            string? sortBy = null,
+            string? sortDir = null,
+            DateTime? accessedBefore = null,
+            bool neverAccessed = false)
+        {
+            var qs = BuildPagingQuery(q, page, pageSize);
+            if (!string.IsNullOrEmpty(sortBy))
+            {
+                qs += $"&sortBy={Uri.EscapeDataString(sortBy)}";
+            }
+
+            if (!string.IsNullOrEmpty(sortDir))
+            {
+                qs += $"&sortDir={Uri.EscapeDataString(sortDir)}";
+            }
+
+            if (accessedBefore.HasValue)
+            {
+                qs += $"&accessedBefore={Uri.EscapeDataString(accessedBefore.Value.ToUniversalTime().ToString("O"))}";
+            }
+
+            if (neverAccessed)
+            {
+                qs += "&neverAccessed=true";
+            }
+
+            return GetAsync<PaginatedResult<SecretAdminOverview>>($"{ApiVersion}/admin/secret-list{qs}");
+        }
+
+        public Task<BaseResponseObject<SecretAdminDetail>> GetSecretDetailAsync(string name)
+            => GetAsync<SecretAdminDetail>($"{ApiVersion}/admin/secret/{Uri.EscapeDataString(name)}");
+
+        public Task<BaseResponseObject<List<SecretAccessItem>>> GetSecretAccessAsync(string name)
+            => GetAsync<List<SecretAccessItem>>($"{ApiVersion}/admin/secret/{Uri.EscapeDataString(name)}/access");
+
+        public Task<BaseResponseObject<UserDetail>> GetUserDetailAsync(string upn)
+            => GetAsync<UserDetail>($"{ApiVersion}/admin/users/{Uri.EscapeDataString(upn)}");
+
         public Task<BaseResponseObject<PaginatedResult<SecretAuditAnchorOverview>>> SearchAuditAsync(string? secretName, int page = 0, int pageSize = 25)
             => GetAsync<PaginatedResult<SecretAuditAnchorOverview>>($"{ApiVersion}/admin/audit{BuildAuditQuery(secretName, page, pageSize)}");
 
