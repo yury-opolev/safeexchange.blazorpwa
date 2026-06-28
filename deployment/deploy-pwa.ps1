@@ -8,20 +8,26 @@
     Wrapper around `dotnet publish` + an Azure upload command whose
     exact form depends on HOSTING_TYPE_<ENV> in deployment/.env:
 
-      storage       → az storage blob upload-batch into the $web
+      storage       -> az storage blob upload-batch into the $web
                       container of STORAGE_ACCOUNT_<ENV>
-      staticwebapp  → swa deploy to STATIC_WEB_APP_<ENV>
-      appservice    → az webapp deploy a zip to APP_SERVICE_<ENV>
+      staticwebapp  -> swa deploy to STATIC_WEB_APP_<ENV>
+      appservice    -> az webapp deploy a zip to APP_SERVICE_<ENV>
+
+    Per-env appsettings values (tenant, clientId, backend URL, API
+    scope) live only in deployment/.env and are injected into the
+    SOURCE wwwroot/appsettings.json BEFORE `dotnet publish`. This is
+    deliberate: dotnet publish hash-derives several files from
+    appsettings.json (the precompressed appsettings.json.gz/.br and
+    the SHA-256 baked into service-worker-assets.js). Injecting after
+    publish — as an earlier version did — left those derived files
+    holding the source staging-dev values, so browsers that request
+    gzip/br got stale config. The source working tree is restored
+    after publish so secrets never linger on disk or in git.
 
     All hosting details (account name, resource group, subscription,
     Front Door names) live in deployment/.env which is gitignored.
     The committed .env.example documents every variable the operator
     must set.
-
-    After a successful upload, if FRONT_DOOR_PROFILE_<ENV> and
-    FRONT_DOOR_ENDPOINT_<ENV> are both set, the script purges the
-    AFD cache so the new index.html (with updated CSP) is picked up
-    immediately rather than waiting out the TTL.
 
 .PARAMETER Environment
     Which environment to deploy. 'test' maps to *_TEST variables,
@@ -45,8 +51,7 @@
 .EXAMPLE
     ./deployment/deploy-pwa.ps1 -Environment prd -WhatIf
 
-    Publishes Release but does not upload or purge. Prints what
-    the upload command would have been.
+    Publishes Release but does not upload or purge.
 #>
 [CmdletBinding()]
 param(
@@ -70,9 +75,9 @@ $env:MSYS_NO_PATHCONV = '1'
 $ErrorActionPreference = 'Stop'
 $InformationPreference = 'Continue'
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Paths
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 $here       = $PSScriptRoot
 $repoRoot   = Split-Path -Parent $here
 $pwaProject = Join-Path $repoRoot 'SafeExchange.PWA/SafeExchange.PWA.csproj'
@@ -83,6 +88,10 @@ $pwaProject = Join-Path $repoRoot 'SafeExchange.PWA/SafeExchange.PWA.csproj'
 $publishRoot = Join-Path $repoRoot 'SafeExchange.PWA/bin/Release/pwa-publish'
 $publishDir  = Join-Path $publishRoot 'wwwroot'
 
+# Source files mutated in place before publish and restored afterwards.
+$srcAppsettings = Join-Path $repoRoot 'SafeExchange.PWA/wwwroot/appsettings.json'
+$srcVersionJson = Join-Path $repoRoot 'SafeExchange.PWA/wwwroot/version.json'
+
 if (-not $EnvFile) {
     $EnvFile = Join-Path $here '.env'
 }
@@ -91,9 +100,9 @@ if (-not (Test-Path $pwaProject)) {
     throw "PWA project file not found: $pwaProject"
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # .env reader
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Reads a single KEY=value line out of a simple .env file. Returns
 # empty string if the file or key is missing. Trims surrounding
 # whitespace and optional single/double quotes.
@@ -131,9 +140,9 @@ function Require-EnvValue {
     return $value
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Resolve env-specific values
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 $envSuffix    = $Environment.ToUpperInvariant()
 $hostingType  = (Require-EnvValue -Path $EnvFile -Name "HOSTING_TYPE_$envSuffix").ToLowerInvariant()
 $resourceGroup = Require-EnvValue -Path $EnvFile -Name "RESOURCE_GROUP_$envSuffix"
@@ -152,9 +161,9 @@ if ($subscription) {
     Write-Host "Subscription:  $subscription" -ForegroundColor DarkGray
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Sanity-check az CLI + login state before any build or upload
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 try {
     $null = & az --version 2>&1
 } catch {
@@ -176,26 +185,19 @@ if ($subscription -and $subscription -ne $account.id) {
     }
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Auto-bump version.json patch number
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Every deploy = a new build, so bump the patch number in
 # SafeExchange.PWA/wwwroot/version.json before publishing.
 #
 # To avoid double-bumping when staging and prod are deployed
 # back-to-back for the same code, the bump is SKIPPED if HEAD already
-# changed the "version" field — that's either a previous auto-bump
-# commit from this script or a manual release-version edit. Either way,
-# we ship the current version unchanged. As soon as a new code commit
-# lands on top, the next deploy will bump again.
-#
-# Skipped entirely under -WhatIf (a dry run must not commit or push).
+# changed the "version" field. Skipped entirely under -WhatIf.
 $bumpedThisDeploy = $false
-$bumpRepoRoot     = Split-Path $PSScriptRoot -Parent
-$srcVersionJson   = Join-Path $bumpRepoRoot 'SafeExchange.PWA\wwwroot\version.json'
 if ((-not $WhatIf) -and (Test-Path $srcVersionJson)) {
     $relPath  = 'SafeExchange.PWA/wwwroot/version.json'
-    $headDiff = git -C $bumpRepoRoot show HEAD --format='' -- $relPath 2>&1
+    $headDiff = git -C $repoRoot show HEAD --format='' -- $relPath 2>&1
     $versionAlreadyChanged = @($headDiff | Where-Object { $_ -match '^\+\s*"version"\s*:' }).Count -gt 0
 
     if ($versionAlreadyChanged) {
@@ -213,8 +215,8 @@ if ((-not $WhatIf) -and (Test-Path $srcVersionJson)) {
             $info.version = $parts -join '.'
             $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $srcVersionJson -NoNewline
 
-            git -C $bumpRepoRoot add $relPath | Out-Null
-            git -C $bumpRepoRoot commit -m "chore(version): auto-bump $oldVersion -> $($info.version) before $Environment deploy" -q
+            git -C $repoRoot add $relPath | Out-Null
+            git -C $repoRoot commit -m "chore(version): auto-bump $oldVersion -> $($info.version) before $Environment deploy" -q
             if ($LASTEXITCODE -eq 0) {
                 $bumpedThisDeploy = $true
                 Write-Host ""
@@ -226,127 +228,82 @@ if ((-not $WhatIf) -and (Test-Path $srcVersionJson)) {
     }
 }
 
-# ──────────────────────────────────────────────────────────────────
-# Build and publish
-# ──────────────────────────────────────────────────────────────────
-Write-Host ""
-Write-Host "Publishing $pwaProject (Release)..." -ForegroundColor Cyan
-
-# Wipe the pinned output folder so stale artefacts from a previous publish
-# can't sneak into the upload.
-if (Test-Path $publishRoot) {
-    Remove-Item -LiteralPath $publishRoot -Recurse -Force
-}
-
-& dotnet publish $pwaProject -c Release -o $publishRoot
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish failed with exit code $LASTEXITCODE"
-}
-
-if (-not (Test-Path $publishDir)) {
-    throw "Publish output not found at expected location: $publishDir"
-}
-Write-Host "Publish output: $publishDir" -ForegroundColor DarkGray
-
-# ──────────────────────────────────────────────────────────────────
-# Inject env-specific appsettings.json values
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
+# Inject env-specific appsettings.json values BEFORE publish
+# ------------------------------------------------------------------
 # Source appsettings.json ships staging-dev defaults so `dotnet run`
-# works locally. Real per-env values (tenant, clientId, backend URL,
-# API scope) live only in deployment/.env and are merged into the
-# published appsettings.json here, before it reaches $web. This
-# prevents prod credentials from sitting in git while still letting
-# the deployed bundle be a normal static asset.
+# works locally. The real per-env values (Authority, ClientId, backend
+# URL, API scope) come from deployment/.env and are written into the
+# SOURCE file here, before publish, so dotnet computes appsettings.json
+# .gz/.br and the SW integrity hash from the correct content. Today's
+# build date is stamped into version.json the same way. Both source
+# files are backed up and restored in the finally below.
 $appsettingsAuthority = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_AUTHORITY_$envSuffix"
 $appsettingsClientId  = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_CLIENT_ID_$envSuffix"
 $appsettingsBackend   = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_BACKEND_$envSuffix"
 $appsettingsScope     = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_SCOPE_$envSuffix"
 
-$publishAppsettings = Join-Path $publishDir 'appsettings.json'
-if (-not (Test-Path $publishAppsettings)) {
-    throw "Published appsettings.json not found at $publishAppsettings"
+if (-not (Test-Path $srcAppsettings)) {
+    throw "Source appsettings.json not found: $srcAppsettings"
 }
 
-Write-Host "Rewriting $publishAppsettings with $envSuffix overrides..." -ForegroundColor DarkGray
-$settings = Get-Content -LiteralPath $publishAppsettings -Raw | ConvertFrom-Json
-$settings.AzureAdB2C.Authority       = $appsettingsAuthority
-$settings.AzureAdB2C.ClientId        = $appsettingsClientId
-$settings.BackendApi.BaseAddress     = $appsettingsBackend
-$settings.AccessTokenScopes          = @($appsettingsScope)
-$settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $publishAppsettings -NoNewline
-Write-Host "  ClientId:         $appsettingsClientId" -ForegroundColor DarkGray
-Write-Host "  Authority:        $appsettingsAuthority" -ForegroundColor DarkGray
-Write-Host "  BackendApi:       $appsettingsBackend" -ForegroundColor DarkGray
-Write-Host "  Scope:            $appsettingsScope" -ForegroundColor DarkGray
+$appsettingsBackup = "$srcAppsettings.deploy-bak"
+$versionBackup     = if (Test-Path $srcVersionJson) { "$srcVersionJson.deploy-bak" } else { $null }
+Copy-Item -LiteralPath $srcAppsettings -Destination $appsettingsBackup -Force
+if ($versionBackup) { Copy-Item -LiteralPath $srcVersionJson -Destination $versionBackup -Force }
 
-# Blazor's service worker validates every cached asset against the
-# SHA-256 hash embedded in service-worker-assets.js during install.
-# Because we just rewrote appsettings.json, its hash no longer matches
-# the one the publish step recorded — service-worker install would fail
-# with "Failed to find a valid digest in the 'integrity' attribute for
-# resource '.../appsettings.json'". Recompute and patch the single
-# affected entry so the SW install stays green.
-$appsettingsBytes = [System.IO.File]::ReadAllBytes($publishAppsettings)
-$sha256 = [System.Security.Cryptography.SHA256]::Create()
-try {
-    $appsettingsHashBytes = $sha256.ComputeHash($appsettingsBytes)
-} finally {
-    $sha256.Dispose()
-}
-$appsettingsIntegrity = 'sha256-' + [Convert]::ToBase64String($appsettingsHashBytes)
+Write-Host ""
+Write-Host "Injecting $envSuffix appsettings into source before publish..." -ForegroundColor Cyan
+$settings = Get-Content -LiteralPath $srcAppsettings -Raw | ConvertFrom-Json
+$settings.AzureAdB2C.Authority   = $appsettingsAuthority
+$settings.AzureAdB2C.ClientId    = $appsettingsClientId
+$settings.BackendApi.BaseAddress = $appsettingsBackend
+$settings.AccessTokenScopes      = @($appsettingsScope)
+$settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $srcAppsettings -NoNewline
+Write-Host "  ClientId:   $appsettingsClientId" -ForegroundColor DarkGray
+Write-Host "  Authority:  $appsettingsAuthority" -ForegroundColor DarkGray
+Write-Host "  BackendApi: $appsettingsBackend" -ForegroundColor DarkGray
+Write-Host "  Scope:      $appsettingsScope" -ForegroundColor DarkGray
 
-$swAssets = Join-Path $publishDir 'service-worker-assets.js'
-if (Test-Path $swAssets) {
-    $swContent = Get-Content -LiteralPath $swAssets -Raw
-    $pattern = '(?s)("hash":\s*")sha256-[^"]+(",\s*"url":\s*"appsettings\.json")'
-    $swUpdated = [regex]::Replace($swContent, $pattern, ('${1}' + $appsettingsIntegrity + '${2}'))
-    if ($swUpdated -eq $swContent) {
-        Write-Warning "Could not locate appsettings.json entry in $swAssets; SW install may fail SRI."
-    } else {
-        Set-Content -LiteralPath $swAssets -Value $swUpdated -NoNewline
-        Write-Host "  SW integrity patched: $appsettingsIntegrity" -ForegroundColor DarkGray
-    }
-} else {
-    Write-Warning "$swAssets not found — skipping SRI patch. Non-PWA publish?"
-}
-
-# ──────────────────────────────────────────────────────────────────
-# Stamp the build date into version.json
-# ──────────────────────────────────────────────────────────────────
-# version.json ships a hand-maintained semantic version; the build date
-# is stamped here at deploy time so the client can show "vX.Y.Z" with a
-# build-date tooltip. Same service-worker integrity caveat as
-# appsettings.json above — recompute and patch its hash so SW install
-# stays green.
-$publishVersionJson = Join-Path $publishDir 'version.json'
-if (Test-Path $publishVersionJson) {
-    $versionInfo = Get-Content -LiteralPath $publishVersionJson -Raw | ConvertFrom-Json
+if (Test-Path $srcVersionJson) {
+    $versionInfo = Get-Content -LiteralPath $srcVersionJson -Raw | ConvertFrom-Json
     $versionInfo.buildDate = [System.DateTime]::UtcNow.ToString('yyyy-MM-dd')
-    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $publishVersionJson -NoNewline
-    Write-Host "Stamped version.json: v$($versionInfo.version) ($($versionInfo.buildDate))" -ForegroundColor DarkGray
+    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $srcVersionJson -NoNewline
+    Write-Host "  version:    v$($versionInfo.version) ($($versionInfo.buildDate))" -ForegroundColor DarkGray
+}
 
-    $versionBytes = [System.IO.File]::ReadAllBytes($publishVersionJson)
-    $sha256v = [System.Security.Cryptography.SHA256]::Create()
-    try {
-        $versionHashBytes = $sha256v.ComputeHash($versionBytes)
-    } finally {
-        $sha256v.Dispose()
+# ------------------------------------------------------------------
+# Build and publish (source restored in finally)
+# ------------------------------------------------------------------
+Write-Host ""
+Write-Host "Publishing $pwaProject (Release)..." -ForegroundColor Cyan
+try {
+    # Wipe the pinned output folder so stale artefacts from a previous
+    # publish can't sneak into the upload.
+    if (Test-Path $publishRoot) {
+        Remove-Item -LiteralPath $publishRoot -Recurse -Force
     }
-    $versionIntegrity = 'sha256-' + [Convert]::ToBase64String($versionHashBytes)
 
-    if (Test-Path $swAssets) {
-        $swVersionContent = Get-Content -LiteralPath $swAssets -Raw
-        $versionPattern = '(?s)("hash":\s*")sha256-[^"]+(",\s*"url":\s*"version\.json")'
-        $swVersionUpdated = [regex]::Replace($swVersionContent, $versionPattern, ('${1}' + $versionIntegrity + '${2}'))
-        if ($swVersionUpdated -eq $swVersionContent) {
-            Write-Warning "Could not locate version.json entry in $swAssets; SW install may fail SRI."
-        } else {
-            Set-Content -LiteralPath $swAssets -Value $swVersionUpdated -NoNewline
-            Write-Host "  SW integrity patched (version.json): $versionIntegrity" -ForegroundColor DarkGray
-        }
+    & dotnet publish $pwaProject -c Release -o $publishRoot
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed with exit code $LASTEXITCODE"
     }
-} else {
-    Write-Warning "Published version.json not found at $publishVersionJson — version display will be empty."
+
+    if (-not (Test-Path $publishDir)) {
+        throw "Publish output not found at expected location: $publishDir"
+    }
+    Write-Host "Publish output: $publishDir" -ForegroundColor DarkGray
+}
+finally {
+    # Restore the working tree: revert injected secrets + build date so
+    # nothing sensitive lingers on disk or sneaks into a later commit.
+    Copy-Item -LiteralPath $appsettingsBackup -Destination $srcAppsettings -Force
+    Remove-Item -LiteralPath $appsettingsBackup -Force
+    if ($versionBackup) {
+        Copy-Item -LiteralPath $versionBackup -Destination $srcVersionJson -Force
+        Remove-Item -LiteralPath $versionBackup -Force
+    }
+    Write-Host "Restored source appsettings.json / version.json." -ForegroundColor DarkGray
 }
 
 if ($WhatIf) {
@@ -355,9 +312,9 @@ if ($WhatIf) {
     exit 0
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Upload — branches on HOSTING_TYPE
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 Write-Host ""
 Write-Host "Uploading to $hostingType target..." -ForegroundColor Cyan
 
@@ -367,17 +324,8 @@ switch ($hostingType) {
         Write-Host "  Storage account: $storageAccount" -ForegroundColor DarkGray
 
         # az storage blob upload-batch uploads every file under
-        # $publishDir into the $web container. --overwrite keeps
-        # stale assets around only if they no longer exist in the
-        # new publish output; the --delete-destination-path flag
-        # would remove those, but it's not available on every az
-        # version, so the caller should manually clear $web if it
-        # matters for a given deploy.
-        # AAD auth — requires the operator to hold "Storage Blob Data
-        # Contributor" on the storage account. Paired with
-        # allowSharedKeyAccess=false on the account so shared-key
-        # upload paths cannot be used as a fallback. See
-        # deployment/README when configuring a new environment.
+        # $publishDir into the $web container. AAD auth — requires the
+        # operator to hold "Storage Blob Data Contributor" on the account.
         $azArgs = @(
             'storage', 'blob', 'upload-batch'
             '--account-name',   $storageAccount
@@ -396,9 +344,24 @@ switch ($hostingType) {
         $staticWebApp = Require-EnvValue -Path $EnvFile -Name "STATIC_WEB_APP_$envSuffix"
         Write-Host "  Static Web App: $staticWebApp" -ForegroundColor DarkGray
 
-        # Fetch a one-time deployment token for this SWA. Stored in
-        # a variable rather than on the command line so it does not
-        # show up in PowerShell's history.
+        # SPA fallback: deep links (e.g. /authentication/login-callback)
+        # must serve index.html instead of 404. Written here, AFTER
+        # publish, so it does NOT land in service-worker-assets.js — SWA
+        # reserves staticwebapp.config.json and returns 404 for it, which
+        # would otherwise fail the offline SW install.
+        $swaConfig = Join-Path $publishDir 'staticwebapp.config.json'
+        Set-Content -LiteralPath $swaConfig -NoNewline -Value @'
+{
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  }
+}
+'@
+        Write-Host "  Wrote staticwebapp.config.json (SPA fallback)" -ForegroundColor DarkGray
+
+        # Fetch a one-time deployment token for this SWA. Stored in a
+        # variable rather than on the command line so it does not show
+        # up in PowerShell's history.
         $deployToken = az staticwebapp secrets list `
             --name $staticWebApp `
             --resource-group $resourceGroup `
@@ -425,8 +388,7 @@ switch ($hostingType) {
         Write-Host "  App Service: $appService" -ForegroundColor DarkGray
 
         # Build a zip of the publish output and push it with
-        # `az webapp deploy --type zip`. The destination path inside
-        # the app is /home/site/wwwroot by default.
+        # `az webapp deploy --type zip`.
         $zipPath = Join-Path ([System.IO.Path]::GetTempPath()) `
             ("safeexchange-pwa-" + [System.Guid]::NewGuid().ToString('N') + ".zip")
 
@@ -450,14 +412,14 @@ switch ($hostingType) {
     }
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Optional: purge Front Door cache
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # AFD profiles typically live in a shared networking/DNS resource
-# group that is different from the storage RG, so the purge needs
-# its own FRONT_DOOR_RG_<ENV>. Falls back to the storage RG only
-# when FRONT_DOOR_RG_* is not set — keeps the scaffold compatible
-# with single-RG setups.
+# group that is different from the storage RG, so the purge needs its
+# own FRONT_DOOR_RG_<ENV>. Falls back to the storage RG only when
+# FRONT_DOOR_RG_* is not set. Leave FRONT_DOOR_* blank to skip
+# entirely (e.g. on Static Web Apps, which is not behind AFD).
 $afdProfile  = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_PROFILE_$envSuffix"
 $afdEndpoint = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_ENDPOINT_$envSuffix"
 $afdRg       = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_RG_$envSuffix"
@@ -482,17 +444,17 @@ if ($afdProfile -and $afdEndpoint) {
     Write-Host "FRONT_DOOR_* not set for $envSuffix — skipping cache purge." -ForegroundColor DarkGray
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Push the auto-bump commit
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # The chore(version) commit from the auto-bump step is still local —
 # push it now that the upload and cache purge have succeeded so the
 # committed version on origin always matches what's actually deployed.
 if ($bumpedThisDeploy) {
-    $currentBranch = (git -C $bumpRepoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    $currentBranch = (git -C $repoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
     Write-Host ""
     Write-Host "Pushing auto-bump commit to origin/$currentBranch..." -ForegroundColor Cyan
-    git -C $bumpRepoRoot push origin $currentBranch 2>&1 | Out-Host
+    git -C $repoRoot push origin $currentBranch 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "git push failed; the auto-bump commit is local. Resolve and push manually so origin matches the deployed version."
     }

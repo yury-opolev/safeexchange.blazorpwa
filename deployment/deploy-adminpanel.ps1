@@ -1,41 +1,28 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Deploy SafeExchange.AdminPanel (Blazor WASM) to its dedicated
-    storage-account static-site hosting.
+    Deploy SafeExchange.AdminPanel (Blazor WASM) to the Azure hosting
+    target configured in deployment/.env.
 
 .DESCRIPTION
     Mirror of deploy-pwa.ps1 for the admin-panel sibling project. The
     panel is a standalone Blazor WASM site (separate Entra UX, separate
-    visual language) and is hosted on its own storage account so its
-    blast radius is independent of the main PWA.
+    visual language) hosted independently of the main PWA.
 
-    The script:
-      1. Reads STORAGE_ACCOUNT_ADMIN_<ENV> + APPSETTINGS_*_<ENV> from
-         deployment/.env (gitignored). The APPSETTINGS_* values are
-         shared with deploy-pwa.ps1 — both sites authenticate against
-         the same Entra app registration and call the same backend.
-      2. Publishes Release to a pinned bin/Release/admin-publish folder.
-      3. Rewrites the published appsettings.json with env-specific
-         tenant/clientId/backend/scope (same shape as the PWA — no
-         service-worker SRI patching because the admin panel has no
-         service worker).
-      4. Uploads the wwwroot to the `$web` container of the storage
-         account named in STORAGE_ACCOUNT_ADMIN_<ENV>.
-      5. Skips the Front Door cache purge for now — the admin panel is
-         not behind AFD yet. Wire FRONT_DOOR_*_ADMIN_<ENV> later when
-         we add a route.
+    Hosting target branches on HOSTING_TYPE_ADMIN_<ENV> (defaults to
+    'storage' when unset, for back-compat):
 
-    First-time setup: the storage account must already exist with
-    static-website hosting enabled. Provision it once with:
+      storage       -> az storage blob upload-batch into the $web
+                      container of STORAGE_ACCOUNT_ADMIN_<ENV>
+      staticwebapp  -> swa deploy to STATIC_WEB_APP_ADMIN_<ENV>
 
-        az storage account create --name <accountName> \
-            --resource-group safeexchange-staging-web \
-            --location northeurope --sku Standard_LRS --kind StorageV2
-        az storage blob service-properties update \
-            --account-name <accountName> --static-website \
-            --index-document index.html --404-document index.html \
-            --auth-mode login
+    The APPSETTINGS_*_<ENV> values are shared with deploy-pwa.ps1 — both
+    sites authenticate against the same Entra app registration and call
+    the same backend. They are injected into the SOURCE appsettings.json
+    BEFORE `dotnet publish` (so the precompressed appsettings.json.gz/.br
+    are derived from the correct content), then the source tree is
+    restored. The admin panel has no service worker, so there is no SW
+    integrity patching.
 
 .PARAMETER Environment
     Which environment to deploy. 'test' maps to *_TEST variables,
@@ -50,8 +37,6 @@
 
 .EXAMPLE
     ./deployment/deploy-adminpanel.ps1 -Environment test
-
-    Publishes Release and uploads to the configured test target.
 #>
 
 [CmdletBinding()]
@@ -80,6 +65,10 @@ $repoRoot   = Split-Path -Parent $here
 $adminProject = Join-Path $repoRoot 'SafeExchange.AdminPanel/SafeExchange.AdminPanel.csproj'
 $publishRoot  = Join-Path $repoRoot 'SafeExchange.AdminPanel/bin/Release/admin-publish'
 $publishDir   = Join-Path $publishRoot 'wwwroot'
+
+# Source files mutated in place before publish and restored afterwards.
+$srcAppsettings = Join-Path $repoRoot 'SafeExchange.AdminPanel/wwwroot/appsettings.json'
+$srcVersionJson = Join-Path $repoRoot 'SafeExchange.AdminPanel/wwwroot/version.json'
 
 if (-not $EnvFile)
 {
@@ -139,13 +128,23 @@ function Require-EnvValue
     return $value
 }
 
-$envSuffix     = $Environment.ToUpperInvariant()
-$storageAccount = Require-EnvValue -Path $EnvFile -Name "STORAGE_ACCOUNT_ADMIN_$envSuffix"
-$subscription   = Read-EnvValue -Path $EnvFile -Name 'SUBSCRIPTION'
+$envSuffix    = $Environment.ToUpperInvariant()
+$subscription = Read-EnvValue -Path $EnvFile -Name 'SUBSCRIPTION'
+
+# Hosting type for the admin panel. Defaults to 'storage' so existing
+# .env files (which only set STORAGE_ACCOUNT_ADMIN_*) keep working.
+$hostingType = (Read-EnvValue -Path $EnvFile -Name "HOSTING_TYPE_ADMIN_$envSuffix").ToLowerInvariant()
+if (-not $hostingType) { $hostingType = 'storage' }
+
+$validTypes = @('storage', 'staticwebapp')
+if ($hostingType -notin $validTypes)
+{
+    throw "HOSTING_TYPE_ADMIN_$envSuffix must be one of: $($validTypes -join ', '). Got '$hostingType'."
+}
 
 Write-Host "Environment:    $Environment" -ForegroundColor DarkGray
 Write-Host "Project:        SafeExchange.AdminPanel" -ForegroundColor DarkGray
-Write-Host "Storage:        $storageAccount" -ForegroundColor DarkGray
+Write-Host "Hosting type:   $hostingType" -ForegroundColor DarkGray
 if ($subscription)
 {
     Write-Host "Subscription:   $subscription" -ForegroundColor DarkGray
@@ -173,21 +172,16 @@ if ($subscription -and $accountShow.id -ne $subscription)
     & az account set --subscription $subscription | Out-Null
 }
 
-# ──────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------
 # Auto-bump version.json patch number
-# ──────────────────────────────────────────────────────────────────
-# Mirrors the PWA flow: every deploy = a new build, so bump the patch
-# number in SafeExchange.AdminPanel/wwwroot/version.json before publishing.
-# Skipped when HEAD already touched the version field (avoids double-
-# bumping when staging + prod are deployed back-to-back for the same
-# code) and under -WhatIf.
+# ------------------------------------------------------------------
+# Mirrors the PWA flow. Skipped when HEAD already touched the version
+# field and under -WhatIf.
 $bumpedThisDeploy = $false
-$bumpRepoRoot     = Split-Path $PSScriptRoot -Parent
-$srcVersionJson   = Join-Path $bumpRepoRoot 'SafeExchange.AdminPanel\wwwroot\version.json'
 if ((-not $WhatIf) -and (Test-Path $srcVersionJson))
 {
     $relPath = 'SafeExchange.AdminPanel/wwwroot/version.json'
-    $headDiff = git -C $bumpRepoRoot show HEAD --format='' -- $relPath 2>&1
+    $headDiff = git -C $repoRoot show HEAD --format='' -- $relPath 2>&1
     $versionAlreadyChanged = @($headDiff | Where-Object { $_ -match '^\+\s*"version"\s*:' }).Count -gt 0
 
     if ($versionAlreadyChanged)
@@ -211,8 +205,8 @@ if ((-not $WhatIf) -and (Test-Path $srcVersionJson))
             $info.version = $parts -join '.'
             $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $srcVersionJson -NoNewline
 
-            git -C $bumpRepoRoot add $relPath | Out-Null
-            git -C $bumpRepoRoot commit -m "chore(adminpanel-version): auto-bump $oldVersion -> $($info.version) before $Environment deploy" -q
+            git -C $repoRoot add $relPath | Out-Null
+            git -C $repoRoot commit -m "chore(adminpanel-version): auto-bump $oldVersion -> $($info.version) before $Environment deploy" -q
             if ($LASTEXITCODE -eq 0)
             {
                 $bumpedThisDeploy = $true
@@ -227,69 +221,85 @@ if ((-not $WhatIf) -and (Test-Path $srcVersionJson))
     }
 }
 
-# Build.
-Write-Host ""
-Write-Host "Publishing $adminProject (Release)..." -ForegroundColor Cyan
-
-if (Test-Path $publishRoot)
-{
-    Remove-Item -LiteralPath $publishRoot -Recurse -Force
-}
-
-& dotnet publish $adminProject -c Release -o $publishRoot
-if ($LASTEXITCODE -ne 0)
-{
-    throw "dotnet publish failed with exit code $LASTEXITCODE"
-}
-
-if (-not (Test-Path $publishDir))
-{
-    throw "Publish output not found at expected location: $publishDir"
-}
-
-Write-Host "Publish output: $publishDir" -ForegroundColor DarkGray
-
-# Rewrite published appsettings.json with env-specific values. Shape is
-# identical to the main PWA — both call the same backend and use the
-# same Entra app registration.
+# ------------------------------------------------------------------
+# Inject env-specific appsettings.json values BEFORE publish
+# ------------------------------------------------------------------
+# Same rationale as deploy-pwa.ps1: write the real per-env values into
+# the source appsettings.json before publish so the precompressed
+# .gz/.br twins are derived from the correct content. Build date is
+# stamped into version.json the same way. Both source files are backed
+# up and restored in the finally below.
 $appsettingsAuthority = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_AUTHORITY_$envSuffix"
 $appsettingsClientId  = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_CLIENT_ID_$envSuffix"
 $appsettingsBackend   = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_BACKEND_$envSuffix"
 $appsettingsScope     = Require-EnvValue -Path $EnvFile -Name "APPSETTINGS_SCOPE_$envSuffix"
 
-$publishAppsettings = Join-Path $publishDir 'appsettings.json'
-if (-not (Test-Path $publishAppsettings))
+if (-not (Test-Path $srcAppsettings))
 {
-    throw "Published appsettings.json not found at $publishAppsettings"
+    throw "Source appsettings.json not found: $srcAppsettings"
 }
 
-Write-Host "Rewriting $publishAppsettings with $envSuffix overrides..." -ForegroundColor DarkGray
-$settings = Get-Content -LiteralPath $publishAppsettings -Raw | ConvertFrom-Json
+$appsettingsBackup = "$srcAppsettings.deploy-bak"
+$versionBackup     = if (Test-Path $srcVersionJson) { "$srcVersionJson.deploy-bak" } else { $null }
+Copy-Item -LiteralPath $srcAppsettings -Destination $appsettingsBackup -Force
+if ($versionBackup) { Copy-Item -LiteralPath $srcVersionJson -Destination $versionBackup -Force }
+
+Write-Host ""
+Write-Host "Injecting $envSuffix appsettings into source before publish..." -ForegroundColor Cyan
+$settings = Get-Content -LiteralPath $srcAppsettings -Raw | ConvertFrom-Json
 $settings.AzureAdB2C.Authority   = $appsettingsAuthority
 $settings.AzureAdB2C.ClientId    = $appsettingsClientId
 $settings.BackendApi.BaseAddress = $appsettingsBackend
 $settings.AccessTokenScopes      = @($appsettingsScope)
-$settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $publishAppsettings -NoNewline
+$settings | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $srcAppsettings -NoNewline
 Write-Host "  ClientId:    $appsettingsClientId" -ForegroundColor DarkGray
 Write-Host "  Authority:   $appsettingsAuthority" -ForegroundColor DarkGray
 Write-Host "  BackendApi:  $appsettingsBackend" -ForegroundColor DarkGray
 Write-Host "  Scope:       $appsettingsScope" -ForegroundColor DarkGray
 
-# Stamp the build date into the published version.json so the panel
-# can show "vX.Y.Z (yyyy-MM-dd)" without us having to remember to
-# touch the file by hand. No SW SRI patching here — admin panel has
-# no service worker, unlike the main PWA.
-$publishVersionJson = Join-Path $publishDir 'version.json'
-if (Test-Path $publishVersionJson)
+if (Test-Path $srcVersionJson)
 {
-    $versionInfo = Get-Content -LiteralPath $publishVersionJson -Raw | ConvertFrom-Json
+    $versionInfo = Get-Content -LiteralPath $srcVersionJson -Raw | ConvertFrom-Json
     $versionInfo.buildDate = [System.DateTime]::UtcNow.ToString('yyyy-MM-dd')
-    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $publishVersionJson -NoNewline
-    Write-Host "Stamped version.json: v$($versionInfo.version) ($($versionInfo.buildDate))" -ForegroundColor DarkGray
+    $versionInfo | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $srcVersionJson -NoNewline
+    Write-Host "  version:     v$($versionInfo.version) ($($versionInfo.buildDate))" -ForegroundColor DarkGray
 }
-else
+
+# ------------------------------------------------------------------
+# Build and publish (source restored in finally)
+# ------------------------------------------------------------------
+Write-Host ""
+Write-Host "Publishing $adminProject (Release)..." -ForegroundColor Cyan
+try
 {
-    Write-Warning "Published version.json not found at $publishVersionJson — version display will be empty."
+    if (Test-Path $publishRoot)
+    {
+        Remove-Item -LiteralPath $publishRoot -Recurse -Force
+    }
+
+    & dotnet publish $adminProject -c Release -o $publishRoot
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw "dotnet publish failed with exit code $LASTEXITCODE"
+    }
+
+    if (-not (Test-Path $publishDir))
+    {
+        throw "Publish output not found at expected location: $publishDir"
+    }
+
+    Write-Host "Publish output: $publishDir" -ForegroundColor DarkGray
+}
+finally
+{
+    Copy-Item -LiteralPath $appsettingsBackup -Destination $srcAppsettings -Force
+    Remove-Item -LiteralPath $appsettingsBackup -Force
+    if ($versionBackup)
+    {
+        Copy-Item -LiteralPath $versionBackup -Destination $srcVersionJson -Force
+        Remove-Item -LiteralPath $versionBackup -Force
+    }
+    Write-Host "Restored source appsettings.json / version.json." -ForegroundColor DarkGray
 }
 
 if ($WhatIf)
@@ -299,26 +309,81 @@ if ($WhatIf)
     exit 0
 }
 
-# Upload.
+# ------------------------------------------------------------------
+# Upload — branches on HOSTING_TYPE_ADMIN
+# ------------------------------------------------------------------
 Write-Host ""
-Write-Host "Uploading to storage..." -ForegroundColor Cyan
+Write-Host "Uploading to $hostingType target..." -ForegroundColor Cyan
 
-$azArgs = @(
-    'storage', 'blob', 'upload-batch'
-    '--account-name',   $storageAccount
-    '--destination',    '$web'
-    '--source',         $publishDir
-    '--overwrite',      'true'
-    '--auth-mode',      'login'
-)
-& az @azArgs
-if ($LASTEXITCODE -ne 0)
+switch ($hostingType)
 {
-    throw "Storage upload failed with exit code $LASTEXITCODE"
+    'storage'
+    {
+        $storageAccount = Require-EnvValue -Path $EnvFile -Name "STORAGE_ACCOUNT_ADMIN_$envSuffix"
+        Write-Host "  Storage account: $storageAccount" -ForegroundColor DarkGray
+
+        $azArgs = @(
+            'storage', 'blob', 'upload-batch'
+            '--account-name',   $storageAccount
+            '--destination',    '$web'
+            '--source',         $publishDir
+            '--overwrite',      'true'
+            '--auth-mode',      'login'
+        )
+        & az @azArgs
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "Storage upload failed with exit code $LASTEXITCODE"
+        }
+    }
+
+    'staticwebapp'
+    {
+        $staticWebApp  = Require-EnvValue -Path $EnvFile -Name "STATIC_WEB_APP_ADMIN_$envSuffix"
+        $resourceGroup = Require-EnvValue -Path $EnvFile -Name "RESOURCE_GROUP_$envSuffix"
+        Write-Host "  Static Web App: $staticWebApp" -ForegroundColor DarkGray
+
+        # SPA fallback so deep links serve index.html instead of 404.
+        # Written post-publish (admin has no SW, but keep it parallel
+        # with the PWA and out of any future asset manifest).
+        $swaConfig = Join-Path $publishDir 'staticwebapp.config.json'
+        Set-Content -LiteralPath $swaConfig -NoNewline -Value @'
+{
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  }
+}
+'@
+        Write-Host "  Wrote staticwebapp.config.json (SPA fallback)" -ForegroundColor DarkGray
+
+        $deployToken = az staticwebapp secrets list `
+            --name $staticWebApp `
+            --resource-group $resourceGroup `
+            --query "properties.apiKey" -o tsv
+        if (-not $deployToken)
+        {
+            throw "Failed to fetch deployment token for SWA '$staticWebApp'."
+        }
+
+        try
+        {
+            $null = & swa --version 2>&1
+        }
+        catch
+        {
+            throw "Static Web Apps CLI ('swa') is not installed. Run 'npm install -g @azure/static-web-apps-cli' and try again."
+        }
+
+        & swa deploy $publishDir --deployment-token $deployToken --env production
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "swa deploy failed with exit code $LASTEXITCODE"
+        }
+    }
 }
 
 # Optional AFD purge — only if FRONT_DOOR_*_ADMIN_<ENV> are set. Admin
-# panel may not be behind AFD yet, so this stays a no-op by default.
+# panel may not be behind AFD, so this stays a no-op by default.
 $afdProfile  = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_PROFILE_ADMIN_$envSuffix"
 $afdEndpoint = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_ENDPOINT_ADMIN_$envSuffix"
 $afdRg       = Read-EnvValue -Path $EnvFile -Name "FRONT_DOOR_RG_ADMIN_$envSuffix"
@@ -342,17 +407,16 @@ if ($afdProfile -and $afdEndpoint -and $afdRg)
 }
 else
 {
-    Write-Host "FRONT_DOOR_*_ADMIN_$envSuffix not set — skipping AFD purge (admin panel not behind AFD yet)." -ForegroundColor DarkGray
+    Write-Host "FRONT_DOOR_*_ADMIN_$envSuffix not set — skipping AFD purge." -ForegroundColor DarkGray
 }
 
-# Push the auto-bump commit. Kept local until the upload succeeded so
-# origin never carries a version that didn't actually deploy.
+# Push the auto-bump commit now that the upload succeeded.
 if ($bumpedThisDeploy)
 {
-    $currentBranch = (git -C $bumpRepoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    $currentBranch = (git -C $repoRoot rev-parse --abbrev-ref HEAD 2>$null).Trim()
     Write-Host ""
     Write-Host "Pushing auto-bump commit to origin/$currentBranch..." -ForegroundColor Cyan
-    git -C $bumpRepoRoot push origin $currentBranch 2>&1 | Out-Host
+    git -C $repoRoot push origin $currentBranch 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0)
     {
         Write-Warning "git push failed; the auto-bump commit is local. Resolve and push manually so origin matches the deployed version."
