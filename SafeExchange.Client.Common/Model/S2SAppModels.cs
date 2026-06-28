@@ -54,6 +54,13 @@ namespace SafeExchange.Client.Common.Model
         public List<S2SAppOwner> Owners { get; set; } = new();
     }
 
+    /// <summary>A tenant the operator allows for S2S app registration (GET /v2/s2sapps-allowed-tenants).</summary>
+    public class S2SAllowedTenant
+    {
+        public string TenantId { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+    }
+
     public class S2SAppOverview
     {
         public string DisplayName { get; set; } = string.Empty;

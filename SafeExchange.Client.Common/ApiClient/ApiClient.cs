@@ -834,6 +834,12 @@ namespace SafeExchange.Client.Common
                 return await client.PostAsJsonAsync($"{ApiVersion}/group-search", input);
             });
 
+        public async Task<BaseResponseObject<List<Application>>> SearchApplicationsAsync(SearchInput input)
+            => await this.ProcessResponseAsync<List<Application>>(async () =>
+            {
+                return await client.PostAsJsonAsync($"{ApiVersion}/application-search", input);
+            });
+
         #endregion
 
         private async Task<BaseResponseObject<T>> ProcessResponseAsync<T>(Func<Task<HttpResponseMessage>> asyncHttpCall) where T : class

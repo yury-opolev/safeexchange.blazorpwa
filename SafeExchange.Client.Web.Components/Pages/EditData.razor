@@ -48,6 +48,19 @@
     </ItemTemplate>
 </ItemSearchDialog>
 
+<ItemSearchDialog TItem="Application" @ref="this.applicationPickDialog" DialogTitle="Find application" Placeholder="Search applications..." OnItemPickedCallback="this.FinishApplicationPick" SearchItemsAsyncCallback="this.SearchApplicationsAsync" OnClosedCallback="() => this.StateHasChanged()">
+    <ItemTemplate Context="application">
+        <div class="px-2">
+            <div class="text-truncate">
+                @application.DisplayName
+            </div>
+            <div class="text-truncate">
+                <small>@application.AadClientId &middot; @application.AadTenantId</small>
+            </div>
+        </div>
+    </ItemTemplate>
+</ItemSearchDialog>
+
 <div class="modal fade" id="deletionDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -356,30 +369,25 @@
 
                         case (SubjectType.Application):
                             <div class="col">
-                                <div class="form-floating">
-                                    <InputSelect id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")">
-                                        @if (!this.StateContainer.IsFetchingApplications)
+                                <div class="input-group">
+                                    <div class="form-floating">
+                                        <InputText id="@($"application-input-{i}")" class="@(this.IsDeleted(tempIndex)? "form-control text-removed" : "form-control")" readonly disabled="@(tempIndex < this.FixedAccessItemCount || this.StateContainer.IsInProgress)" @bind-Value="this.compoundModel.Permissions[tempIndex].SubjectName" placeholder="Application" aria-describedby="@($"app-validation-{i}")" />
+                                        <label for="@($"application-input-{i}")" class="form-label">Application</label>
+                                    </div>
+                                    <span class="narrow-floating-group input-group-text">
+                                        @if (tempIndex < this.FixedAccessItemCount)
                                         {
-                                            if ((this.StateContainer.RegisteredApplications?.Count ?? 0) > 0)
-                                            {
-                                                foreach (var application in this.StateContainer.RegisteredApplications.Where(a => a.Enabled))
-                                                {
-                                                    <option value="@application.DisplayName">@application.DisplayName</option>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <option value="">- No Applications -</option>
-                                            }
+                                            <button class="btn btn-link" type="button" disabled aria-label="Find application">
+                                                <span class="bi bi-search"></span>
+                                            </button>
                                         }
-                                    </InputSelect>
-                                    <label for="@($"application-input-{i}")" class="form-label">
-                                        @if (this.StateContainer.IsFetchingApplications)
+                                        else
                                         {
-                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            <button class="btn" type="button" disabled="@(this.StateContainer.IsInProgress)" @onclick="@(e => this.StartApplicationPickAsync(tempIndex))" aria-label="Find application">
+                                                <span class="bi bi-search"></span>
+                                            </button>
                                         }
-                                        Application
-                                    </label>
+                                    </span>
                                 </div>
                                 <ValidationMessage id="@($"app-validation-{i}")" For="@(() => compoundModel.Permissions[tempIndex].SubjectName)" />
                             </div>
@@ -480,6 +488,8 @@
     private ItemSearchDialog<GraphUserOutput> userPickDialog;
 
     private ItemSearchDialog<GraphGroupOutput> groupPickDialog;
+
+    private ItemSearchDialog<Application> applicationPickDialog;
 
     private int currentPermissionItemIndex;
 
@@ -1146,6 +1156,22 @@
     {
         this.currentPermissionItemIndex = permissionItemIndex;
         await this.groupPickDialog.StartItemSearchAsync();
+    }
+
+    private async Task StartApplicationPickAsync(int permissionItemIndex)
+    {
+        this.currentPermissionItemIndex = permissionItemIndex;
+        await this.applicationPickDialog.StartItemSearchAsync();
+    }
+
+    private async Task<BaseResponseObject<List<Application>>> SearchApplicationsAsync(SearchInput searchInput)
+        => await this.apiClient.SearchApplicationsAsync(searchInput);
+
+    public void FinishApplicationPick(Application pickedApplication)
+    {
+        // Application access grants key on the globally-unique display name.
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectId = pickedApplication.DisplayName;
+        this.compoundModel.Permissions[this.currentPermissionItemIndex].SubjectName = pickedApplication.DisplayName;
     }
 
     private async Task<BaseResponseObject<List<GraphUserOutput>>> SearchUsersAsync(SearchInput searchInput)
