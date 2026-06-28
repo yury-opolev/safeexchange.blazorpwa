@@ -427,7 +427,6 @@
         }
 
         this.editContext = new EditContext(this.compoundModel);
-        await this.StateContainer.TryFetchRegisteredApplications(this.apiClient);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

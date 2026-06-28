@@ -549,7 +549,6 @@
 
         this.editContext = new EditContext(this.compoundModel);
         await this.FetchSecretAsync(this.ObjectName);
-        await this.StateContainer.TryFetchRegisteredApplications(this.apiClient);
         await this.StateContainer.TryFetchRegisteredGroups(this.apiClient);
     }
 
