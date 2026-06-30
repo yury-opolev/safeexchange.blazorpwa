@@ -67,6 +67,21 @@
         <ValidationMessage For="@(() => this.form.AadClientId)" class="text-danger small" />
     </div>
 
+    @if (this.allowedTenants.Count > 0)
+    {
+        <div class="mb-2">
+            <label class="form-label" for="aad-tenant-id">Tenant</label>
+            <select id="aad-tenant-id" class="form-select" @bind="this.form.AadTenantId">
+                <option value="">- Select a tenant -</option>
+                @foreach (var tenant in this.allowedTenants)
+                {
+                    <option value="@tenant.TenantId">@tenant.DisplayName</option>
+                }
+            </select>
+            <small class="form-text text-muted">The Entra tenant that issues your app's tokens. Only tenants approved for S2S are listed.</small>
+        </div>
+    }
+
     <p class="mt-3 mb-2"><strong>Co-owners:</strong></p>
     <ValidationMessage For="@(() => this.form.CoOwners)" class="text-danger small d-block mb-2" />
 
@@ -139,19 +154,39 @@
     private string? error;
     private RegisterForm form = new();
     private int currentOwnerIndex;
+    private List<S2SAllowedTenant> allowedTenants = new();
 
     private ItemSearchDialog<GraphUserOutput>? userPickDialog;
     private ItemSearchDialog<GraphGroupOutput>? groupPickDialog;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         this.StateContainer.SetCurrentPageHeader("Register S2S app");
         this.form.CoOwners.Add(new CoOwnerRow());
+
+        try
+        {
+            var response = await this.apiClient.GetS2SAllowedTenantsAsync();
+            if ("ok".Equals(response.Status) && response.Result is not null)
+            {
+                this.allowedTenants = response.Result;
+                // Preselect when there's exactly one choice so the user can't miss it.
+                if (this.allowedTenants.Count == 1)
+                {
+                    this.form.AadTenantId = this.allowedTenants[0].TenantId;
+                }
+            }
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
     }
 
     private bool CanSubmit
         => !string.IsNullOrWhiteSpace(this.form.DisplayName)
         && !string.IsNullOrWhiteSpace(this.form.AadClientId)
+        && (this.allowedTenants.Count == 0 || !string.IsNullOrWhiteSpace(this.form.AadTenantId))
         && this.form.CoOwners.Any(o => !string.IsNullOrWhiteSpace(o.SubjectId));
 
     private void AddCoOwner()
@@ -238,7 +273,9 @@
     {
         if (!this.CanSubmit)
         {
-            this.error = "Display name, client id, and at least one co-owner are required.";
+            this.error = this.allowedTenants.Count > 0 && string.IsNullOrWhiteSpace(this.form.AadTenantId)
+                ? "Display name, client id, a tenant, and at least one co-owner are required."
+                : "Display name, client id, and at least one co-owner are required.";
             return;
         }
 
@@ -260,6 +297,7 @@
             {
                 DisplayName = this.form.DisplayName.Trim(),
                 AadClientId = this.form.AadClientId.Trim(),
+                AadTenantId = string.IsNullOrWhiteSpace(this.form.AadTenantId) ? null : this.form.AadTenantId,
                 AdditionalOwners = owners,
             };
 
@@ -300,6 +338,10 @@
         [Required(ErrorMessage = "Entra client id is required.")]
         [RegularExpression(GuidPattern, ErrorMessage = "Entra client id must be a GUID (00000000-0000-0000-0000-000000000000).")]
         public string AadClientId { get; set; } = string.Empty;
+
+        // Chosen from the allowed-tenants dropdown when the operator has configured an
+        // S2S allowlist; left empty (server defaults to the home tenant) otherwise.
+        public string AadTenantId { get; set; } = string.Empty;
 
         public List<CoOwnerRow> CoOwners { get; } = new();
 

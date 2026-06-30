@@ -27,6 +27,15 @@ namespace SafeExchange.Client.Common
             return await DeserializeOrErrorAsync<S2SApp>(response);
         }
 
+        /// <summary>GET /v2/s2sapps-allowed-tenants — tenants the operator allows for S2S registration.</summary>
+        public async Task<BaseResponseObject<List<S2SAllowedTenant>>> GetS2SAllowedTenantsAsync()
+        {
+            var url = new Uri(this.client.BaseAddress!, $"{ApiVersion}/s2sapps-allowed-tenants");
+            using var http = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await this.client.SendAsync(http);
+            return await DeserializeOrErrorAsync<List<S2SAllowedTenant>>(response);
+        }
+
         /// <summary>GET /v2/s2sapps/mine — apps where the caller is a direct user-owner.</summary>
         public async Task<BaseResponseObject<List<S2SAppOverview>>> ListMyS2SAppsAsync()
         {
