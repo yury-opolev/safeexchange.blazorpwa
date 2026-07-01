@@ -247,8 +247,12 @@ if (-not (Test-Path $srcAppsettings)) {
     throw "Source appsettings.json not found: $srcAppsettings"
 }
 
-$appsettingsBackup = "$srcAppsettings.deploy-bak"
-$versionBackup     = if (Test-Path $srcVersionJson) { "$srcVersionJson.deploy-bak" } else { $null }
+# Back up OUTSIDE the project tree (temp dir). A backup next to the source in
+# wwwroot exists during `dotnet publish` and can be swept into the published
+# output as a static web asset — and then SW-cached — shipping the
+# pre-injection appsettings.json. A temp path is never a publish input.
+$appsettingsBackup = Join-Path ([System.IO.Path]::GetTempPath()) ("appsettings.json.deploy-bak." + [guid]::NewGuid())
+$versionBackup     = if (Test-Path $srcVersionJson) { Join-Path ([System.IO.Path]::GetTempPath()) ("version.json.deploy-bak." + [guid]::NewGuid()) } else { $null }
 Copy-Item -LiteralPath $srcAppsettings -Destination $appsettingsBackup -Force
 if ($versionBackup) { Copy-Item -LiteralPath $srcVersionJson -Destination $versionBackup -Force }
 
