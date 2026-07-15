@@ -16,5 +16,11 @@ namespace SafeExchange.Client.Common.Model
         public ExpirationSettingsOutput ExpirationSettings { get; set; }
 
         public bool AuditEnabled { get; set; }
+
+        /// <summary>
+        /// The current caller's effective permissions on this secret. Populated by the
+        /// single-secret read endpoint; null on responses that do not carry it.
+        /// </summary>
+        public CallerPermissions CallerPermissions { get; set; }
     }
 }

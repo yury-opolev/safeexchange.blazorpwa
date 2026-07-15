@@ -23,6 +23,14 @@ namespace SafeExchange.Client.Common.Model
             this.ExpirationMetadata = new ExpirationMetadata(source.ExpirationMetadata);
 
             this.AuditEnabled = source.AuditEnabled;
+
+            this.CallerPermissions = new CallerPermissions
+            {
+                CanRead = source.CallerPermissions.CanRead,
+                CanWrite = source.CallerPermissions.CanWrite,
+                CanGrantAccess = source.CallerPermissions.CanGrantAccess,
+                CanRevokeAccess = source.CallerPermissions.CanRevokeAccess,
+            };
         }
 
         public ObjectMetadata(ObjectMetadataOutput source)
@@ -35,6 +43,10 @@ namespace SafeExchange.Client.Common.Model
             this.ExpirationMetadata = new ExpirationMetadata(source.ExpirationSettings);
 
             this.AuditEnabled = source.AuditEnabled;
+
+            // Additive field: the API only populates it on the single-secret read path,
+            // so fall back to an all-false capability set for responses without it.
+            this.CallerPermissions = source.CallerPermissions ?? new CallerPermissions();
         }
 
         private static List<ContentMetadata> CreateContent()
@@ -63,6 +75,11 @@ namespace SafeExchange.Client.Common.Model
         // Default true so freshly-constructed metadata (the new-secret form path)
         // opts new secrets into auditing unless the user unchecks the checkbox.
         public bool AuditEnabled { get; set; } = true;
+
+        // The caller's effective permissions on this secret (direct unioned with
+        // group-derived). Drives the UI capability checks. Defaults to no capabilities
+        // until the read endpoint populates it.
+        public CallerPermissions CallerPermissions { get; set; } = new();
 
         public MetadataCreationInput ToCreationDto() => new MetadataCreationInput()
         {
