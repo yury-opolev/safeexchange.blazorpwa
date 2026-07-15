@@ -417,11 +417,11 @@
                     <div class="col-2">
                         @if (this.IsDeleted(tempIndex))
                         {
-                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="bi bi-arrow-counterclockwise"></span></button>
+                            <button id="@($"undo-revoke-button-{i}")" class="btn btn-outline-secondary" type="button" disabled="@(this.StateContainer.IsInProgress || this.IsRevokeDisabled(tempIndex))" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Undo revoke access" aria-labelledby="@($"undo-revoke-button-{i} username-input-{i}")"><span class="bi bi-arrow-counterclockwise"></span></button>
                         }
                         else
                         {
-                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="bi bi-x-lg"></span></button>
+                            <button id="@($"revoke-button-{i}")" class="btn btn-outline-danger" type="button" disabled="@(this.StateContainer.IsInProgress || this.IsRevokeDisabled(tempIndex))" @onclick="@(e => this.RemovePermissionItem(tempIndex))" aria-label="Revoke access" aria-labelledby="@($"revoke-button-{i} username-input-{i}")"><span class="bi bi-x-lg"></span></button>
                         }
                     </div>
                 </div>
@@ -430,7 +430,7 @@
         <p>
             <div class="row">
                 <div class="col">
-                    <button class="btn btn-outline-primary" type="button" disabled="@this.StateContainer.IsInProgress" @onclick="AddPermissionItem"><span class="bi bi-plus-lg"></span>&nbsp; Add user</button>
+                    <button class="btn btn-outline-primary" type="button" disabled="@(this.StateContainer.IsInProgress || !this.CanGrantAccess())" @onclick="AddPermissionItem"><span class="bi bi-plus-lg"></span>&nbsp; Add user</button>
                 </div>
             </div>
         </p>
@@ -763,6 +763,17 @@
     {
         return this.DeletedAccessItems.Contains(index);
     }
+
+    // Grant / revoke controls follow the caller's effective GrantAccess / RevokeAccess.
+    private bool CanGrantAccess()
+        => this.compoundModel?.Metadata?.EffectivePermissions?.CanGrantAccess ?? false;
+
+    private bool CanRevokeAccess()
+        => this.compoundModel?.Metadata?.EffectivePermissions?.CanRevokeAccess ?? false;
+
+    // Only existing access items are gated by RevokeAccess; unsaved added rows are just removed locally.
+    private bool IsRevokeDisabled(int index)
+        => index < this.FixedAccessItemCount && !this.CanRevokeAccess();
 
     private bool IsAttachmentDeleted(ContentMetadata attachment)
     {

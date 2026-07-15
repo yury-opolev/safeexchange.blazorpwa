@@ -57,7 +57,7 @@
                         <i class="bi bi-eye"></i>
                         <span>&nbsp;View</span>
                     </button>
-                    <button class="btn btn-outline-primary" type="button" disabled="@(!secretPermissions.CanWrite || this.StateContainer.IsInProgress)" @onclick="@(e => this.EditObject(secretPermissions.ObjectName))">
+                    <button class="btn btn-outline-primary" type="button" disabled="@(!secretPermissions.CallerEffectivePermissions.CanWrite || this.StateContainer.IsInProgress)" @onclick="@(e => this.EditObject(secretPermissions.ObjectName))">
                         <i class="bi bi-pencil"></i>
                         <span>&nbsp; Edit</span>
                     </button>
@@ -91,7 +91,7 @@
 
     private NotificationData Notification;
 
-    private List<SubjectPermissions> SecretsPermissions;
+    private List<SecretListItemOutput> SecretsPermissions;
 
     private GiveUpDialog giveUpDialog;
 
@@ -202,11 +202,7 @@
                 return;
             }
 
-            this.SecretsPermissions = new List<SubjectPermissions>(secretPermissionsOutput.Result.Count);
-            foreach (var secretPermissionsOutputItem in secretPermissionsOutput.Result)
-            {
-                this.SecretsPermissions.Add(new SubjectPermissions(secretPermissionsOutputItem));
-            }
+            this.SecretsPermissions = secretPermissionsOutput.Result;
         }
         catch (AccessTokenNotAvailableException exception)
         {

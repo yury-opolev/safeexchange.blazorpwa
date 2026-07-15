@@ -122,9 +122,12 @@ namespace SafeExchange.Client.Common
 
             var result = new CompoundModel()
             {
-                Metadata = new ObjectMetadata(secretMetadata.Result),
+                Metadata = new ObjectMetadata(secretMetadata.Result)
+                {
+                    EffectivePermissions = accessListData.Result?.CallerEffectivePermissions ?? new EffectivePermissions()
+                },
                 Permissions = new List<SubjectPermissions>(
-                    accessListData.Result?.Select(p => new SubjectPermissions(p))
+                    accessListData.Result?.AccessList?.Select(p => new SubjectPermissions(p))
                     ?? Array.Empty<SubjectPermissions>()),
                 MainData = mainDataBuilder?.ToString() ?? "Could not get data."
             };
@@ -511,8 +514,8 @@ namespace SafeExchange.Client.Common
             return await client.PostAsJsonAsync($"{ApiVersion}/access/{secretId}", input);
         });
 
-        public async Task<BaseResponseObject<List<SubjectPermissionsOutput>>> ListAccessAsync(string secretId)
-            => await this.ProcessResponseAsync<List<SubjectPermissionsOutput>>(async () =>
+        public async Task<BaseResponseObject<AccessListOutput>> ListAccessAsync(string secretId)
+            => await this.ProcessResponseAsync<AccessListOutput>(async () =>
         {
             return await client.GetAsync($"{ApiVersion}/access/{secretId}");
         });
@@ -555,8 +558,8 @@ namespace SafeExchange.Client.Common
 
         #region secret metadata
 
-        public async Task<BaseResponseObject<List<SubjectPermissionsOutput>>> ListSecretMetadataAsync()
-            => await this.ProcessResponseAsync<List<SubjectPermissionsOutput>>(async () =>
+        public async Task<BaseResponseObject<List<SecretListItemOutput>>> ListSecretMetadataAsync()
+            => await this.ProcessResponseAsync<List<SecretListItemOutput>>(async () =>
         {
             return await client.GetAsync($"{ApiVersion}/secret-list");
         });

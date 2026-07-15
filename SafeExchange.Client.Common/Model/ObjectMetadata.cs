@@ -23,6 +23,14 @@ namespace SafeExchange.Client.Common.Model
             this.ExpirationMetadata = new ExpirationMetadata(source.ExpirationMetadata);
 
             this.AuditEnabled = source.AuditEnabled;
+
+            this.EffectivePermissions = new EffectivePermissions
+            {
+                CanRead = source.EffectivePermissions.CanRead,
+                CanWrite = source.EffectivePermissions.CanWrite,
+                CanGrantAccess = source.EffectivePermissions.CanGrantAccess,
+                CanRevokeAccess = source.EffectivePermissions.CanRevokeAccess,
+            };
         }
 
         public ObjectMetadata(ObjectMetadataOutput source)
@@ -63,6 +71,9 @@ namespace SafeExchange.Client.Common.Model
         // Default true so freshly-constructed metadata (the new-secret form path)
         // opts new secrets into auditing unless the user unchecks the checkbox.
         public bool AuditEnabled { get; set; } = true;
+
+        // Caller's effective permissions, populated from the access endpoint; drives UI capability checks.
+        public EffectivePermissions EffectivePermissions { get; set; } = new();
 
         public MetadataCreationInput ToCreationDto() => new MetadataCreationInput()
         {
