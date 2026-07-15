@@ -30,7 +30,7 @@ namespace SafeExchange.Client.Common.Tests
 
             var response = await client.ListSecretMetadataAsync();
 
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/secret-list"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/secret-list"));
             Assert.That(response.Status, Is.EqualTo("ok"));
             var item = response.Result!.Single();
 
@@ -55,7 +55,7 @@ namespace SafeExchange.Client.Common.Tests
 
             var response = await client.ListAccessAsync("sec-1");
 
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/access/sec-1"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/access/sec-1"));
             Assert.That(response.Status, Is.EqualTo("ok"));
 
             // The access list keeps each subject's actual permissions.
