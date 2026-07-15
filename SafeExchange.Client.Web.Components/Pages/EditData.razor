@@ -764,18 +764,14 @@
         return this.DeletedAccessItems.Contains(index);
     }
 
-    // Permission-management controls are driven independently by the caller's effective
-    // permissions (direct unioned with group-derived), as calculated by the API — granting
-    // requires effective GrantAccess, revoking requires effective RevokeAccess.
+    // Grant / revoke controls follow the caller's effective GrantAccess / RevokeAccess.
     private bool CanGrantAccess()
-        => this.compoundModel?.Metadata?.CallerPermissions?.CanGrantAccess ?? false;
+        => this.compoundModel?.Metadata?.EffectivePermissions?.CanGrantAccess ?? false;
 
     private bool CanRevokeAccess()
-        => this.compoundModel?.Metadata?.CallerPermissions?.CanRevokeAccess ?? false;
+        => this.compoundModel?.Metadata?.EffectivePermissions?.CanRevokeAccess ?? false;
 
-    // Existing access items can only be marked for revocation when the caller has effective
-    // RevokeAccess. Newly-added, unsaved rows are removed locally (not revoked), so they stay
-    // enabled. The API remains the final authority on the resulting access PATCH.
+    // Only existing access items are gated by RevokeAccess; unsaved added rows are just removed locally.
     private bool IsRevokeDisabled(int index)
         => index < this.FixedAccessItemCount && !this.CanRevokeAccess();
 

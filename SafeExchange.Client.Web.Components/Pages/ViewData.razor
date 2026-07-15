@@ -482,13 +482,9 @@
         await this.ResolveInlineImagesAsync();
     }
 
+    // Edit follows the caller's effective Write, calculated by the API — not an access-list identity match.
     private bool CanEditObject()
-    {
-        // Drive Edit from the caller's effective permissions (direct unioned with
-        // group-derived), as calculated by the API — never by matching the caller's
-        // identifier against access-list entries. Edit requires effective Write.
-        return this.compoundModel?.Metadata?.CallerPermissions?.CanWrite ?? false;
-    }
+        => this.compoundModel?.Metadata?.EffectivePermissions?.CanWrite ?? false;
 
     private void EditObject()
     {

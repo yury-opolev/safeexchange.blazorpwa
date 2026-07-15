@@ -24,12 +24,12 @@ namespace SafeExchange.Client.Common.Model
 
             this.AuditEnabled = source.AuditEnabled;
 
-            this.CallerPermissions = new CallerPermissions
+            this.EffectivePermissions = new EffectivePermissions
             {
-                CanRead = source.CallerPermissions.CanRead,
-                CanWrite = source.CallerPermissions.CanWrite,
-                CanGrantAccess = source.CallerPermissions.CanGrantAccess,
-                CanRevokeAccess = source.CallerPermissions.CanRevokeAccess,
+                CanRead = source.EffectivePermissions.CanRead,
+                CanWrite = source.EffectivePermissions.CanWrite,
+                CanGrantAccess = source.EffectivePermissions.CanGrantAccess,
+                CanRevokeAccess = source.EffectivePermissions.CanRevokeAccess,
             };
         }
 
@@ -43,10 +43,6 @@ namespace SafeExchange.Client.Common.Model
             this.ExpirationMetadata = new ExpirationMetadata(source.ExpirationSettings);
 
             this.AuditEnabled = source.AuditEnabled;
-
-            // Additive field: the API only populates it on the single-secret read path,
-            // so fall back to an all-false capability set for responses without it.
-            this.CallerPermissions = source.CallerPermissions ?? new CallerPermissions();
         }
 
         private static List<ContentMetadata> CreateContent()
@@ -76,10 +72,8 @@ namespace SafeExchange.Client.Common.Model
         // opts new secrets into auditing unless the user unchecks the checkbox.
         public bool AuditEnabled { get; set; } = true;
 
-        // The caller's effective permissions on this secret (direct unioned with
-        // group-derived). Drives the UI capability checks. Defaults to no capabilities
-        // until the read endpoint populates it.
-        public CallerPermissions CallerPermissions { get; set; } = new();
+        // Caller's effective permissions, populated from the access endpoint; drives UI capability checks.
+        public EffectivePermissions EffectivePermissions { get; set; } = new();
 
         public MetadataCreationInput ToCreationDto() => new MetadataCreationInput()
         {
