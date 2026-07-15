@@ -68,5 +68,24 @@ namespace SafeExchange.Client.Common.Tests
 
             Assert.That(model.PermissionsString, Is.EqualTo(string.Empty));
         }
+
+        [Test]
+        public void State_And_Permissions_FromEffective_WhenGroupOnlyReadable()
+        {
+            // Actual direct grant is empty, but the caller can read/write via a group, so the pinned
+            // secret is Live (not AccessLost) and shows the effective permissions.
+            var model = new PinnedSecret(new PinnedSecretListItemOutput
+            {
+                SecretName = "s6",
+                Exists = true,
+                CanRead = false,
+                CallerEffectivePermissions = new EffectivePermissions { CanRead = true, CanWrite = true },
+                Tags = new List<string> { "prod" }
+            });
+
+            Assert.That(model.State, Is.EqualTo(PinnedSecretState.Live));
+            Assert.That(model.PermissionsString, Is.EqualTo("Read,Write"));
+            Assert.That(model.Tags, Has.Member("prod"));
+        }
     }
 }

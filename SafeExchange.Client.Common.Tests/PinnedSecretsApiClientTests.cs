@@ -19,7 +19,9 @@ namespace SafeExchange.Client.Common.Tests
         [Test]
         public async Task ListPinnedSecretsAsync_SendsGetAndParsesList()
         {
-            var body = "{\"status\":\"ok\",\"result\":[{\"secretName\":\"s1\",\"exists\":true,\"canRead\":true,\"tags\":[\"prod\"]},{\"secretName\":\"s2\",\"exists\":false,\"canRead\":false,\"tags\":[]}]}";
+            var body = "{\"status\":\"ok\",\"result\":[{\"secretName\":\"s1\",\"exists\":true,\"canRead\":false,\"tags\":[\"prod\"]," +
+                       "\"callerEffectivePermissions\":{\"canRead\":true,\"canWrite\":true,\"canGrantAccess\":false,\"canRevokeAccess\":false}}," +
+                       "{\"secretName\":\"s2\",\"exists\":false,\"canRead\":false,\"tags\":[]}]}";
             var handler = new CapturingHttpMessageHandler(HttpStatusCode.OK, body);
             var client = new ApiClient(new StubHttpClientFactory(handler));
 
@@ -31,6 +33,11 @@ namespace SafeExchange.Client.Common.Tests
             Assert.That(response.Result, Has.Count.EqualTo(2));
             Assert.That(response.Result![0].SecretName, Is.EqualTo("s1"));
             Assert.That(response.Result![0].Tags, Has.Member("prod"));
+
+            // Actual direct grant is empty; the caller's effective grant (via a group) is separate.
+            Assert.That(response.Result![0].CanRead, Is.False);
+            Assert.That(response.Result![0].CallerEffectivePermissions.CanRead, Is.True);
+            Assert.That(response.Result![0].CallerEffectivePermissions.CanWrite, Is.True);
         }
 
         [Test]
