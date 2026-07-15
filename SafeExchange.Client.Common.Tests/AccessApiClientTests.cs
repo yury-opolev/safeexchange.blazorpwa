@@ -47,7 +47,7 @@ namespace SafeExchange.Client.Common.Tests
 
             Assert.That(handler.CapturedRequest, Is.Not.Null);
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(new HttpMethod("PATCH")));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/access/secret-1"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/access/secret-1"));
             Assert.That(response.Status, Is.EqualTo("ok"));
         }
 
@@ -112,7 +112,7 @@ namespace SafeExchange.Client.Common.Tests
 
             Assert.That(handler.CapturedRequest, Is.Not.Null);
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(HttpMethod.Get));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/access-giveup/secret-q"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/access-giveup/secret-q"));
             Assert.That(response.Status, Is.EqualTo("ok"));
             Assert.That(response.Result, Is.Not.Null);
             Assert.That(response.Result!.HasDirectRow, Is.True);
@@ -162,7 +162,7 @@ namespace SafeExchange.Client.Common.Tests
 
             Assert.That(handler.CapturedRequest, Is.Not.Null);
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(HttpMethod.Delete));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/access-giveup/secret-z"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/access-giveup/secret-z"));
             Assert.That(response.Status, Is.EqualTo("ok"));
             Assert.That(response.Result!.HadDirectRow, Is.True);
             Assert.That(response.Result!.WasOrphaned, Is.True);

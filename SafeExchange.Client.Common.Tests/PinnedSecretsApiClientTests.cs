@@ -26,7 +26,7 @@ namespace SafeExchange.Client.Common.Tests
             var response = await client.ListPinnedSecretsAsync();
 
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(HttpMethod.Get));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/pinnedsecrets-list"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/pinnedsecrets-list"));
             Assert.That(response.Status, Is.EqualTo("ok"));
             Assert.That(response.Result, Has.Count.EqualTo(2));
             Assert.That(response.Result![0].SecretName, Is.EqualTo("s1"));
@@ -54,7 +54,7 @@ namespace SafeExchange.Client.Common.Tests
             var response = await client.GetPinnedSecretAsync("s1");
 
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(HttpMethod.Get));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/pinnedsecrets/s1"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/pinnedsecrets/s1"));
             Assert.That(response.Status, Is.EqualTo("ok"));
             Assert.That(response.Result!.SecretName, Is.EqualTo("s1"));
         }
@@ -80,7 +80,7 @@ namespace SafeExchange.Client.Common.Tests
             var response = await client.PutPinnedSecretAsync("s1");
 
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(HttpMethod.Put));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/pinnedsecrets/s1"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/pinnedsecrets/s1"));
             Assert.That(handler.CapturedRequest!.Content, Is.Null);
             Assert.That(response.Status, Is.EqualTo("ok"));
         }
@@ -107,7 +107,7 @@ namespace SafeExchange.Client.Common.Tests
             var response = await client.DeletePinnedSecretAsync("s1");
 
             Assert.That(handler.CapturedRequest!.Method, Is.EqualTo(HttpMethod.Delete));
-            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v2/pinnedsecrets/s1"));
+            Assert.That(handler.CapturedRequest!.RequestUri!.AbsoluteUri, Does.EndWith("/api/v3/pinnedsecrets/s1"));
             Assert.That(response.Status, Is.EqualTo("ok"));
         }
 

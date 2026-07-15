@@ -22,7 +22,7 @@ namespace SafeExchange.Client.Common
     {
         public static readonly string DefaultHttpClientName = "BackendApi";
 
-        public static readonly string ApiVersion = "v2";
+        public static readonly string ApiVersion = "v3";
 
         public const string ChunkHashHeaderName = "X-SafeExchange-Chunk-Hash";
 
