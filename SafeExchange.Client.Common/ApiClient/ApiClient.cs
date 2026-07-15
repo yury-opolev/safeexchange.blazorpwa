@@ -795,8 +795,8 @@ namespace SafeExchange.Client.Common
 
         #region pinned secrets
 
-        public async Task<BaseResponseObject<List<PinnedSecretOutput>>> ListPinnedSecretsAsync()
-            => await this.ProcessResponseAsync<List<PinnedSecretOutput>>(async () =>
+        public async Task<BaseResponseObject<List<PinnedSecretListItemOutput>>> ListPinnedSecretsAsync()
+            => await this.ProcessResponseAsync<List<PinnedSecretListItemOutput>>(async () =>
             {
                 return await client.GetAsync($"{ApiVersion}/pinnedsecrets-list");
             });

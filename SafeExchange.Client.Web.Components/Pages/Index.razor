@@ -158,7 +158,7 @@
             var response = await this.apiClient.ListPinnedSecretsAsync();
             if ("ok".Equals(response.Status) || "no_content".Equals(response.Status))
             {
-                var items = response.Result ?? new List<PinnedSecretOutput>();
+                var items = response.Result ?? new List<PinnedSecretListItemOutput>();
                 this.pinnedSecrets = items.Select(x => new PinnedSecret(x)).ToList();
                 // Mutate the shared set in place (rather than reassigning) so the
                 // canonical instance is never orphaned for other readers.

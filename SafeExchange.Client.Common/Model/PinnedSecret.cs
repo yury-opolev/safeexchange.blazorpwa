@@ -22,6 +22,22 @@ namespace SafeExchange.Client.Common.Model
             this.Tags = source.Tags ?? new List<string>();
         }
 
+        // For a pinned secret the user cares about what they can effectively do with it, so the
+        // Live / "no access" state and permissions text are driven by the caller's effective grant
+        // (direct unioned with group-derived) rather than only a direct assignment.
+        public PinnedSecret(PinnedSecretListItemOutput source)
+        {
+            this.SecretName = source.SecretName;
+            this.Exists = source.Exists;
+
+            var effective = source.CallerEffectivePermissions ?? new EffectivePermissions();
+            this.CanRead = effective.CanRead;
+            this.CanWrite = effective.CanWrite;
+            this.CanGrantAccess = effective.CanGrantAccess;
+            this.CanRevokeAccess = effective.CanRevokeAccess;
+            this.Tags = source.Tags ?? new List<string>();
+        }
+
         public string SecretName { get; set; } = string.Empty;
 
         public bool Exists { get; set; }
