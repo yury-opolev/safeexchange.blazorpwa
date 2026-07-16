@@ -1,0 +1,67 @@
+name: CI
+
+# Build + test on every push and pull request. On a push to main, also publish
+# the web-client artifact (version-stamped via the build-time PwaVersion knob).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & test (web client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore SafeExchange.PWA.slnx
+
+      - name: Build
+        run: dotnet build SafeExchange.PWA.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test SafeExchange.PWA.slnx -c Release --no-build
+
+  publish:
+    name: Publish web client artifact
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Base MAJOR.MINOR.PATCH from the committed version.json, plus the CI run
+      # number as build metadata, injected via the build-time PwaVersion knob
+      # (see docs/build-versioning.md and Directory.Build.targets).
+      - name: Resolve build version
+        id: ver
+        run: |
+          base=$(jq -r .version SafeExchange.PWA/wwwroot/version.json)
+          echo "pwa_version=${base}+ci.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish web client
+        run: dotnet publish SafeExchange.PWA -c Release -p:PwaVersion=${{ steps.ver.outputs.pwa_version }} -o publish
+
+      - name: Upload web client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pwa-wwwroot-${{ github.run_number }}
+          path: publish/wwwroot
+          if-no-files-found: error
