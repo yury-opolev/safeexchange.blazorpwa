@@ -1,0 +1,40 @@
+<Project>
+
+  <!--
+    Build-time PWA version injection.
+
+    An external build pipeline (Azure DevOps, GitHub Actions, ...) can set the
+    web client version without editing any source file by passing PwaVersion:
+
+        dotnet publish SafeExchange.PWA -c Release -p:PwaVersion=2.3.4
+
+    Optionally pin the stamped date with -p:PwaBuildDate=2026-07-16; it defaults
+    to the UTC build date. When PwaVersion is not supplied the target is inert,
+    so a plain `dotnet build`, `dotnet run`, and deployment/deploy-pwa.ps1 keep
+    their existing version.json handling untouched.
+
+    The value is written into wwwroot/version.json BEFORE the build computes the
+    static-web-asset fingerprints and the service-worker integrity manifest, so
+    the cache-busting hashes shipped to the browser match the stamped content.
+    Only the project that owns wwwroot/version.json (the PWA host) is affected;
+    the target is a no-op in every other project in the tree.
+  -->
+
+  <PropertyGroup Condition="'$(PwaVersion)' != '' And '$(PwaBuildDate)' == ''">
+    <PwaBuildDate>$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd'))</PwaBuildDate>
+  </PropertyGroup>
+
+  <Target Name="StampPwaVersion"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(PwaVersion)' != '' And Exists('$(MSBuildProjectDirectory)\wwwroot\version.json')">
+    <!-- No Encoding attribute: WriteLinesToFile then defaults to UTF-8 without a
+         BOM, matching the BOM-less file the deploy script and source already use. -->
+    <WriteLinesToFile File="$(MSBuildProjectDirectory)\wwwroot\version.json"
+                      Lines="{ &quot;version&quot;: &quot;$(PwaVersion)&quot;, &quot;buildDate&quot;: &quot;$(PwaBuildDate)&quot; }"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+    <Message Importance="high"
+             Text="PWA version stamped: $(PwaVersion) ($(PwaBuildDate)) -> $(MSBuildProjectDirectory)\wwwroot\version.json" />
+  </Target>
+
+</Project>
