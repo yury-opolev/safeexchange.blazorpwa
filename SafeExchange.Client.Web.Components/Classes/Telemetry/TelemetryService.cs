@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using SafeExchange.Client.Common;
 
 /// <summary>
 /// Mediator between C# code and the window.saexTelemetry wrapper in
@@ -31,7 +32,9 @@ using Microsoft.JSInterop;
 /// </summary>
 public sealed class TelemetryService : IAsyncDisposable
 {
-    private const string ConfigEndpoint = "v2/telemetry/config";
+    // Derive from the shared client ApiVersion so this stays on the same version as every
+    // other backend call (v3) instead of pinning to a stale one.
+    private static readonly string ConfigEndpoint = $"{ApiClient.ApiVersion}/telemetry/config";
     private const string BackendApiClientName = "BackendApi";
 
     private readonly IJSRuntime jsRuntime;
