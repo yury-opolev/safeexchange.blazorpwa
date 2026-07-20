@@ -24,12 +24,16 @@ namespace SafeExchange.Client.Common.Model
 
             this.AuditEnabled = source.AuditEnabled;
 
+            // Nullable annotations are not enforced at runtime, so a caller can still assign
+            // null to the source property; copying restores the no-capability default instead
+            // of throwing.
+            var sourceEffectivePermissions = source.EffectivePermissions ?? new EffectivePermissions();
             this.EffectivePermissions = new EffectivePermissions
             {
-                CanRead = source.EffectivePermissions.CanRead,
-                CanWrite = source.EffectivePermissions.CanWrite,
-                CanGrantAccess = source.EffectivePermissions.CanGrantAccess,
-                CanRevokeAccess = source.EffectivePermissions.CanRevokeAccess,
+                CanRead = sourceEffectivePermissions.CanRead,
+                CanWrite = sourceEffectivePermissions.CanWrite,
+                CanGrantAccess = sourceEffectivePermissions.CanGrantAccess,
+                CanRevokeAccess = sourceEffectivePermissions.CanRevokeAccess,
             };
         }
 

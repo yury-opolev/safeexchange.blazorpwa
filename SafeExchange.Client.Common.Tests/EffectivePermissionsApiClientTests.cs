@@ -102,5 +102,25 @@ namespace SafeExchange.Client.Common.Tests
             Assert.That(copy.EffectivePermissions.CanWrite, Is.True);
             Assert.That(copy.EffectivePermissions.CanGrantAccess, Is.False);
         }
+
+        [Test]
+        public void ObjectMetadata_CopyConstructor_NullEffectivePermissions_YieldsNoCapabilityCopy()
+        {
+            var source = new ObjectMetadata
+            {
+                ObjectName = "sec-4",
+                Content = new List<ContentMetadata>(),
+                ExpirationMetadata = new ExpirationMetadata(),
+                EffectivePermissions = null!, // simulate a caller violating the non-null contract
+            };
+
+            var copy = new ObjectMetadata(source);
+
+            Assert.That(copy.EffectivePermissions, Is.Not.Null);
+            Assert.That(copy.EffectivePermissions.CanRead, Is.False);
+            Assert.That(copy.EffectivePermissions.CanWrite, Is.False);
+            Assert.That(copy.EffectivePermissions.CanGrantAccess, Is.False);
+            Assert.That(copy.EffectivePermissions.CanRevokeAccess, Is.False);
+        }
     }
 }
