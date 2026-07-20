@@ -26,10 +26,10 @@ namespace SafeExchange.Client.Common.Model
 
             this.EffectivePermissions = new EffectivePermissions
             {
-                CanRead = source.EffectivePermissions.CanRead,
-                CanWrite = source.EffectivePermissions.CanWrite,
-                CanGrantAccess = source.EffectivePermissions.CanGrantAccess,
-                CanRevokeAccess = source.EffectivePermissions.CanRevokeAccess,
+                CanRead = source.EffectivePermissions?.CanRead ?? false,
+                CanWrite = source.EffectivePermissions?.CanWrite ?? false,
+                CanGrantAccess = source.EffectivePermissions?.CanGrantAccess ?? false,
+                CanRevokeAccess = source.EffectivePermissions?.CanRevokeAccess ?? false,
             };
         }
 
