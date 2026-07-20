@@ -111,7 +111,7 @@ namespace SafeExchange.Client.Common.Tests
                 ObjectName = "sec-4",
                 Content = new List<ContentMetadata>(),
                 ExpirationMetadata = new ExpirationMetadata(),
-                EffectivePermissions = null!, // simulate a caller violating the non-null contract
+                EffectivePermissions = null!,
             };
 
             var copy = new ObjectMetadata(source);
