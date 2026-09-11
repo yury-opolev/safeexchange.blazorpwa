@@ -102,7 +102,8 @@
 @if (this.compoundModel != null)
 {
     <EditForm EditContext="@editContext" OnSubmit="@OnSubmitAsync">
-        <CompoundModelValidator />
+        <CompoundModelValidator ValidateObjectName="false" />
+        <ValidationSummary role="alert" />
 
         <p>
             <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
@@ -145,7 +146,7 @@
                 </div>
                 <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
             </div>
-            <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
+            <ValidationMessage id="content-validation" For="@(() => this.compoundModel.MainData)" />
         </p>
 
         <p>
@@ -793,12 +794,22 @@
     private async Task FetchSecretAsync(string objectName)
     {
         this.StateContainer.IsInProgress = true;
-        if (this.quillEditor != null)
-        {
-            await this.quillEditor.SetEnabledAsync(false);
-        }
+
+        // The editor call is inside the try so a JS failure cannot skip the cleanup
+        // below. editorPrepared stays false if disabling threw, so a call whose setup
+        // already failed is never retried in the finally block. On first load the
+        // editor does not exist yet (this runs from OnInitializedAsync, before the
+        // first render), which counts as prepared: there was nothing to disable.
+        var editorPrepared = false;
         try
         {
+            if (this.quillEditor != null)
+            {
+                await this.quillEditor.SetEnabledAsync(false);
+            }
+
+            editorPrepared = true;
+
             var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
             if (!"ok".Equals(compoundModelResult.Status))
             {
@@ -862,7 +873,9 @@
         finally
         {
             this.StateContainer.IsInProgress = false;
-            if (this.quillEditor != null)
+            this.StateHasChanged();
+
+            if (editorPrepared && this.quillEditor != null)
             {
                 await this.quillEditor.SetEnabledAsync(true);
             }
@@ -888,13 +901,20 @@
     private async Task TryUpdateSecretAsync()
     {
         this.StateContainer.IsInProgress = true;
-        if (this.quillEditor != null)
-        {
-            await this.quillEditor.SetEnabledAsync(false);
-        }
-        this.StateHasChanged();
+
+        // See FetchSecretAsync: the editor call must not be able to skip the cleanup,
+        // otherwise a failed disable leaves the page permanently busy and Update disabled.
+        var editorPrepared = false;
         try
         {
+            if (this.quillEditor != null)
+            {
+                await this.quillEditor.SetEnabledAsync(false);
+            }
+
+            editorPrepared = true;
+            this.StateHasChanged();
+
             this.SpecifyExpirationDateTimeKind();
             await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             if (!this.compoundModel.Metadata.ExpirationMetadata.Equals(this.originalMetadata.ExpirationMetadata))
@@ -1049,11 +1069,12 @@
         finally
         {
             this.StateContainer.IsInProgress = false;
-            if (this.quillEditor != null)
+            this.StateHasChanged();
+
+            if (editorPrepared && this.quillEditor != null)
             {
                 await this.quillEditor.SetEnabledAsync(true);
             }
-            this.StateHasChanged();
         }
     }
 

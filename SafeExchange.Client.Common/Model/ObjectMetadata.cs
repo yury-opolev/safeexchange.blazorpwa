@@ -8,6 +8,7 @@ namespace SafeExchange.Client.Common.Model
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
     using System.Linq;
+    using SafeExchange.Client.Common.Utilities;
 
     public class ObjectMetadata
     {
@@ -60,8 +61,10 @@ namespace SafeExchange.Client.Common.Model
             return new List<ContentMetadata> { mainContent };
         }
 
-        [StringLength(100, ErrorMessage = "Value too long (100 character limit).")]
-        [RegularExpression(@"^[0-9a-zA-Z-]+$", ErrorMessage = "Only letters, numbers and hyphens are allowed.")]
+        // Creation-time contract, shared with the form validator and mirrored by the API.
+        [Required(ErrorMessage = SecretNameValidator.RequiredMessage)]
+        [StringLength(SecretNameValidator.MaxLength, ErrorMessage = SecretNameValidator.TooLongMessage)]
+        [RegularExpression(SecretNameValidator.Pattern, ErrorMessage = SecretNameValidator.PatternMessage)]
         public string ObjectName { get; set; }
 
         public List<ContentMetadata> Content { get; set; }

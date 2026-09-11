@@ -7,6 +7,7 @@ namespace SafeExchange.Client.Web.Components
     using Microsoft.AspNetCore.Components;
     using Microsoft.AspNetCore.Components.Forms;
     using SafeExchange.Client.Common.Model;
+    using SafeExchange.Client.Common.Utilities;
     using System;
     using System.Linq;
     using System.Linq.Expressions;
@@ -18,6 +19,13 @@ namespace SafeExchange.Client.Web.Components
 
         [CascadingParameter]
         private EditContext CurrentEditContext { get; set; }
+
+        /// <summary>
+        /// Whether the name is subject to the creation naming contract. The edit form opts out:
+        /// the name is immutable there, so revalidating it would block unrelated changes.
+        /// </summary>
+        [Parameter]
+        public bool ValidateObjectName { get; set; } = true;
 
         protected override void OnInitialized()
         {
@@ -58,7 +66,11 @@ namespace SafeExchange.Client.Web.Components
         private void ValidateInternal(bool force = false)
         {
             var model = this.CurrentEditContext.Model as CompoundModel;
-            if (force || CurrentEditContext.IsModified(() => model.Metadata.ObjectName))
+            if (!this.ValidateObjectName)
+            {
+                this.messageStore.Clear(() => model.Metadata.ObjectName);
+            }
+            else if (force || CurrentEditContext.IsModified(() => model.Metadata.ObjectName))
             {
                 this.ValidateName(model);
             }
@@ -80,27 +92,13 @@ namespace SafeExchange.Client.Web.Components
         {
             this.messageStore.Clear(() => model.Metadata.ObjectName);
 
-            var isValid = true;
-            if (string.IsNullOrEmpty(model.Metadata.ObjectName))
+            var errors = SecretNameValidator.Validate(model.Metadata.ObjectName);
+            foreach (var error in errors)
             {
-                this.AddErrorMessage(() => model.Metadata.ObjectName, "Name is required.");
-                isValid = false;
+                this.AddErrorMessage(() => model.Metadata.ObjectName, error);
             }
 
-            if (model.Metadata.ObjectName.Length > 100)
-            {
-                this.AddErrorMessage(() => model.Metadata.ObjectName, "Name is too long (100 character limit).");
-                isValid = false;
-            }
-
-            var nameRegex = new Regex(@"^[0-9a-zA-Z-]+$");
-            if (!nameRegex.IsMatch(model.Metadata.ObjectName))
-            {
-                this.AddErrorMessage(() => model.Metadata.ObjectName, "Only letters, numbers and hyphens are allowed.");
-                isValid = false;
-            }
-
-            return isValid;
+            return errors.Count == 0;
         }
 
         private void ValidatePermissions(CompoundModel model, bool force = false)

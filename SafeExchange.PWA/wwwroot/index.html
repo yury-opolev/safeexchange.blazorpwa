@@ -71,15 +71,25 @@
     <script src="_content/SafeExchange.Client.Web.Components/js/saexDownload.js"></script>
 
     <script src="_content/Microsoft.Authentication.WebAssembly.Msal/AuthenticationService.js"></script>
+
+    <!--
+        Quill and its modules must be loaded BEFORE blazor.webassembly.js.
+        richTextEditor.js reads the Quill and QuillBlotFormatter2 globals while the
+        module is being imported, and that import can be triggered by any editor call
+        from a component lifecycle. Blazor startup is asynchronous and is not gated on
+        scripts that come after it, so loading these later races the runtime and fails
+        with "Quill is not defined" on a direct navigation or refresh of an edit route.
+        These are ordinary classic scripts on purpose - no async, no defer.
+    -->
+    <script src="_content/SafeExchange.Client.Web.Components/quill.2.0.3.min.js"></script>
+    <script src="_content/SafeExchange.Client.Web.Components/quill-modules/image-drop.min.js"></script>
+    <script src="_content/SafeExchange.Client.Web.Components/quill-modules/quill-blot-formatter2.min.js"></script>
+
     <script src="_framework/blazor.webassembly.js"></script>
 
     <script src="_content/SafeExchange.Client.Web.Components/js/jquery-3.3.1.slim.min.js"></script>
     <script src="_content/SafeExchange.Client.Web.Components/js/bootstrap.bundle.min.js"></script>
     <script src="js/safeexchange-ui.js"></script>
-
-    <script src="_content/SafeExchange.Client.Web.Components/quill.2.0.3.min.js"></script>
-    <script src="_content/SafeExchange.Client.Web.Components/quill-modules/image-drop.min.js"></script>
-    <script src="_content/SafeExchange.Client.Web.Components/quill-modules/quill-blot-formatter2.min.js"></script>
 </body>
 
 </html>
