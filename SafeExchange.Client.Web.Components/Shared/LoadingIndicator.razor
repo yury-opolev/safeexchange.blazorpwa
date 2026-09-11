@@ -1,0 +1,23 @@
+@inject StateContainer StateContainerInstance
+
+@implements IDisposable
+
+@if (this.StateContainerInstance.IsInProgress)
+{
+    <div class="client-loading-overlay" role="status" aria-live="polite">
+        <div class="spinner-border" aria-hidden="true"></div>
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        this.StateContainerInstance.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        this.StateContainerInstance.OnChange -= StateHasChanged;
+    }
+}
