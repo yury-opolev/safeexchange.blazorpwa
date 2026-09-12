@@ -1,4 +1,5 @@
 ﻿@using Microsoft.JSInterop
+@using Microsoft.Extensions.Logging;
 @using SafeExchange.Client.Common
 @using SafeExchange.Client.Common.Model
 @using SafeExchange.Client.Web.Components.Model
@@ -15,6 +16,7 @@
 @inject TooltipsInitializer TooltipsInitializerInstance
 @inject DownloadUploadHelper downloadUploadHelper
 @inject TelemetryService Telemetry
+@inject ILogger<CreateData> logger
 
 <ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
     <ItemTemplate Context="user">
@@ -537,10 +539,19 @@
 
         if (!editContext.Validate())
         {
+            this.LogValidationFailure(editContext);
             return;
         }
 
         await TryCreateSecretAsync();
+    }
+
+    // See EditData: the form renders a message for every rule it enforces, and this names
+    // anything that ever slips past that guarantee instead of leaving a dead button.
+    private void LogValidationFailure(EditContext context)
+    {
+        var messages = string.Join(" | ", context.GetValidationMessages());
+        this.logger.LogWarning($"Creation blocked by validation: {messages}");
     }
 
     private async Task TryCreateSecretAsync()

@@ -1,4 +1,5 @@
 ﻿@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.Logging;
 @using Microsoft.Extensions.Options
 @using SafeExchange.Client.Common
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
@@ -21,6 +22,7 @@
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
 @inject TelemetryService Telemetry
+@inject ILogger<EditData> logger
 
 <ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
     <ItemTemplate Context="user">
@@ -102,8 +104,7 @@
 @if (this.compoundModel != null)
 {
     <EditForm EditContext="@editContext" OnSubmit="@OnSubmitAsync">
-        <CompoundModelValidator ValidateObjectName="false" />
-        <ValidationSummary role="alert" />
+        <CompoundModelValidator ValidateObjectName="false" ShouldValidatePermission="@this.IsEditableAccessItem" />
 
         <p>
             <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
@@ -892,11 +893,28 @@
 
         if (!editContext.Validate())
         {
+            this.LogValidationFailure(editContext);
             return;
         }
 
         await TryUpdateSecretAsync();
     }
+
+    // Every rule this form enforces renders a message next to its own field. This is the
+    // diagnostic for the day that stops being true: a message with nowhere to render still
+    // holds Validate() false, the submit returns here, and without this the user sees a
+    // button that does nothing. The messages are fixed strings, never field values.
+    private void LogValidationFailure(EditContext context)
+    {
+        var messages = string.Join(" | ", context.GetValidationMessages());
+        this.logger.LogWarning($"Update of '{this.ObjectName}' blocked by validation: {messages}");
+    }
+
+    // Rows the API already accepted are read only here, and a row marked for deletion is on
+    // its way out. Neither can be corrected on this form, so neither is judged by the
+    // creation time subject rule - an unfixable row would block every other change.
+    private bool IsEditableAccessItem(SubjectPermissions accessItem, int index)
+        => index >= this.FixedAccessItemCount && !this.IsDeleted(index);
 
     private async Task TryUpdateSecretAsync()
     {

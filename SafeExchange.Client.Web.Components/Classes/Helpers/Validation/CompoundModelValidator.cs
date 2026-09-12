@@ -1,4 +1,4 @@
-﻿/// <summary>
+/// <summary>
 /// CompoundModelValidator
 /// </summary>
 
@@ -7,15 +7,15 @@ namespace SafeExchange.Client.Web.Components
     using Microsoft.AspNetCore.Components;
     using Microsoft.AspNetCore.Components.Forms;
     using SafeExchange.Client.Common.Model;
-    using SafeExchange.Client.Common.Utilities;
     using System;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Text.RegularExpressions;
 
+    /// <summary>
+    /// Wires <see cref="CompoundModelValidation"/> into an <see cref="EditForm"/>.
+    /// The rules themselves live in that class, so they can be tested without rendering.
+    /// </summary>
     public class CompoundModelValidator : ComponentBase
     {
-        private ValidationMessageStore messageStore;
+        private CompoundModelValidation validation;
 
         [CascadingParameter]
         private EditContext CurrentEditContext { get; set; }
@@ -26,6 +26,13 @@ namespace SafeExchange.Client.Web.Components
         /// </summary>
         [Parameter]
         public bool ValidateObjectName { get; set; } = true;
+
+        /// <summary>
+        /// Decides, per access list row, whether the row is still the user's to correct.
+        /// Left unset, every row is validated, which is what the creation form wants.
+        /// </summary>
+        [Parameter]
+        public Func<SubjectPermissions, int, bool> ShouldValidatePermission { get; set; }
 
         protected override void OnInitialized()
         {
@@ -38,147 +45,36 @@ namespace SafeExchange.Client.Web.Components
                     $"inside an {nameof(EditForm)}.");
             }
 
-            messageStore = new(CurrentEditContext);
+            this.validation = new CompoundModelValidation(CurrentEditContext);
+            this.ApplyParameters();
 
             CurrentEditContext.OnValidationRequested += (s, e) =>
             {
-                this.Validate();
+                this.validation.ValidateAll();
+                CurrentEditContext.NotifyValidationStateChanged();
             };
 
             CurrentEditContext.OnFieldChanged += (s, e) =>
             {
-                this.ValidateField(e.FieldIdentifier);
+                this.validation.ValidateModified();
+                CurrentEditContext.NotifyValidationStateChanged();
             };
         }
 
-        private void Validate()
+        protected override void OnParametersSet()
         {
-            this.ValidateInternal(force: true);
-            this.CurrentEditContext.NotifyValidationStateChanged();
+            this.ApplyParameters();
         }
 
-        private void ValidateField(FieldIdentifier fieldIdentifier)
+        private void ApplyParameters()
         {
-            this.ValidateInternal();
-            this.CurrentEditContext.NotifyValidationStateChanged();
-        }
-
-        private void ValidateInternal(bool force = false)
-        {
-            var model = this.CurrentEditContext.Model as CompoundModel;
-            if (!this.ValidateObjectName)
-            {
-                this.messageStore.Clear(() => model.Metadata.ObjectName);
-            }
-            else if (force || CurrentEditContext.IsModified(() => model.Metadata.ObjectName))
-            {
-                this.ValidateName(model);
-            }
-
-            this.ValidatePermissions(model, force);
-
-            if (force || CurrentEditContext.IsModified(() => model.MainData))
-            {
-                this.ValidateContent(model);
-            }
-
-            if (force || CurrentEditContext.IsModified(() => model.Metadata.ExpirationMetadata.DaysToExpire))
-            {
-                this.ValidateExpirationIdleDays(model);
-            }
-        }
-
-        private bool ValidateName(CompoundModel model)
-        {
-            this.messageStore.Clear(() => model.Metadata.ObjectName);
-
-            var errors = SecretNameValidator.Validate(model.Metadata.ObjectName);
-            foreach (var error in errors)
-            {
-                this.AddErrorMessage(() => model.Metadata.ObjectName, error);
-            }
-
-            return errors.Count == 0;
-        }
-
-        private void ValidatePermissions(CompoundModel model, bool force = false)
-        {
-            var accessList = model.Permissions ?? Array.Empty<SubjectPermissions>().ToList();
-            foreach (var accessItem in model.Permissions)
-            {
-                if (!CurrentEditContext.IsModified(() => accessItem.SubjectId) && !force)
-                {
-                    continue;
-                }
-
-                if (string.IsNullOrEmpty(accessItem.SubjectId))
-                {
-                    continue;
-                }
-
-                ValidatePermissionsItem(accessItem);
-            }
-        }
-
-        private void ValidatePermissionsItem(SubjectPermissions accessItem)
-        {
-            this.messageStore.Clear(() => accessItem.SubjectName);
-            this.messageStore.Clear(() => accessItem.SubjectId);
-
-            if (accessItem.SubjectType.Equals(SubjectType.Application))
+            if (this.validation is null)
             {
                 return;
             }
 
-            if (accessItem.SubjectType.Equals(SubjectType.Group))
-            {
-                return;
-            }
-
-            var regex = new Regex(@"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-            if (accessItem.SubjectName.Length > 320 || !regex.IsMatch(accessItem.SubjectName))
-            {
-                this.AddErrorMessage(() => accessItem.SubjectName, "Email-like identifier required.");
-            }
-        }
-
-        private bool ValidateContent(CompoundModel model)
-        {
-            this.messageStore.Clear(() => model.MainData);
-
-            var isValid = true;
-            if (string.IsNullOrEmpty(model.MainData))
-            {
-                this.AddErrorMessage(() => model.MainData, "Content is required.");
-                isValid = false;
-            }
-
-            if (model.MainData.Length > 10 * 1024 * 1024)
-            {
-                this.AddErrorMessage(() => model.MainData, "Content is too large (10 Mb limit).");
-                isValid = false;
-            }
-
-            return isValid;
-        }
-
-        private bool ValidateExpirationIdleDays(CompoundModel model)
-        {
-            this.messageStore.Clear(() => model.Metadata.ExpirationMetadata.DaysToExpire);
-
-            var isValid = true;
-            if (model.Metadata.ExpirationMetadata.DaysToExpire < 0)
-            {
-                this.AddErrorMessage(() => model.Metadata.ExpirationMetadata.DaysToExpire, "Days cannot be negative.");
-                isValid = false;
-            }
-
-            return isValid;
-        }
-
-        private void AddErrorMessage(Expression<Func<object>> accessor, string message)
-        {
-            this.messageStore.Add(accessor, message);
+            this.validation.ValidateObjectName = this.ValidateObjectName;
+            this.validation.ShouldValidatePermission = this.ShouldValidatePermission;
         }
     }
 }
