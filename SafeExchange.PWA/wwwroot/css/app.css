@@ -280,7 +280,7 @@ input, select, textarea, progress {
    below, so first-paint before JS sets data-accent is still blue).
    Override via <html data-accent="blue|vivid|mono">; only the accent
    variables change. --client-strip-a / --client-strip-b stay locked to
-   the brand magenta↔indigo wash regardless of the user's pick. */
+   the brand magenta↔indigo strip regardless of the user's pick. */
 
 :root[data-accent="vivid"] {
     --client-accent: #c85ab4;
@@ -364,7 +364,7 @@ input, select, textarea, progress {
        reads well on the blue/vivid accents; flipped to near-black under
        mono dark where the accent is too light for white to read against. */
     --client-on-accent: #ffffff;
-    /* Animated topbar strip colors — kept vivid regardless of accent. */
+    /* Topbar strip colors — kept vivid regardless of accent. */
     --client-strip-a: #d943c1;
     --client-strip-b: #7c5cff;
     --client-nav-active-bg: rgba(255, 255, 255, .12);   /* neutral lighten on dark surface */
@@ -445,19 +445,9 @@ input, select, textarea, progress {
     background: linear-gradient(
         90deg,
         var(--client-strip-a) 0%,
-        var(--client-strip-b) 50%,
-        var(--client-strip-a) 100%);
-    background-size: 200% 100%;
-    animation: client-accent-shift 9s linear infinite;
+        var(--client-strip-b) 100%);
     z-index: 21;
     pointer-events: none;
-}
-@keyframes client-accent-shift {
-    0%   { background-position:   0% 50%; }
-    100% { background-position: 200% 50%; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .client-topbar::after { animation: none; }
 }
 
 .client-brand {
@@ -542,6 +532,10 @@ input, select, textarea, progress {
 
 .client-nav-scrim { display: none; }
 
+/* Desktop shows progress in the topbar StateHeader; the mobile topbar hides it,
+   so this page-level spinner takes over below the same breakpoint. */
+.client-loading-overlay { display: none; }
+
 @media (max-width: 720px) {
     .client-shell {
         grid-template-columns: 1fr;
@@ -555,6 +549,23 @@ input, select, textarea, progress {
     .client-brand { padding-left: 0; }
     .client-hamburger { display: inline-flex; align-items: center; }
     .client-state-header { display: none; }
+    .client-loading-overlay {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: var(--client-topbar-h);
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 17;   /* below the nav drawer (19) and its scrim (18) */
+        pointer-events: none;
+    }
+    .client-loading-overlay .spinner-border {
+        width: 2.5rem;
+        height: 2.5rem;
+        color: var(--client-accent);
+    }
     /* Mobile topbar is flex (not grid) with gap, so without an explicit
        push the user-icon column sits right after the brand. margin-left:
        auto consumes the remaining row to pin the login menu to the right

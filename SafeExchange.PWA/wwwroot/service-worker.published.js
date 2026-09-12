@@ -73,7 +73,12 @@ async function onNotificationClick(event) {
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 const offlineAssetsInclude = [ /\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/ ];
-const offlineAssetsExclude = [ /^service-worker\.js$/ ];
+// staticwebapp.config.json is hosting configuration, not an application asset. The
+// deploy scripts write it after publish so it stays out of service-worker-assets.js,
+// but exclude it here too: if a host ever publishes it into the asset manifest, SWA
+// reserves the path and serves a different response, so the build-time integrity hash
+// no longer matches and the whole service worker install is aborted.
+const offlineAssetsExclude = [ /^service-worker\.js$/, /^staticwebapp\.config\.json$/ ];
 
 async function onInstall(event) {
     console.info('Service worker: Install');

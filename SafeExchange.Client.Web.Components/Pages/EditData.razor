@@ -1,4 +1,5 @@
 ﻿@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.Logging;
 @using Microsoft.Extensions.Options
 @using SafeExchange.Client.Common
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
@@ -21,6 +22,7 @@
 @inject IOptionsSnapshot<RemoteAuthenticationOptions<ApiAuthorizationProviderOptions>> OptionsSnapshot
 @inject IConfiguration Configuration
 @inject TelemetryService Telemetry
+@inject ILogger<EditData> logger
 
 <ItemSearchDialog TItem="GraphUserOutput" @ref="this.userPickDialog" DialogTitle="Find user" Placeholder="Search users..." OnItemPickedCallback="this.FinishUserPick" SearchItemsAsyncCallback="this.SearchUsersAsync" OnClosedCallback="() => this.StateHasChanged()">
     <ItemTemplate Context="user">
@@ -102,7 +104,7 @@
 @if (this.compoundModel != null)
 {
     <EditForm EditContext="@editContext" OnSubmit="@OnSubmitAsync">
-        <CompoundModelValidator />
+        <CompoundModelValidator ValidateObjectName="false" ShouldValidatePermission="@this.IsEditableAccessItem" />
 
         <p>
             <div class="@(this.editContext.FieldCssClass(() => this.compoundModel.MainData))">
@@ -145,7 +147,7 @@
                 </div>
                 <QuillEditor @ref="this.quillEditor" disabled="@this.StateContainer.IsInProgress" aria-label="Content" aria-describedby="content-validation" @bind-Value="this.compoundModel.MainData" Placeholder="" OnBlur="@this.HandleEditorLostFocus" OnCopyableElementInserted="@this.HandleCopyableElementInserted" NextElementRef="@this.attachmentsButtonElement"></QuillEditor>
             </div>
-            <ValidationMessage id="name-validation" For="@(() => this.compoundModel.MainData)" />
+            <ValidationMessage id="content-validation" For="@(() => this.compoundModel.MainData)" />
         </p>
 
         <p>
@@ -793,12 +795,22 @@
     private async Task FetchSecretAsync(string objectName)
     {
         this.StateContainer.IsInProgress = true;
-        if (this.quillEditor != null)
-        {
-            await this.quillEditor.SetEnabledAsync(false);
-        }
+
+        // The editor call is inside the try so a JS failure cannot skip the cleanup
+        // below. editorPrepared stays false if disabling threw, so a call whose setup
+        // already failed is never retried in the finally block. On first load the
+        // editor does not exist yet (this runs from OnInitializedAsync, before the
+        // first render), which counts as prepared: there was nothing to disable.
+        var editorPrepared = false;
         try
         {
+            if (this.quillEditor != null)
+            {
+                await this.quillEditor.SetEnabledAsync(false);
+            }
+
+            editorPrepared = true;
+
             var compoundModelResult = await this.apiClient.GetCompoundModelAsync(objectName);
             if (!"ok".Equals(compoundModelResult.Status))
             {
@@ -862,7 +874,9 @@
         finally
         {
             this.StateContainer.IsInProgress = false;
-            if (this.quillEditor != null)
+            this.StateHasChanged();
+
+            if (editorPrepared && this.quillEditor != null)
             {
                 await this.quillEditor.SetEnabledAsync(true);
             }
@@ -879,22 +893,46 @@
 
         if (!editContext.Validate())
         {
+            this.LogValidationFailure(editContext);
             return;
         }
 
         await TryUpdateSecretAsync();
     }
 
+    // Every rule this form enforces renders a message next to its own field. This is the
+    // diagnostic for the day that stops being true: a message with nowhere to render still
+    // holds Validate() false, the submit returns here, and without this the user sees a
+    // button that does nothing. The messages are fixed strings, never field values.
+    private void LogValidationFailure(EditContext context)
+    {
+        var messages = string.Join(" | ", context.GetValidationMessages());
+        this.logger.LogWarning($"Update of '{this.ObjectName}' blocked by validation: {messages}");
+    }
+
+    // Rows the API already accepted are read only here, and a row marked for deletion is on
+    // its way out. Neither can be corrected on this form, so neither is judged by the
+    // creation time subject rule - an unfixable row would block every other change.
+    private bool IsEditableAccessItem(SubjectPermissions accessItem, int index)
+        => index >= this.FixedAccessItemCount && !this.IsDeleted(index);
+
     private async Task TryUpdateSecretAsync()
     {
         this.StateContainer.IsInProgress = true;
-        if (this.quillEditor != null)
-        {
-            await this.quillEditor.SetEnabledAsync(false);
-        }
-        this.StateHasChanged();
+
+        // See FetchSecretAsync: the editor call must not be able to skip the cleanup,
+        // otherwise a failed disable leaves the page permanently busy and Update disabled.
+        var editorPrepared = false;
         try
         {
+            if (this.quillEditor != null)
+            {
+                await this.quillEditor.SetEnabledAsync(false);
+            }
+
+            editorPrepared = true;
+            this.StateHasChanged();
+
             this.SpecifyExpirationDateTimeKind();
             await using var timer = new Timer(_ => InvokeAsync(() => StateHasChanged()), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             if (!this.compoundModel.Metadata.ExpirationMetadata.Equals(this.originalMetadata.ExpirationMetadata))
@@ -1049,11 +1087,12 @@
         finally
         {
             this.StateContainer.IsInProgress = false;
-            if (this.quillEditor != null)
+            this.StateHasChanged();
+
+            if (editorPrepared && this.quillEditor != null)
             {
                 await this.quillEditor.SetEnabledAsync(true);
             }
-            this.StateHasChanged();
         }
     }
 
