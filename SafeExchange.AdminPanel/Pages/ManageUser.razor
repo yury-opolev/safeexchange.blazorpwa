@@ -2,6 +2,7 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 @using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Helpers
 @using SafeExchange.Client.Common.Model
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
 
@@ -73,6 +74,27 @@
             <dt class="col-sm-3">Consent required</dt>
             <dd class="col-sm-9">@(this.user.ConsentRequired ? "yes" : "no")</dd>
 
+            <dt class="col-sm-3">MCP (user's choice)</dt>
+            <dd class="col-sm-9">
+                @(this.user.McpAllowed ? "allowed" : "not allowed")
+                <span class="text-muted small">— set by the user, read-only here</span>
+            </dd>
+
+            <dt class="col-sm-3">MCP access</dt>
+            <dd class="col-sm-9 d-flex align-items-center">
+                <span class="admin-pill @McpStatus.AdminPillClass(this.user.McpAllowed, this.user.McpBlockedByAdmin)">@McpStatus.Label(this.user.McpAllowed, this.user.McpBlockedByAdmin)</span>
+                <button type="button"
+                        class="btn btn-sm @(this.user.McpBlockedByAdmin ? "btn-outline-success" : "btn-outline-warning") ms-3"
+                        disabled="@this.togglingMcp"
+                        @onclick="this.ToggleMcpBlockedAsync">
+                    @if (this.togglingMcp)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    @(this.user.McpBlockedByAdmin ? "Unblock MCP" : "Block MCP")
+                </button>
+            </dd>
+
             <dt class="col-sm-3">Telemetry id (current)</dt>
             <dd class="col-sm-9">
                 @if (string.IsNullOrEmpty(this.user.CurrentTelemetryId))
@@ -123,6 +145,7 @@
     private UserDetail? user;
     private bool loading;
     private bool toggling;
+    private bool togglingMcp;
     private string? error;
     private ConfirmDialog? confirmDialog;
 
@@ -193,6 +216,51 @@
         finally
         {
             this.toggling = false;
+        }
+    }
+
+    private async Task ToggleMcpBlockedAsync()
+    {
+        if (this.user is null || this.confirmDialog is null)
+        {
+            return;
+        }
+
+        var willBlock = !this.user.McpBlockedByAdmin;
+        var ok = await this.confirmDialog.ShowAsync(
+            title: willBlock ? "Block MCP" : "Unblock MCP",
+            body: willBlock
+                ? $"Block MCP for user '{this.user.AadUpn}'? AI agents are refused for this user even if they allowed MCP."
+                : $"Unblock MCP for user '{this.user.AadUpn}'? MCP stays off until the user allows it.",
+            confirmLabel: willBlock ? "Block MCP" : "Unblock MCP",
+            confirmButtonClass: willBlock ? "btn-warning" : "btn-success");
+        if (!ok)
+        {
+            return;
+        }
+
+        this.togglingMcp = true;
+        this.error = null;
+        try
+        {
+            var resp = await this.apiClient.SetUserMcpBlockedAsync(this.user.AadUpn, willBlock);
+            if ("ok".Equals(resp.Status) && resp.Result is not null)
+            {
+                this.user.McpAllowed = resp.Result.McpAllowed;
+                this.user.McpBlockedByAdmin = resp.Result.McpBlockedByAdmin;
+            }
+            else
+            {
+                this.error = resp.Error ?? resp.Status;
+            }
+        }
+        catch (AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
+        finally
+        {
+            this.togglingMcp = false;
         }
     }
 
