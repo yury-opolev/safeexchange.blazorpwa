@@ -92,6 +92,10 @@
                         @onclick="this.GoToMyApps">
                     <i class="bi bi-robot me-2"></i>My S2S apps
                 </button>
+                <button type="button" class="btn btn-link btn-sm w-100 text-start text-decoration-none px-0"
+                        @onclick="this.OpenSettingsAsync">
+                    <i class="bi bi-gear me-2"></i>Settings
+                </button>
             </div>
 
             <div class="dropdown-divider"></div>
@@ -141,6 +145,9 @@
 
 @code {
     private const string AccentStorageKey = "client-accent";
+
+    [Parameter]
+    public EventCallback OnOpenSettings { get; set; }
 
     private ColorTheme currentTheme = ColorTheme.Auto;
     private string currentAccent = "blue";
@@ -305,6 +312,18 @@
         {
         }
         this.Navigation.NavigateTo("s2sapps");
+    }
+
+    private async Task OpenSettingsAsync()
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("safeexchange.closeUserDropdown");
+        }
+        catch
+        {
+        }
+        await this.OnOpenSettings.InvokeAsync();
     }
 
     private sealed record VersionInfo(string Version, string BuildDate);

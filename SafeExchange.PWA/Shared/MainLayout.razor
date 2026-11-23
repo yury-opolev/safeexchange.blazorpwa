@@ -12,7 +12,7 @@
             <StateHeader />
         </div>
         <div class="client-login-wrap">
-            <LoginDisplay />
+            <LoginDisplay OnOpenSettings="this.OpenSettingsAsync" />
         </div>
     </header>
 
@@ -33,9 +33,15 @@
     </main>
 </div>
 
+<SettingsDialog @ref="this.settingsDialog" />
+
 @code {
     private bool navOpen;
 
+    private SettingsDialog? settingsDialog;
+
     private void ToggleNav() => this.navOpen = !this.navOpen;
     private void CloseNav() => this.navOpen = false;
+
+    private Task OpenSettingsAsync() => this.settingsDialog?.ShowAsync() ?? Task.CompletedTask;
 }
