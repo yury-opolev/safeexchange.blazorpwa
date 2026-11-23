@@ -24,6 +24,8 @@ namespace SafeExchange.Client.Common.Model
         public string DisplayName { get; set; } = string.Empty;
         public string ContactEmail { get; set; } = string.Empty;
         public bool Enabled { get; set; }
+        public bool McpAllowed { get; set; }
+        public bool McpBlockedByAdmin { get; set; }
     }
 
     public class ApplicationAdminOverview
@@ -90,6 +92,8 @@ namespace SafeExchange.Client.Common.Model
         public string DisplayName { get; set; } = string.Empty;
         public string ContactEmail { get; set; } = string.Empty;
         public bool Enabled { get; set; }
+        public bool McpAllowed { get; set; }
+        public bool McpBlockedByAdmin { get; set; }
         public string Id { get; set; } = string.Empty;
         public string AadObjectId { get; set; } = string.Empty;
         public string AadTenantId { get; set; } = string.Empty;
@@ -113,5 +117,10 @@ namespace SafeExchange.Client.Common.Model
     public class EnabledToggleRequest
     {
         public bool Enabled { get; set; }
+    }
+
+    public class McpBlockedToggleRequest
+    {
+        public bool Blocked { get; set; }
     }
 }

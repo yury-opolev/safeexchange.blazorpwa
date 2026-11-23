@@ -22,6 +22,10 @@ namespace SafeExchange.Client.Common
             => PatchAsync<UserOverview>($"{ApiVersion}/admin/users/{Uri.EscapeDataString(upn)}/enabled",
                 new EnabledToggleRequest { Enabled = enabled });
 
+        public Task<BaseResponseObject<UserOverview>> SetUserMcpBlockedAsync(string upn, bool blocked)
+            => PatchAsync<UserOverview>($"{ApiVersion}/admin/users/{Uri.EscapeDataString(upn)}/mcp-blocked",
+                new McpBlockedToggleRequest { Blocked = blocked });
+
         public Task<BaseResponseObject<PaginatedResult<ApplicationAdminOverview>>> ListApplicationsAsync(string? q, int page = 0, int pageSize = 25)
             => GetAsync<PaginatedResult<ApplicationAdminOverview>>($"{ApiVersion}/admin/applications{BuildPagingQuery(q, page, pageSize)}");
 
