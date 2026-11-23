@@ -1,5 +1,6 @@
 @page "/users"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using SafeExchange.Client.Common.Helpers
 @inject ApiClient apiClient
 @inject NavigationManager NavManager
 
@@ -30,6 +31,7 @@
                 <div><strong>@u.AadUpn</strong></div>
                 <div class="text-muted small">@u.DisplayName</div>
             </div>
+            <span class="admin-pill @McpStatus.AdminPillClass(u.McpAllowed, u.McpBlockedByAdmin)" title="MCP (AI agents)">MCP: @McpStatus.Label(u.McpAllowed, u.McpBlockedByAdmin)</span>
             <span class="admin-pill @(u.Enabled ? "ok" : "off")">@(u.Enabled ? "enabled" : "disabled")</span>
             <button class="btn btn-sm btn-outline-primary"
                     @onclick="() => this.Manage(u)"

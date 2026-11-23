@@ -1,107 +1,89 @@
-﻿@using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
-@using SafeExchange.Client.Web.Components.Classes.Model
-@using SafeExchange.Client.Web.Components.Model;
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using SafeExchange.Client.Common
+@using SafeExchange.Client.Common.Helpers
 
-@inject NotificationsSubscriber subscriber
-@inject ColorThemeHelper colorThemeHelper
+@inject ApiClient apiClient
+@inject ItemPickDialogHelper dialogHelper
 
-<div class="modal fade" id="settingsDialog" tabindex="-1" role="dialog" aria-labelledby="modalLabel">
+@* Personal settings. Opened from the account dropdown (LoginDisplay -> MainLayout
+   -> ShowAsync); settings are (re)loaded on every open so an administrator block
+   applied since the last open is shown. Theme and accent live in the dropdown. *@
+<div class="modal fade" id="settingsDialog" @ref="this.modalElement" tabindex="-1" role="dialog" aria-labelledby="settingsDialogLabel">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <p class="modal-title" id="modalLabel"><strong>Settings</strong></p>
+                <p class="modal-title" id="settingsDialogLabel"><strong>Settings</strong></p>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <EditForm class="px-4 py-2" EditContext="@editContext">
-                    <div class="row gy-2">
-                        <div class="px-0">Theme:</div>
-                        @* Switched from form-switch to radios: the choices are mutually
-                           exclusive, and a Bootstrap switch in its off state reads as
-                           "disabled" — confusing here. Radios show clearly which option
-                           is selected without implying the others are unavailable.
-                           Unique ids per radio (the previous markup shared one id, so
-                           clicking the Dark/Auto labels actually toggled Light). *@
-                        <div role="radiogroup" aria-label="Color theme picker">
-                            <div class="py-2 form-check">
-                                <input class="form-check-input" type="radio" name="colorTheme" id="lightThemeRadio" disabled="@this.IsInProgress"
-                                       checked="@(this.colorThemeContext.Value == ColorTheme.Light)"
-                                       @onchange="() => this.OnColorThemeChangedAsync(ColorTheme.Light)" />
-                                <label class="form-check-label" for="lightThemeRadio">&nbsp;<i class="bi bi-sun"></i>&nbsp; Light</label>
-                            </div>
-
-                            <div class="py-2 form-check">
-                                <input class="form-check-input" type="radio" name="colorTheme" id="darkThemeRadio" disabled="@this.IsInProgress"
-                                       checked="@(this.colorThemeContext.Value == ColorTheme.Dark)"
-                                       @onchange="() => this.OnColorThemeChangedAsync(ColorTheme.Dark)" />
-                                <label class="form-check-label" for="darkThemeRadio">&nbsp; <i class="bi bi-moon"></i>&nbsp; Dark</label>
-                            </div>
-
-                            <div class="py-2 form-check">
-                                <input class="form-check-input" type="radio" name="colorTheme" id="autoThemeRadio" disabled="@this.IsInProgress"
-                                       checked="@(this.colorThemeContext.Value == ColorTheme.Auto)"
-                                       @onchange="() => this.OnColorThemeChangedAsync(ColorTheme.Auto)" />
-                                <label class="form-check-label" for="autoThemeRadio">&nbsp; <i class="bi bi-circle-half"></i>&nbsp; Auto</label>
-                            </div>
-                        </div>
-                    </div>
-                </EditForm>
-                @if (this.IsInProgress)
+            <div class="modal-body px-4">
+                <div class="form-check form-switch d-flex align-items-center gap-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="mcpAllowedSwitch"
+                           checked="@this.mcp.SwitchChecked"
+                           disabled="@this.mcp.SwitchDisabled"
+                           aria-describedby="mcpAllowedHelp"
+                           @onchange="this.OnMcpAllowedChangedAsync" />
+                    <label class="form-check-label" for="mcpAllowedSwitch">Allow MCP (AI agents)</label>
+                    @if (this.mcp.IsBusy)
+                    {
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-label="Working"></span>
+                    }
+                </div>
+                <div id="mcpAllowedHelp" class="form-text">
+                    Lets AI tools such as Copilot CLI act on your secrets through SafeExchange's MCP endpoint.
+                </div>
+                @if (this.mcp.ShowBlockedNotice)
                 {
-                    <div class="d-flex justify-content-center">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                            <span class="sr-only">Applying...</span>
-                        </div>
+                    <div class="alert alert-secondary mt-2 mb-0" role="status">
+                        <i class="bi bi-slash-circle me-1"></i>@McpSettingsState.BlockedNotice
                     </div>
                 }
-                @if (!string.IsNullOrEmpty(this.AlertMessage))
+                @if (!string.IsNullOrEmpty(this.mcp.Error))
                 {
-                    <div class="alert alert-warning" role="alert">
-                        <strong>@this.AlertHeader</strong>&nbsp; @this.AlertMessage
-                    </div>
+                    <div class="alert alert-warning mt-2 mb-0" role="alert">@this.mcp.Error</div>
                 }
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled="@this.IsInProgress">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
 @code {
+    private ElementReference modalElement;
 
-    private bool IsInProgress { get; set; }
+    private McpSettingsState mcp = default!;
 
-    private string AlertHeader { get; set; }
-
-    private string AlertMessage { get; set; }
-
-    private ColorThemeContext colorThemeContext;
-
-    private EditContext editContext;
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        this.colorThemeContext = new ColorThemeContext();
-        this.colorThemeContext.OnValueChangedAsync = OnColorThemeChangedAsync;
-        this.editContext = new EditContext(this.colorThemeContext);
+        this.mcp = new McpSettingsState(this.apiClient);
+    }
 
-        var preferredTheme = await colorThemeHelper.GetPreferredThemeAsync();
-        this.colorThemeContext.Value = preferredTheme;
+    public async Task ShowAsync()
+    {
+        this.mcp = new McpSettingsState(this.apiClient);
+        this.StateHasChanged();
+        await this.dialogHelper.ShowModalAsync(this.modalElement);
 
-        await this.colorThemeHelper.SetThemeAsync(preferredTheme);
+        var loading = this.mcp.LoadAsync();
+        this.StateHasChanged();
+        await loading;
 
-        this.IsInProgress = false;
+        this.RedirectIfSignInRequired();
         this.StateHasChanged();
     }
 
-    private async Task OnColorThemeChangedAsync(ColorTheme theme)
+    private async Task OnMcpAllowedChangedAsync(ChangeEventArgs e)
     {
-        // Radio @onchange bypasses the IsLightSelected/IsDarkSelected/IsAutoSelected
-        // setters on ColorThemeContext, which is where Value used to be updated.
-        // Set it explicitly so the @checked bindings on the other radios re-render
-        // to the new selection.
-        this.colorThemeContext.Value = theme;
-        await colorThemeHelper.SetThemeAsync(theme);
+        await this.mcp.SetAllowedAsync(e.Value is true);
+        this.RedirectIfSignInRequired();
+    }
+
+    private void RedirectIfSignInRequired()
+    {
+        if (this.mcp.LastException is AccessTokenNotAvailableException ex)
+        {
+            ex.Redirect();
+        }
     }
 }
